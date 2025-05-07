@@ -32,7 +32,6 @@ db.exec(`
     name TEXT NOT NULL COLLATE NOCASE,  -- 대소문자 구분 없음
     source TEXT NOT NULL CHECK (source IN ('auto', 'user')),
     sync_status TEXT CHECK (sync_status IN ('synced', 'pending')) DEFAULT ('pending'),  
-    created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
     UNIQUE (name, source)  
   );
   CREATE TABLE IF NOT EXISTS data_tag (
@@ -42,17 +41,7 @@ db.exec(`
     CONSTRAINT data_tag_clipboard_FK_1 FOREIGN KEY (data_id) REFERENCES clipboard(id) ON DELETE CASCADE,
     CONSTRAINT data_tag_tag_FK_1 FOREIGN KEY (tag_id) REFERENCES tag(gb_id) ON DELETE CASCADE ON UPDATE CASCADE
   );
-  CREATE TABLE IF NOT EXISTS expiration_policy (
-    policy_id TEXT PRIMARY KEY,
-    max_count_local INTEGER DEFAULT 100,
-    max_count_cloud INTEGER DEFAULT 100,
-    retention_days INTEGER DEFAULT 30, 
-    set_at INTEGER
-  );
   
-  CREATE INDEX idx_clipboard_created ON clipboard(created_at);
-  CREATE INDEX idx_data_tag_data ON data_tag(data_id);
-  CREATE INDEX idx_data_tag_tag ON data_tag(tag_id);
 `);
 
 // Clipboard 관련 함수
