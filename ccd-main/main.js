@@ -8,7 +8,7 @@ const createWindow = () => {
   })
 
 //   win.loadFile('index.html')
-    const rendererPath = path.join(__dirname, '../ccd-renderer/index.html');
+  const rendererPath = path.join(__dirname, '../ccd-renderer/dist/index.html');
     console.log("이것은 renderPAth", rendererPath)
     win.loadFile(rendererPath);
 }
