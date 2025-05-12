@@ -1,0 +1,30 @@
+{
+  "name": "ccd",
+  "version": "1.0.0",
+  "description": "",
+  "main": "ccd-main/main.js",
+  "scripts": {
+  "dev": "concurrently \"npm run dev --prefix ccd-renderer\" \"wait-on http://localhost:5173 --timeout 5000 && electron .\"",
+    "build": "npm run build --prefix ccd-renderer",
+    "package": "npm run build && electron-builder"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "build": {
+    "appId": "com.ccd.app",
+    "files": [
+      "ccd-main/**/*",
+      "ccd-renderer/dist/**/*"
+    ],
+    "directories": {
+      "buildResources": "assets"
+    }
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "electron": "^36.2.0",
+    "electron-builder": "^26.0.12",
+    "wait-on": "^8.0.3"
+  }
+}
