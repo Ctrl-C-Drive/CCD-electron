@@ -61,12 +61,7 @@ async function authenticate(encryptedId, encryptedPwd) {
     const userId = decryptAES(encryptedId);
     const password = decryptAES(encryptedPwd);
     // 2) 비밀번호 bcrypt 해싱
-    const hashedPwd = await bcrypt.hash(password, 10);
-    // 3) CloudServerModule 호출
-    const res = await axios.post(
-      `${CLOUD_SERVER_URL}/auth/login`,
-      { userId, password: hashedPwd }
-    );
+    const res = await axios.post(`${CLOUD_SERVER_URL}/auth/login`, { userId, password });
     return { loginResult: true, accessToken: res.data.accessToken };
   } catch (err) {
     const code = err.response?.data?.errorCode || err.code;
