@@ -9,6 +9,8 @@ const pipeline = promisify(stream.pipeline);
 const sharp = require("sharp");
 const fs = require("fs-extra");
 const { app } = require("electron");
+const LocalDataModule = require("./LocalData");
+const CloudDataModule = require("./CloudData");
 
 class DataRepositoryModule extends EventEmitter {
   constructor(config) {
@@ -19,7 +21,11 @@ class DataRepositoryModule extends EventEmitter {
       local: { data: null, valid: false },
       cloud: { data: null, valid: false },
     };
-    this.uploadDir = path.join(app.getPath("userData"), "uploads");
+    const documentsDir = app.getPath("documents");
+    this.uploadDir = path.join(documentsDir, "CCD");
+
+    // 업로드 폴더가 없으면 생성
+    fs.ensureDirSync(this.uploadDir);
   }
 
   invalidateCache(source = "all") {
@@ -35,8 +41,13 @@ class DataRepositoryModule extends EventEmitter {
   // 클립보드 항목 추가 (이미지 처리 포함)
   async addItem(itemData, target = "both") {
     try {
-      const id = uuidv4();
-      const newItem = { ...itemData, id };
+      const id = itemData.id || uuidv4();
+      const newItem = {
+        ...itemData,
+        id,
+        created_at: itemData.created_at || Math.floor(Date.now() / 1000),
+      };
+      console.log("addItem received:", newItem);
 
       // 이미지 처리
       if (newItem.type === "img") {
@@ -47,21 +58,10 @@ class DataRepositoryModule extends EventEmitter {
       if (target === "local" || target === "both") {
         const localItem = {
           ...newItem,
-          content:
-            newItem.type === "img"
-              ? newItem.imageMeta.file_path
-              : newItem.content,
           shared: target === "both" ? "cloud" : "local",
         };
 
         this.localDB.insertClipboardItem(localItem);
-
-        if (newItem.type === "img") {
-          this.localDB.insertImageMeta({
-            data_id: id,
-            ...newItem.imageMeta,
-          });
-        }
       }
 
       // 클라우드 저장
@@ -70,9 +70,10 @@ class DataRepositoryModule extends EventEmitter {
           await this.cloudDB.createTextItem(newItem);
         } else if (newItem.type === "img") {
           await this.cloudDB.uploadImage(
-            newItem.imageMeta.file_path,
+            newItem.id,
+            newItem.content,
             newItem.format,
-            Math.floor(Date.now() / 1000)
+            newItem.created_at
           );
         }
       }
@@ -86,35 +87,35 @@ class DataRepositoryModule extends EventEmitter {
 
   // 이미지 파일 처리 메서드
   async processImageFiles(item) {
-    const originalDir = path.join(this.uploadDir, "original");
+    // const originalDir = path.join(this.uploadDir, "original");
     const thumbnailDir = path.join(this.uploadDir, "thumbnail");
 
-    await fs.ensureDir(originalDir);
+    // await fs.ensureDir(originalDir);
     await fs.ensureDir(thumbnailDir);
 
-    const fileExt = path.extname(item.imageMeta.file_path);
-    const originalFileName = `${item.id}${fileExt}`;
+    const fileExt = path.extname(item.content);
+    // const originalFileName = `${item.id}${fileExt}`;
     const thumbnailFileName = `${item.id}_thumb${fileExt}`;
 
     // 1. 원본 이미지 저장
-    const originalPath = path.join(originalDir, originalFileName);
-    await fs.copy(item.imageMeta.file_path, originalPath);
+    // const originalPath = path.join(originalDir, originalFileName);
+    // await fs.copy(item.imageMeta.file_path, originalPath);
 
     // 2. 썸네일 생성 (300px width)
     const thumbnailPath = path.join(thumbnailDir, thumbnailFileName);
-    await sharp(originalPath)
+    await sharp(item.content)
       .resize({ width: 300, fit: "inside" })
       .toFile(thumbnailPath);
 
     // 3. 메타데이터 계산
-    const metadata = await sharp(originalPath).metadata();
-    const stats = await fs.stat(originalPath);
+    const metadata = await sharp(item.content).metadata();
+    const stats = await fs.stat(item.content);
 
     item.imageMeta = {
       width: metadata.width,
       height: metadata.height,
       file_size: stats.size,
-      file_path: originalPath,
+      file_path: item.content,
       thumbnail_path: thumbnailPath,
       format: metadata.format,
     };
@@ -469,31 +470,6 @@ class DataRepositoryModule extends EventEmitter {
       file_path: originalPath,
       thumbnail_path: thumbnailPath,
     });
-  }
-
-  // 이미지 업로드
-  async uploadImage(itemData) {
-    try {
-      // 로컬 저장
-      const localMeta = await this.localDB.saveImage(itemData);
-
-      // 클라우드 업로드
-      const cloudMeta = await this.cloudDB.uploadImage(
-        localMeta.file_path,
-        localMeta.format
-      );
-
-      // 메타데이터 병합
-      return {
-        ...localMeta,
-        cloud_url: cloudMeta.url,
-        thumbnail_url: cloudMeta.thumbnail_url,
-      };
-    } catch (error) {
-      // 롤백 로직 추가
-      await this.localDB.deleteImage(localMeta.id);
-      throw error;
-    }
   }
 
   // 태그 동기화

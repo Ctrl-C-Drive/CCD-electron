@@ -1,11 +1,35 @@
 // ccd-main/clipboard/monitor.js
 // 1초 단위로 클립보드를 폴링해서 변경된 내용이 있으면 콜백 호출
 
-const { clipboard } = require('electron');
-const { v4: uuidv4 } = require('uuid');
+const { clipboard, app } = require("electron");
+const { v4: uuidv4 } = require("uuid");
+const path = require("path");
+const os = require("os");
+const fs = require("fs-extra");
+const crypto = require("crypto");
+
+const documentsDir = app.getPath("documents");
+const imageDir = path.join(documentsDir, "CCD", "clipboard_images");
+fs.ensureDirSync(imageDir);
 
 let lastData = null;
 let intervalId = null;
+let isProcessingImage = false;
+let lastImageHash = null;
+function saveImageToDisk(nativeImage, id) {
+  const filePath = path.join(imageDir, `${id}.png`);
+  const buffer = nativeImage.toPNG();
+
+  fs.promises
+    .writeFile(filePath, buffer)
+    .then(() => console.log(`Image saved: ${filePath}`))
+    .catch((err) => console.error("Image save failed:", err));
+  return filePath;
+}
+function getImageHash(nativeImage) {
+  const buffer = nativeImage.toPNG();
+  return crypto.createHash("sha256").update(buffer).digest("hex");
+}
 
 /**
  * 폴링을 시작합니다.
@@ -21,33 +45,64 @@ function start(onData) {
       const text = clipboard.readText();
       let contentType, content;
       if (text && text !== lastData) {
-        contentType = 'text';
+        contentType = "text";
         content = text;
-      } else {
-        // 텍스트가 없거나 변경 없으면 이미지 체크
-        const image = clipboard.readImage();
-        // PNG 포맷으로 인코딩
-        const pngBase64 = image.toPNG().toString('base64');
-        if (pngBase64 && pngBase64 !== lastData) {
-          contentType = 'image';
-          content = pngBase64;
-        }
-      }
-
-      if (content && content !== lastData) {
         lastData = content;
+
         const payload = {
           id: uuidv4(),
           content,
           metadata: {
             type: contentType,
-            timestamp: Date.now(),
+            timestamp: Math.floor(Date.now() / 1000),
           },
         };
         onData(payload);
+        return;
       }
+
+      // 2. 이미지 체크 (동기 처리)
+      const image = clipboard.readImage();
+      if (!image.isEmpty() && !isProcessingImage) {
+        const currentHash = getImageHash(image);
+        if (currentHash === lastImageHash) {
+          // 같은 이미지이므로 무시
+          return;
+        }
+        lastImageHash = currentHash;
+        isProcessingImage = true;
+        const id = uuidv4();
+        const filePath = saveImageToDisk(image, id);
+
+        // 즉시 메타데이터 전달
+        const payload = {
+          id,
+          content: filePath,
+          metadata: {
+            type: "image",
+            timestamp: Math.floor(Date.now() / 1000),
+          },
+        };
+
+        lastData = filePath;
+        onData(payload);
+        isProcessingImage = false;
+      }
+
+      // if (content && content !== lastData) {
+      //   lastData = content;
+      //   const payload = {
+      //     id: uuidv4(),
+      //     content,
+      //     metadata: {
+      //       type: contentType,
+      //       timestamp: Date.now(),
+      //     },
+      //   };
+      //   onData(payload);
+      // }
     } catch (err) {
-      console.error('Clipboard monitor error:', err);
+      console.error("Clipboard monitor error:", err);
     }
   }, 1000);
 }

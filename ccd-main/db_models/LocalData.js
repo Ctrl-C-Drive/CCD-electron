@@ -76,6 +76,17 @@ class LocalDataModule {
   }
   // 클립보드 항목 추가
   insertClipboardItem(item) {
+    console.log("insertClipboardItem params:", {
+      format: item.format,
+      id: item.id,
+      content: item.content,
+      created_at: item.created_at,
+      typeof_created_at: typeof item.created_at,
+    });
+    item.created_at =
+      item.created_at instanceof Date
+        ? item.created_at.toISOString()
+        : item.created_at;
     try {
       const stmt = this.db.prepare(`
         INSERT INTO clipboard (id, type, format, content, created_at, shared)
