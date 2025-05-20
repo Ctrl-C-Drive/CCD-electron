@@ -1,26 +1,30 @@
-const CloudDataModule = require("./db_models/CloudData");
+require('dotenv').config();
+const crypto = require('crypto');
+const { registerUser } = require('./auth/authService'); // 예: cloud-auth.js
 
-async function testSignup() {
-  // API 기본 설정 예시
-  const config = {
-    apiBaseURL: "http://localhost:8000",
-    authToken: null,
-    refreshToken: null,
-  };
+const AES_KEY = Buffer.from(process.env.AES_KEY, 'hex');
+const AES_IV = Buffer.from(process.env.AES_IV, 'hex');
 
-  const cloudModule = new CloudDataModule(config);
-
-  // 회원가입이 없다면 로그인 테스트 (예시)
-  try {
-    const credentials = {
-      user_id: "testuser",
-      password: "password123",
-    };
-    const result = await cloudModule.login(credentials);
-    console.log("로그인 성공:", result);
-  } catch (err) {
-    console.error("로그인 실패:", err);
-  }
+function encryptAES(text) {
+  const cipher = crypto.createCipheriv('aes-256-cbc', AES_KEY, AES_IV);
+  let encrypted = cipher.update(text, 'utf8', 'base64');
+  encrypted += cipher.final('base64');
+  return encrypted;
 }
 
-testSignup();
+(async () => {
+  const userId = 'testuser123';
+  const password = 'testpassword123';
+
+  const encryptedId = encryptAES(userId);
+  const encryptedPwd = encryptAES(password);
+
+
+  try {
+    console.log(encryptedId)
+    const result = await registerUser(encryptedId, encryptedPwd);
+    console.log('✅ 로그인 성공:', result);
+  } catch (err) {
+    console.error('❌ 로그인 실패:', err.code, err.message);
+  }
+})();
