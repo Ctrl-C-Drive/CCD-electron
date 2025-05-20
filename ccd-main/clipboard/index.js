@@ -65,10 +65,8 @@ function startMonitoring() {
  * 렌더러에 현재 클라우드 업로드 상태 전송
  */
 function notifyRenderer() {
-  const [win] = BrowserWindow.getAllWindows();
-  if (win && win.webContents) {
-    win.webContents.send('clipboard-upload-status', cloudUploadEnabled);
-  }
+  ipcMain.emit('clipboard-upload-status', cloudUploadEnabled);
 }
+
 
 module.exports = { initClipboardModule };
