@@ -3,17 +3,18 @@ const path = require("path");
 const { app } = require("electron");
 const Database = require("better-sqlite3");
 const crypto = require("crypto");
-db.pragma("foreign_keys = ON");
 
-class DatabaseManager {
+class LocalDataModule {
   constructor() {
     this.dbPath = path.join(app.getPath("userData"), "clipboard-manager.db");
     // this.encryptionKey = "secure-key-1234"; // 실제 배포 시 환경변수로 관리
     this.db = null;
+    this._initialize();
   }
-  initialize() {
+  _initialize() {
     try {
       this.db = new Database(this.dbPath);
+      this.db.pragma("foreign_keys = ON");
       // this._enableEncryption();
       this._createTables();
       this._createIndexes();
@@ -23,12 +24,10 @@ class DatabaseManager {
       throw error;
     }
   }
+
   // _enableEncryption() {
-  //   const keyBuffer = crypto
-  //     .createHash("sha256")
-  //     .update(this.encryptionKey)
-  //     .digest();
-  //   this.db.pragma(`key='${keyBuffer.toString("hex")}'`);
+  //   const keyBuffer = crypto.scryptSync(this.encryptionKey, "salt", 32); // 더 안전한 키 생성
+  //   this.db.pragma(`key=x'${keyBuffer.toString("hex")}'`); // 바이너리 방식으로 전달
   // }
   _createTables() {
     this.db.exec(`
@@ -64,76 +63,245 @@ class DatabaseManager {
         tag_id TEXT NOT NULL,
         CONSTRAINT data_tag_pk PRIMARY KEY (data_id,tag_id),
         CONSTRAINT data_tag_clipboard_FK_1 FOREIGN KEY (data_id) REFERENCES clipboard(id) ON DELETE CASCADE,
-        CONSTRAINT data_tag_tag_FK_1 FOREIGN KEY (tag_id) REFERENCES tag(gb_id) ON DELETE CASCADE ON UPDATE CASCADE
+        CONSTRAINT data_tag_tag_FK_1 FOREIGN KEY (tag_id) REFERENCES tag(tag_id) ON DELETE CASCADE ON UPDATE CASCADE
       );
     `);
   }
   _createIndexes() {
     this.db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_clipboard_created ON clipboard(created_at);
+      CREATE INDEX IF NOT EXISTS idx_tag_name ON tag(name);
+      CREATE INDEX IF NOT EXISTS idx_data_tag ON data_tag(data_id, tag_id);
     `);
   }
-  create(tableName, data) {
+  // 클립보드 항목 추가
+  insertClipboardItem(item) {
     try {
-      const keys = Object.keys(data);
-      const values = Object.values(data);
-      const placeholders = keys.map(() => "?").join(", ");
-      const sql = `INSERT INTO ${tableName} (${keys.join(
-        ", "
-      )}) VALUES (${placeholders})`;
-      const stmt = this.db.prepare(sql);
-      stmt.run(...values);
-      return { ...data };
-    } catch (err) {
-      console.error(`Create Error (${tableName}):`, err);
-      throw { code: "E654", message: "데이터 생성 실패" };
+      const stmt = this.db.prepare(`
+        INSERT INTO clipboard (id, type, format, content, created_at, shared)
+        VALUES (@id, @type, @format, @content, @created_at, @shared)
+      `);
+      stmt.run(item);
+    } catch (error) {
+      throw this.handleError(error, "클립보드 항목 삽입 실패");
+    }
+  }
+  delete(table, whereClause) {
+    const keys = Object.keys(whereClause);
+    const conditions = keys.map((k) => `${k} = ?`).join(" AND ");
+    const stmt = this.db.prepare(`DELETE FROM ${table} WHERE ${conditions}`);
+    stmt.run(...keys.map((k) => whereClause[k]));
+  }
+  //클립보드 항목 삭제
+  deleteClipboardItem(id) {
+    const deleteChain = this.db.transaction((id) => {
+      this.delete("data_tag", { data_id: id });
+      this.delete("image_meta", { data_id: id });
+      this.delete("clipboard", { id: id });
+    });
+    deleteChain(id);
+  }
+  // 이미지 메타데이터 조회
+  getImageMeta(dataId) {
+    try {
+      return this.db
+        .prepare(
+          `
+        SELECT * FROM image_meta WHERE data_id = ?
+      `
+        )
+        .get(dataId);
+    } catch (error) {
+      throw this.handleError(error, "이미지 메타데이터 조회 실패");
     }
   }
 
-  read(tableName, condition = {}) {
+  // 이미지 메타 삽입
+  insertImageMeta(meta) {
     try {
-      const keys = Object.keys(condition);
-      const values = Object.values(condition);
-      const whereClause =
-        keys.length > 0
-          ? "WHERE " + keys.map((key) => `${key} = ?`).join(" AND ")
-          : "";
-      const sql = `SELECT * FROM ${tableName} ${whereClause}`;
-      return this.db.prepare(sql).all(...values);
-    } catch (err) {
-      console.error(`Read Error (${tableName}):`, err);
-      throw { code: "E655", message: "데이터 조회 실패" };
+      const stmt = this.db.prepare(`
+        INSERT INTO image_meta (data_id, width, height, file_size, file_path, thumbnail_path)
+        VALUES (@data_id, @width, @height, @file_size, @file_path, @thumbnail_path)
+      `);
+      stmt.run(meta);
+    } catch (error) {
+      throw this.handleError(error, "이미지 메타 삽입 실패");
+    }
+  }
+  // 태그 삽입
+  insertTag(tag) {
+    try {
+      const stmt = this.db.prepare(`
+        INSERT OR IGNORE INTO tag (tag_id, name, source, sync_status)
+        VALUES (@tag_id, @name, @source, @sync_status)
+      `);
+      stmt.run(tag);
+    } catch (error) {
+      throw this.handleError(error, "태그 삽입 실패");
+    }
+  }
+  // 태그 동기화 상태 변경
+  updateTagSyncStatus(tagId, newStatus) {
+    try {
+      if (!["synced", "pending"].includes(newStatus)) {
+        throw new Error("sync_status는 'synced' 또는 'pending'만 허용됩니다.");
+      }
+
+      const stmt = this.db.prepare(`
+      UPDATE tag SET sync_status = ? WHERE tag_id = ?
+    `);
+      const result = stmt.run(newStatus, tagId);
+
+      if (result.changes === 0) {
+        throw new Error(`tag_id ${tagId}에 해당하는 태그가 존재하지 않습니다.`);
+      }
+
+      return {
+        success: true,
+        message: `태그(${tagId})의 sync_status가 '${newStatus}'로 변경되었습니다.`,
+      };
+    } catch (error) {
+      throw this.handleError(error, "태그 동기화 상태 변경 실패");
+    }
+  }
+  // name과 source로 태그 조회
+  getTagByNameAndSource(name, source) {
+    try {
+      const stmt = this.db.prepare(`
+        SELECT * FROM tag 
+        WHERE name = ? AND source = ?
+        COLLATE NOCASE
+      `);
+      return stmt.get(name, source);
+    } catch (error) {
+      throw this.handleError(error, "태그 조회 실패");
+    }
+  }
+  //태그 id 변경
+  updateTagId(oldId, newId) {
+    try {
+      const tx = this.db.transaction((oldId, newId) => {
+        // 기존 태그가 존재하는지 확인
+        const existing = this.db
+          .prepare(`SELECT * FROM tag WHERE tag_id = ?`)
+          .get(oldId);
+        if (!existing) throw new Error(`Tag with ID ${oldId} does not exist`);
+
+        // 새로운 ID가 이미 존재하면 충돌이 발생하므로 예외 처리
+        const conflict = this.db
+          .prepare(`SELECT * FROM tag WHERE tag_id = ?`)
+          .get(newId);
+        if (conflict) throw new Error(`Tag with ID ${newId} already exists`);
+
+        // 먼저 태그 ID 변경
+        this.db
+          .prepare(
+            `
+          UPDATE tag SET tag_id = ? WHERE tag_id = ?
+        `
+          )
+          .run(newId, oldId);
+
+        // 연결된 data_tag도 ID 변경
+        this.db
+          .prepare(
+            `
+          UPDATE data_tag SET tag_id = ? WHERE tag_id = ?
+        `
+          )
+          .run(newId, oldId);
+      });
+
+      tx(oldId, newId);
+      return {
+        success: true,
+        message: `Tag ID updated from ${oldId} to ${newId}`,
+      };
+    } catch (error) {
+      throw this.handleError(error, "태그 ID 변경 실패");
     }
   }
 
-  update(tableName, condition, data) {
+  // 데이터-태그 연결
+  insertDataTag(dataId, tagId) {
     try {
-      const setClause = Object.keys(data)
-        .map((k) => `${k} = ?`)
-        .join(", ");
-      const whereClause = Object.keys(condition)
-        .map((k) => `${k} = ?`)
-        .join(" AND ");
-      const sql = `UPDATE ${tableName} SET ${setClause} WHERE ${whereClause}`;
-      const stmt = this.db.prepare(sql);
-      stmt.run(...[...Object.values(data), ...Object.values(condition)]);
-      return { ...condition, ...data };
-    } catch (err) {
-      console.error(`Update Error (${tableName}):`, err);
-      throw { code: "E656", message: "데이터 수정 실패" };
+      const stmt = this.db.prepare(`
+        INSERT OR IGNORE INTO data_tag (data_id, tag_id)
+        VALUES (?, ?)
+      `);
+      stmt.run(dataId, tagId);
+    } catch (error) {
+      throw this.handleError(error, "데이터-태그 연결 실패");
     }
   }
-
-  delete(tableName, condition) {
+  // 항목 조회
+  getClipboardItem(id) {
     try {
-      const keys = Object.keys(condition);
-      const values = Object.values(condition);
-      const whereClause = keys.map((key) => `${key} = ?`).join(" AND ");
-      const sql = `DELETE FROM ${tableName} WHERE ${whereClause}`;
-      const result = this.db.prepare(sql).run(...values);
-      return result.changes;
-    } catch (err) {
-      console.error(`Delete Error (${tableName}):`, err);
-      throw { code: "E650", message: "데이터 삭제 실패" };
+      const item = this.db
+        .prepare(`SELECT * FROM clipboard WHERE id = ?`)
+        .get(id);
+      if (!item) return null;
+      const meta = this.db
+        .prepare(`SELECT * FROM image_meta WHERE data_id = ?`)
+        .get(id);
+      const tags = this.db
+        .prepare(
+          `
+        SELECT t.* FROM tag t
+        JOIN data_tag dt ON t.tag_id = dt.tag_id
+        WHERE dt.data_id = ?
+      `
+        )
+        .all(id);
+      return this.transformItem(item, meta, tags);
+    } catch (error) {
+      throw this.handleError(error, "클립보드 아이템 조회 실패");
     }
+  }
+  // 공통 에러 핸들러
+  handleError(error, defaultMessage) {
+    console.error(error);
+    return {
+      code: "E500",
+      message: defaultMessage,
+      details: error.message,
+    };
+  }
+
+  // 변환 함수 (CloudDataModule과 일관되게)
+  transformItem(item, imageMeta = null, tags = []) {
+    return {
+      ...item,
+      imageMeta: imageMeta
+        ? {
+            ...imageMeta,
+            originalUrl: `file://${imageMeta.file_path}`,
+            thumbnailUrl: imageMeta.thumbnail_path
+              ? `file://${imageMeta.thumbnail_path}`
+              : null,
+          }
+        : null,
+      tags: tags || [],
+    };
+  }
+  // 공유 상태 업데이트
+  updateSharedStatus(id, shared) {
+    const stmt = this.db.prepare(`
+      UPDATE clipboard SET shared = ? WHERE id = ?
+    `);
+    stmt.run(shared, id);
+  }
+
+  // 이미지 메타데이터 조회
+  getImageMeta(dataId) {
+    return this.db
+      .prepare(
+        `
+      SELECT * FROM image_meta WHERE data_id = ?
+    `
+      )
+      .get(dataId);
   }
 }
+
+module.exports = LocalDataModule;
