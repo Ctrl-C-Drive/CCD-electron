@@ -4,6 +4,65 @@ import './App.css'
 import './index.css'
 const options = ['일반 검색', '고급 검색'];
 
+  const LoginModal = () => {
+  const [showLogin, setShowLogin] = useState(false);
+  const ref = useRef(null);
+
+useEffect(() => {
+  function handleClickOutside(event) {
+    if (ref.current && !ref.current.contains(event.target)) {
+      setShowLogin(false);
+    }
+  }
+
+  document.addEventListener('mousedown', handleClickOutside);
+  return () => document.removeEventListener('mousedown', handleClickOutside);
+}, []);
+
+
+  return (
+    <div className="relative inline-block">
+      {/* 아바타 */}
+      <div
+        className="ml-3 w-8 h-8 border-2 border-blue-700 rounded-full cursor-pointer"
+        onClick={() => setShowLogin(!showLogin)}
+      />
+
+      {/* 로그인 모달 */}
+      {showLogin && (
+        <div
+          ref={ref}
+          className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg p-4 z-10"
+        >
+          <div className="text-center text-blue-700 font-semibold mb-3">Login</div>
+          <div className="flex flex-col gap-2">
+            <label className="text-sm text-blue-800 flex justify-between items-center">
+              ID
+              <input
+                type="text"
+                placeholder="ID"
+                defaultValue="Hello1355"
+                className="ml-2 px-2 py-1 rounded-md bg-gray-100 text-gray-800 flex-1"
+              />
+            </label>
+            <label className="text-sm text-blue-800 flex justify-between items-center">
+              PW
+              <input
+                type="password"
+                placeholder="Password"
+                defaultValue="password"
+                className="ml-2 px-2 py-1 rounded-md bg-gray-100 text-gray-800 flex-1"
+              />
+            </label>
+          </div>
+          <button className="mt-3 text-sm text-blue-700 underline w-full text-center">
+            Login
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
   const SettingModal = () => {
     const [isVisible, setIsVisible] = useState(false);
     const [retentionOpen, setRetentionOpen] = useState(false);
@@ -440,6 +499,7 @@ const SearchBar =() => {
           {/* 프로필 */}
         </div>
         <div className="ml-3 w-8 h-8 border-2 border-blue-700 rounded-full"></div>
+            <LoginModal />
     </div>
   );
 
