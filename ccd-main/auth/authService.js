@@ -3,6 +3,8 @@ const axios = require('axios');
 const crypto = require('crypto');
 const bcrypt = require('bcrypt');
 
+const cloudDB = require("../db_models/CloudData");
+
 const { AES_KEY, AES_IV, CLOUD_SERVER_URL } = process.env;
 if (!AES_KEY || !AES_IV) throw new Error('환경 변수 AES_KEY 또는 AES_IV가 설정되지 않았습니다.');
 if (!CLOUD_SERVER_URL) throw new Error('환경 변수 CLOUD_SERVER_URL이 설정되지 않았습니다.');
@@ -30,14 +32,19 @@ async function registerUser(encryptedId, encryptedPwd) {
     // 1) AES 복호화
     const userId = decryptAES(encryptedId);
     const password = decryptAES(encryptedPwd);
+    console.log(userId)
+    const result = await cloudDB.signup(userId, password);
+
+    // 3) 결과 반환
+    return { JoinResult: result?.JoinResult ?? true };
     // 2) 비밀번호 bcrypt 해싱
-    const hashedPwd = await bcrypt.hash(password, 10);
-    // 3) CloudServerModule 호출
-    const res = await axios.post(
-      `${CLOUD_SERVER_URL}/auth/signup`,
-      { userId, password: hashedPwd }
-    );
-    return { JoinResult: res.data.JoinResult ?? res.data.joinResult ?? true };
+    // const hashedPwd = await bcrypt.hash(password, 10);
+    // // 3) CloudServerModule 호출
+    // const res = await axios.post(
+    //   `${CLOUD_SERVER_URL}/auth/signup`,
+    //   { userId, password: hashedPwd }
+    // );
+    // return { JoinResult: res.data.JoinResult ?? res.data.joinResult ?? true };
   } catch (err) {
     const code = err.response?.data?.errorCode || err.code;
     switch (code) {
@@ -60,9 +67,10 @@ async function authenticate(encryptedId, encryptedPwd) {
     // 1) AES 복호화
     const userId = decryptAES(encryptedId);
     const password = decryptAES(encryptedPwd);
+
     // 2) 비밀번호 bcrypt 해싱
-    const res = await axios.post(`${CLOUD_SERVER_URL}/auth/login`, { userId, password });
-    return { loginResult: true, accessToken: res.data.accessToken };
+    // const res = await axios.post(`${CLOUD_SERVER_URL}/auth/login`, { userId, password });
+    // return { loginResult: true, accessToken: res.data.accessToken };
   } catch (err) {
     const code = err.response?.data?.errorCode || err.code;
     switch (code) {
