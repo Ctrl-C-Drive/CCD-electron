@@ -472,15 +472,28 @@ class DataRepositoryModule extends EventEmitter {
   }
 
   // 이미지 업로드
-  async uploadImage(localItem) {
-    const imageMeta = this.localDB.getImageMeta(localItem.id);
-    const filePath = imageMeta.file_path.replace("file://", "");
+  async uploadImage(itemData) {
+    try {
+      // 로컬 저장
+      const localMeta = await this.localDB.saveImage(itemData);
 
-    await this.cloudDB.uploadImage(
-      filePath,
-      localItem.format,
-      Math.floor(Date.now() / 1000)
-    );
+      // 클라우드 업로드
+      const cloudMeta = await this.cloudDB.uploadImage(
+        localMeta.file_path,
+        localMeta.format
+      );
+
+      // 메타데이터 병합
+      return {
+        ...localMeta,
+        cloud_url: cloudMeta.url,
+        thumbnail_url: cloudMeta.thumbnail_url,
+      };
+    } catch (error) {
+      // 롤백 로직 추가
+      await this.localDB.deleteImage(localMeta.id);
+      throw error;
+    }
   }
 
   // 태그 동기화

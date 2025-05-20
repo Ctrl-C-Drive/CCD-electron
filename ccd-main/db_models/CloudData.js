@@ -84,14 +84,14 @@ class CloudDataModule {
       refreshToken: tokens.refresh_token,
     };
   }
-
-  // 로그인 메서드 추가
+  // 로그인 메서드
   async login(credentials) {
     try {
       const response = await axios.post(
         `${this.apiBaseURL}/login`,
         credentials
       );
+      console.log("sent");
       this.updateTokenStorage({
         access_token: response.data.access_token,
         refresh_token: response.data.refresh_token,
@@ -120,12 +120,9 @@ class CloudDataModule {
       throw error;
     }
   }
-  async signup(userId, password) {
+  async signup(userData) {
     try {
-      const response = await this.axiosInstance.post("/signup", {
-        user_id: userId,
-        password: password,
-      });
+      const response = await this.axiosInstance.post("/signup", userData);
       return response.data;
     } catch (error) {
       throw this.handleError(error, "회원가입 실패");
