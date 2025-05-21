@@ -271,6 +271,7 @@ class DataRepositoryModule extends EventEmitter {
       let finalTagId = uuidv4();
       let cloudTagId = null;
       let needLocalUpdate = false;
+      let sync_status = "pending";
 
       // 1. 클라우드 동기화 먼저 시도
       if (target === "cloud" || target === "both") {
@@ -278,6 +279,7 @@ class DataRepositoryModule extends EventEmitter {
           const cloudTag = await this.cloudDB.createTag(tagData);
           cloudTagId = cloudTag.tag_id;
           finalTagId = cloudTagId; // 클라우드 ID를 기본으로 사용
+          sync_status = "synced";
         } catch (error) {
           console.error("클라우드 태그 생성 실패:", error);
           throw error;
@@ -286,6 +288,9 @@ class DataRepositoryModule extends EventEmitter {
 
       // 2. 로컬 처리
       if (target === "local" || target === "both") {
+        if (cloudTagId == null) {
+          sync_status = "pending";
+        }
         // 로컬에서 기존 태그 확인 (name/source 기준)
         const existingLocalTag = this.localDB.getTagByNameAndSource(
           tagData.name,
@@ -299,6 +304,7 @@ class DataRepositoryModule extends EventEmitter {
               `태그 ID 충돌 감지: 로컬 ${existingLocalTag.tag_id} ↔ 클라우드 ${finalTagId}`
             );
             this.localDB.updateTagId(existingLocalTag.tag_id, finalTagId);
+            this.localDB.updateSyncStatus(finalTagId, "synced");
             needLocalUpdate = true;
           }
         } else {
@@ -306,7 +312,7 @@ class DataRepositoryModule extends EventEmitter {
           this.localDB.insertTag({
             tag_id: finalTagId,
             ...tagData,
-            sync_status: "synced",
+            sync_status: sync_status,
           });
           needLocalUpdate = true;
         }
@@ -320,7 +326,7 @@ class DataRepositoryModule extends EventEmitter {
       return {
         tag_id: finalTagId,
         ...tagData,
-        sync_status: "synced",
+        sync_status: sync_status,
       };
     } catch (error) {
       this.handleSyncError(error, "태그 추가 실패");
