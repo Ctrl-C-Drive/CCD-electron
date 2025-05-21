@@ -125,7 +125,7 @@ class DataRepositoryModule extends EventEmitter {
           { name: "URL / 도메인", regex: /https?:\/\/[^\s/$.?#].[^\s]*/ },
           { name: "IPv4 주소", regex: /\b(?:\d{1,3}\.){3}\d{1,3}\b/ },
           { name: "날짜", regex: /\b\d{4}[-\/.]\d{1,2}[-\/.]\d{1,2}\b/ },
-          { name: "시간", regex: /\b\d{1,2}:\d{2}\b/ },
+          { name: "시간", regex: /\b(?:[01]?\d|2[0-3]):[0-5]\d\b/ },
           { name: "우편번호", regex: /\b\d{5}(-\d{4})?\b/ },
           { name: "주민등록번호", regex: /\b\d{6}-\d{7}\b/ },
           { name: "신용카드 번호", regex: /\b(?:\d{4}[- ]?){3}\d{4}\b/ },
