@@ -1,22 +1,29 @@
-require('dotenv').config();
-const axios = require('axios');
-const crypto = require('crypto');
-const bcrypt = require('bcrypt');
-const cloudDB = require("../db_models/CloudData");
+
+require("dotenv").config();
+const axios = require("axios");
+const crypto = require("crypto");
+const bcrypt = require("bcrypt");
 
 const { AES_KEY, AES_IV, CLOUD_SERVER_URL } = process.env;
-if (!AES_KEY || !AES_IV) throw new Error('환경 변수 AES_KEY 또는 AES_IV가 설정되지 않았습니다.');
-if (!CLOUD_SERVER_URL) throw new Error('환경 변수 CLOUD_SERVER_URL이 설정되지 않았습니다.');
+if (!AES_KEY || !AES_IV)
+  throw new Error("환경 변수 AES_KEY 또는 AES_IV가 설정되지 않았습니다.");
+if (!CLOUD_SERVER_URL)
+  throw new Error("환경 변수 CLOUD_SERVER_URL이 설정되지 않았습니다.");
+
+const CloudDataModule = require("../db_models/CloudData");
+const cloudDB = new CloudDataModule({
+  apiBaseURL: CLOUD_SERVER_URL,
+});
 
 // AES-256-CBC 복호화 함수
 function decryptAES(encrypted) {
   const decipher = crypto.createDecipheriv(
-    'aes-256-cbc',
-    Buffer.from(AES_KEY, 'hex'),
-    Buffer.from(AES_IV, 'hex')
+    "aes-256-cbc",
+    Buffer.from(AES_KEY, "hex"),
+    Buffer.from(AES_IV, "hex")
   );
-  let decrypted = decipher.update(encrypted, 'base64', 'utf8');
-  decrypted += decipher.final('utf8');
+  let decrypted = decipher.update(encrypted, "base64", "utf8");
+  decrypted += decipher.final("utf8");
   return decrypted;
 }
 
@@ -31,25 +38,31 @@ async function registerUser(encryptedId, encryptedPwd) {
     // 1) AES 복호화
     const userId = decryptAES(encryptedId);
     const password = decryptAES(encryptedPwd);
-    console.log(userId)
-    const result = await cloudDB.signup(userId, password);
 
-    // 3) 결과 반환
-    return { JoinResult: result?.JoinResult ?? true };
+
     // 2) 비밀번호 bcrypt 해싱
     // const hashedPwd = await bcrypt.hash(password, 10);
-    // // 3) CloudServerModule 호출
-    // const res = await axios.post(
-    //   `${CLOUD_SERVER_URL}/auth/signup`,
-    //   { userId, password: hashedPwd }
-    // );
-    // return { JoinResult: res.data.JoinResult ?? res.data.joinResult ?? true };
+    // CloudDataModule 사용하여 회원가입
+
+    const result = await cloudDB.signup({
+      user_id: userId,
+      password: password,
+    });
+
+    return { JoinResult: result?.JoinResult ?? true };
   } catch (err) {
     const code = err.response?.data?.errorCode || err.code;
     switch (code) {
-      case 'E409': err.code = 'E409'; err.message = '이미 존재하는 사용자입니다.'; break;
-      case 'E611': err.code = 'E611'; break;
-      default: err.code = 'E632'; err.message = '회원가입 처리 중 오류가 발생했습니다.';
+      case "E409":
+        err.code = "E409";
+        err.message = "이미 존재하는 사용자입니다.";
+        break;
+      case "E611":
+        err.code = "E611";
+        break;
+      default:
+        err.code = "E632";
+        err.message = "회원가입 처리 중 오류가 발생했습니다.";
     }
     throw err;
   }
@@ -67,16 +80,33 @@ async function authenticate(encryptedId, encryptedPwd) {
     const userId = decryptAES(encryptedId);
     const password = decryptAES(encryptedPwd);
 
-
     // 2) 비밀번호 bcrypt 해싱
-    // const res = await axios.post(`${CLOUD_SERVER_URL}/auth/login`, { userId, password });
-    // return { loginResult: true, accessToken: res.data.accessToken };
+    // const hashedPwd = await bcrypt.hash(password, 10);
+    console.log(userId, password);
+
+    const result = await cloudDB.login({
+      user_id: userId,
+      password: password,
+    });
+
+    return {
+      loginResult: true,
+      access_token: result.access_token,
+      refresh_token: result.refresh_token,
+    };
   } catch (err) {
     const code = err.response?.data?.errorCode || err.code;
     switch (code) {
-      case 'E401': err.code = 'E401'; err.message = '인증에 실패했습니다. 아이디 또는 비밀번호를 확인하세요.'; break;
-      case 'E611': err.code = 'E611'; break;
-      default: err.code = 'E610'; err.message = '로그인 처리 중 오류가 발생했습니다.';
+      case "E401":
+        err.code = "E401";
+        err.message = "인증에 실패했습니다. 아이디 또는 비밀번호를 확인하세요.";
+        break;
+      case "E611":
+        err.code = "E611";
+        break;
+      default:
+        err.code = "E610";
+        err.message = "로그인 처리 중 오류가 발생했습니다.";
     }
     throw err;
   }

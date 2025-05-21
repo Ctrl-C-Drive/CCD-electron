@@ -65,7 +65,24 @@ class LocalDataModule {
         CONSTRAINT data_tag_clipboard_FK_1 FOREIGN KEY (data_id) REFERENCES clipboard(id) ON DELETE CASCADE,
         CONSTRAINT data_tag_tag_FK_1 FOREIGN KEY (tag_id) REFERENCES tag(tag_id) ON DELETE CASCADE ON UPDATE CASCADE
       );
+      CREATE TABLE IF NOT EXISTS config(
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        local_limit INTEGER DEFAULT 30, 
+        day_limit INTEGER DEFAULT 30,
+        last_modified INTEGER DEFAULT 0
+      );
     `);
+    this._initializeDefaultConfig();
+  }
+  _initializeDefaultConfig() {
+    try {
+      const insertStmt = this.db.prepare(`
+        INSERT OR IGNORE INTO config (id) VALUES (1)
+      `);
+      insertStmt.run();
+    } catch (error) {
+      console.error("초기 설정 생성 실패:", error);
+    }
   }
   _createIndexes() {
     this.db.exec(`
@@ -74,8 +91,64 @@ class LocalDataModule {
       CREATE INDEX IF NOT EXISTS idx_data_tag ON data_tag(data_id, tag_id);
     `);
   }
+  // 설정 조회
+  getConfig() {
+    try {
+      return this.db
+        .prepare(
+          `
+      SELECT local_limit, day_limit, last_modified
+      FROM config
+      WHERE id = 1
+    `
+        )
+        .get();
+    } catch (error) {
+      throw this.handleError(error, "설정 조회 실패");
+    }
+  }
+  // 설정 업데이트 메서드
+  updateConfig(newConfig) {
+    const tx = this.db.transaction((config) => {
+      this.db
+        .prepare(
+          `
+          UPDATE config
+          SET 
+            local_limit = COALESCE($local_limit, local_limit),
+            day_limit = COALESCE($day_limit, day_limit),
+            last_modified = $last_modified
+          WHERE id = 1
+        `
+        )
+        .run({
+          local_limit: config.local_limit,
+          day_limit: config.day_limit,
+          last_modified: Math.floor(Date.now() / 1000), // 현재 시간으로 업데이트
+        });
+    });
+
+    try {
+      tx(newConfig);
+      return { success: true, message: "설정이 업데이트 되었습니다" };
+    } catch (error) {
+      throw this.handleError(error, "설정 업데이트 실패");
+    }
+  }
+
   // 클립보드 항목 추가
   insertClipboardItem(item) {
+    console.log("insertClipboardItem params:", {
+      format: item.format,
+      id: item.id,
+      content: item.content,
+      created_at: item.created_at,
+      typeof_created_at: typeof item.created_at,
+    });
+    item.created_at =
+      item.created_at instanceof Date
+        ? item.created_at.toISOString()
+        : item.created_at;
     try {
       const stmt = this.db.prepare(`
         INSERT INTO clipboard (id, type, format, content, created_at, shared)
@@ -118,6 +191,7 @@ class LocalDataModule {
 
   // 이미지 메타 삽입
   insertImageMeta(meta) {
+    console.log(meta.data_id);
     try {
       const stmt = this.db.prepare(`
         INSERT INTO image_meta (data_id, width, height, file_size, file_path, thumbnail_path)
@@ -301,6 +375,50 @@ class LocalDataModule {
     `
       )
       .get(dataId);
+  }
+  // 최대 항목 수 제한 적용
+  enforceMaxClipboardItems(maxItems) {
+    try {
+      const countRow = this.db
+        .prepare("SELECT COUNT(*) as count FROM clipboard")
+        .get();
+
+      if (countRow.count > maxItems) {
+        const deleteCount = countRow.count - maxItems;
+        this.db
+          .prepare(
+            `
+          DELETE FROM clipboard 
+          WHERE id IN (
+            SELECT id FROM clipboard 
+            ORDER BY created_at ASC 
+            LIMIT ?
+          )
+        `
+          )
+          .run(deleteCount);
+      }
+    } catch (error) {
+      throw this.handleError(error, "최대 항목 수 제한 실패");
+    }
+  }
+
+  // 지정 일수 이상된 데이터 삭제
+  deleteOldClipboardItems(retentionDays) {
+    try {
+      console.log("data deleted");
+      const cutoff = Math.floor(Date.now() / 1000) - retentionDays * 86400;
+      this.db
+        .prepare(
+          `
+        DELETE FROM clipboard 
+        WHERE created_at < ?
+      `
+        )
+        .run(cutoff);
+    } catch (error) {
+      throw this.handleError(error, "오래된 데이터 삭제 실패");
+    }
   }
 }
 

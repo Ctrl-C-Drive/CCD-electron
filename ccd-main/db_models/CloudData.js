@@ -84,14 +84,14 @@ class CloudDataModule {
       refreshToken: tokens.refresh_token,
     };
   }
-
-  // 로그인 메서드 추가
+  // 로그인 메서드
   async login(credentials) {
     try {
       const response = await axios.post(
         `${this.apiBaseURL}/login`,
         credentials
       );
+      console.log("sent");
       this.updateTokenStorage({
         access_token: response.data.access_token,
         refresh_token: response.data.refresh_token,
@@ -120,12 +120,9 @@ class CloudDataModule {
       throw error;
     }
   }
-  async signup(userId, password) {
+  async signup(userData) {
     try {
-      const response = await this.axiosInstance.post("/signup", {
-        user_id: userId,
-        password: password,
-      });
+      const response = await this.axiosInstance.post("/signup", userData);
       return response.data;
     } catch (error) {
       throw this.handleError(error, "회원가입 실패");
@@ -146,7 +143,6 @@ class CloudDataModule {
     try {
       const response = await this.axiosInstance.post("/items", {
         ...itemData,
-        id: uuidv4(),
       });
       return this.transformItem(response.data);
     } catch (error) {
@@ -242,7 +238,7 @@ class CloudDataModule {
   }
 
   // 이미지 업로드
-  async uploadImage(filePath, format, created_at) {
+  async uploadImage(id, filePath, format, created_at) {
     if (!fs.existsSync(filePath)) {
       throw {
         code: "E400",
@@ -252,7 +248,6 @@ class CloudDataModule {
     try {
       const formData = new FormData();
       const fileStream = fs.createReadStream(filePath);
-      const id = uuidv4();
 
       formData.append("file", fileStream);
       formData.append("id", id);
