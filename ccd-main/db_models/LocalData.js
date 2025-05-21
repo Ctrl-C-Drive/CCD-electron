@@ -191,6 +191,7 @@ class LocalDataModule {
 
   // 이미지 메타 삽입
   insertImageMeta(meta) {
+    console.log(meta.data_id);
     try {
       const stmt = this.db.prepare(`
         INSERT INTO image_meta (data_id, width, height, file_size, file_path, thumbnail_path)
@@ -405,7 +406,8 @@ class LocalDataModule {
   // 지정 일수 이상된 데이터 삭제
   deleteOldClipboardItems(retentionDays) {
     try {
-      const cutoff = Date.now() - retentionDays * 86400000; // 일→밀리초
+      console.log("data deleted");
+      const cutoff = Math.floor(Date.now() / 1000) - retentionDays * 86400;
       this.db
         .prepare(
           `

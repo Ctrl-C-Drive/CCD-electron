@@ -86,11 +86,6 @@ class DataRepositoryModule extends EventEmitter {
       };
       console.log("addItem received:", newItem);
 
-      // 이미지 처리
-      if (newItem.type === "img") {
-        await this.processImageFiles(newItem);
-      }
-
       // 로컬 저장
       if (target === "local" || target === "both") {
         const localItem = {
@@ -113,6 +108,79 @@ class DataRepositoryModule extends EventEmitter {
             newItem.format,
             newItem.created_at
           );
+        }
+      }
+      // 이미지 처리
+      if (newItem.type === "img") {
+        await this.processImageFiles(newItem);
+      }
+
+      if (newItem.type === "txt") {
+        const autoTagPatterns = [
+          {
+            name: "이메일 주소",
+            regex: /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/,
+          },
+          { name: "전화번호", regex: /\b\d{2,3}[-.\s]?\d{3,4}[-.\s]?\d{4}\b/ },
+          { name: "URL / 도메인", regex: /https?:\/\/[^\s/$.?#].[^\s]*/ },
+          { name: "IPv4 주소", regex: /\b(?:\d{1,3}\.){3}\d{1,3}\b/ },
+          { name: "날짜", regex: /\b\d{4}[-\/.]\d{1,2}[-\/.]\d{1,2}\b/ },
+          { name: "시간", regex: /\b\d{1,2}:\d{2}\b/ },
+          { name: "우편번호", regex: /\b\d{5}(-\d{4})?\b/ },
+          { name: "주민등록번호", regex: /\b\d{6}-\d{7}\b/ },
+          { name: "신용카드 번호", regex: /\b(?:\d{4}[- ]?){3}\d{4}\b/ },
+          { name: "HTML 태그", regex: /<[^>]+>/ },
+          { name: "해시태그", regex: /#[\w가-힣]+/g },
+          { name: "멘션", regex: /@\w+/ },
+          {
+            name: "MAC 주소",
+            regex: /\b([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})\b/,
+          },
+          {
+            name: "UUID",
+            regex:
+              /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/,
+          },
+          {
+            name: "ISBN",
+            regex: /\b97[89][- ]?\d{1,5}[- ]?\d{1,7}[- ]?\d{1,7}[- ]?\d\b/,
+          },
+          {
+            name: "국제 전화번호",
+            regex: /\+\d{1,3}[-\s]?\d{1,4}[-\s]?\d{3,4}[-\s]?\d{4}/,
+          },
+          {
+            name: "통화 금액",
+            regex: /[\₩\$\€\£]\s?\d{1,3}(,\d{3})*(\.\d{2})?/,
+          },
+          { name: "파일 경로", regex: /([A-Za-z]:)?(\\|\/)[\w\s.-]+(\\|\/)?/ },
+          { name: "색상 코드", regex: /#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})\b/ },
+        ];
+
+        for (const { name, regex } of autoTagPatterns) {
+          try {
+            if (regex.test(newItem.content)) {
+              // 기존 태그 검색
+              let tag = this.localDB.getTagByNameAndSource(name, "auto");
+
+              // 새 태그 생성
+              if (!tag) {
+                tag = await this.addTag(
+                  {
+                    name,
+                    source: "auto",
+                    sync_status: "pending",
+                  },
+                  target
+                );
+              }
+
+              // 태그 연결
+              await this.addDataTag(newItem.id, tag.tag_id, target);
+            }
+          } catch (error) {
+            console.error(`[${name}] 태그 처리 실패:`, error);
+          }
         }
       }
 
@@ -149,7 +217,8 @@ class DataRepositoryModule extends EventEmitter {
     const metadata = await sharp(item.content).metadata();
     const stats = await fs.stat(item.content);
 
-    item.imageMeta = {
+    const imageMeta = {
+      data_id: item.id,
       width: metadata.width,
       height: metadata.height,
       file_size: stats.size,
@@ -158,7 +227,18 @@ class DataRepositoryModule extends EventEmitter {
       format: metadata.format,
     };
 
-    item.format = `image/${metadata.format}`;
+    // DB에 삽입
+    this.localDB.insertImageMeta({
+      data_id: item.id,
+      width: imageMeta.width,
+      height: imageMeta.height,
+      file_size: imageMeta.file_size,
+      file_path: imageMeta.file_path,
+      thumbnail_path: imageMeta.thumbnail_path,
+    });
+
+    // item에 저장
+    item.imageMeta = imageMeta;
   }
 
   // 클립보드 항목 삭제
