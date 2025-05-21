@@ -17,6 +17,8 @@ class DataRepositoryModule extends EventEmitter {
     super();
     this.localDB = new LocalDataModule();
     this.cloudDB = new CloudDataModule(config);
+    this._loadConfig();
+    this.initializeCleanup();
     this.cache = {
       local: { data: null, valid: false },
       cloud: { data: null, valid: false },
@@ -26,6 +28,41 @@ class DataRepositoryModule extends EventEmitter {
 
     // 업로드 폴더가 없으면 생성
     fs.ensureDirSync(this.uploadDir);
+  }
+  _loadConfig() {
+    try {
+      const { local_limit, day_limit } = this.localDB.getConfig();
+      this.config = {
+        maxItems: local_limit,
+        retentionDays: day_limit,
+      };
+    } catch (error) {
+      console.error("설정 로드 실패, 기본값 사용:", error);
+      this.config = { maxItems: 100, retentionDays: 30 };
+    }
+  }
+  initializeCleanup() {
+    // 앱 시작 시 초기 정리
+    this.cleanup();
+
+    // 24시간 주기로 정리
+    setInterval(() => this.cleanup(), 86400000);
+  }
+
+  cleanup() {
+    try {
+      // 항목 수 제한 적용
+      this.localDB.enforceMaxClipboardItems(this.config.maxItems);
+
+      // 오래된 데이터 삭제
+      this.localDB.deleteOldClipboardItems(this.config.retentionDays);
+    } catch (error) {
+      console.error("자동 정리 실패:", error);
+    }
+  }
+  async updateConfig(newConfig) {
+    await this.localDB.updateConfig(newConfig);
+    this._loadConfig(); // 변경된 설정 다시 로드
   }
 
   invalidateCache(source = "all") {
@@ -62,6 +99,7 @@ class DataRepositoryModule extends EventEmitter {
         };
 
         this.localDB.insertClipboardItem(localItem);
+        this.cleanup();
       }
 
       // 클라우드 저장
