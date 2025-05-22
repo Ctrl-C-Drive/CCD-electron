@@ -565,11 +565,16 @@ const Toast = ({ message, type }) => {
   };
   // 기록보기
   //기록 보기
-const MainView = () => {
+const MainView = ({isTagChecked}) => {
   const [items, setItems] = useState([
-    { id: 1, tag: '#고양이', selected: true },
-    { id: 2, tag: '#고양이', selected: false },
-    { id: 3, tag: '#고양이', selected: false },
+    { id: 1, tag: '고양이', selected: true },
+    { id: 2, tag: '고양이', selected: false },
+    { id: 3, tag: '고양이', selected: false },
+    { id: 4, tag: '고양이', selected: false },
+    { id: 5, tag: '고양이', selected: false },
+  
+
+
   ]);
 
   const toggleSelect = (id) => {
@@ -581,14 +586,16 @@ const MainView = () => {
   };
 
   return (
-    <div className="grid grid-cols-3 gap-4 px-6 py-4 ">
+    <div className="grid grid-cols-2 gap-3 px-6 py-4 ">
       {items.map((item) => (
         <div
           key={item.id}
-          className="border border-blue-700 rounded-md overflow-hidden cursor-pointer"
+          className="w-[17rm]  border border-blue-700 rounded-md overflow-hidden cursor-pointer"
           onClick={() => toggleSelect(item.id)}
         >
-          <div className="relative h-32 bg-blue-100">
+          <div className="relative  h-[9.2rem] bg-blue-100">
+            {isTagChecked && (
+
             <div className="absolute top-1 left-1">
               <input
                 type="checkbox"
@@ -597,12 +604,19 @@ const MainView = () => {
                 className="accent-blue-700 w-4 h-4"
               />
             </div>
+            )}
             <div className="absolute bottom-1 right-1">
-              <img src="folder.svg" alt="folder" className="w-4 h-4" />
+              <img src="folder.svg" alt="folder" className="w-[1.7rem] h-[1.5rem]" />
             </div>
           </div>
-          <div className="border-t border-blue-700 p-2 text-blue-700 text-sm">
-            {item.tag}
+          <div className="
+            text-[var(--blue-200)]
+            !font-pretendard
+            text-[1.3rem]
+            font-[var(--font-rg)]
+            leading-[2.8rem]
+             border-t h-[2.6rem] border-[var(--blue-200)] pl-[1.6rem] ">
+            # {item.tag}
           </div>
         </div>
       ))}
@@ -612,8 +626,7 @@ const MainView = () => {
 
   //필터 바
 
-  const FilterBar = () => {
-    const [isTagChecked, setIsTagChecked] = useState(true);
+  const FilterBar = ({isTagChecked, setIsTagChecked}) => {
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [location, setLocation] = useState('ALL');
     const [isLocal, setIsLocal] = useState(false);
@@ -864,7 +877,7 @@ const handleDateInput = (value) => {
           </div>
 
         </div>
-  </div>
+      </div>
       </>
     );
   };
@@ -989,6 +1002,7 @@ const SearchBar =() => {
 
 //전체 
 const App= () => {
+    const [isTagChecked, setIsTagChecked] = useState(true);
 
   return (
     <>
@@ -1011,11 +1025,11 @@ const App= () => {
               </div>
               {/* Tag, 필터 2개 zone */}
               <div className="">
-                  <FilterBar/>
+                  <FilterBar isTagChecked={isTagChecked} setIsTagChecked={setIsTagChecked}/>
               </div>
               {/* grid-view 데이터 존 */}
               <div className="">
-                  <MainView />
+                  <MainView isTagChecked={isTagChecked} />
               </div>
               {/* 하단 bar */}
               <div className="">
@@ -1025,7 +1039,7 @@ const App= () => {
       </div>
       
     </>
-  )
+  );
 }
 
 export default App
