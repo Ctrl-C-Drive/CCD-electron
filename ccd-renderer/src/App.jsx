@@ -61,6 +61,13 @@ const [pwError, setPwError] = useState("");
     setModalState("menu");
 
   };
+  const handleIDChange = (value) => {
+    setUserId(value);
+  }
+  const handlePwChange = (value) => {
+  // 상태 업데이트
+  setPw(value);
+  }
 
   return (
     <div className="relative inline-block">
@@ -166,7 +173,7 @@ const [pwError, setPwError] = useState("");
                     maxLength={8}
                     placeholder="ID"
                     value={userId}
-                    onChange={(e) => handleUserIdChange(e.target.value)}
+                    onChange={(e) => handleIDChange(e.target.value)}
                     className="!w-[8.3rem] px-2 py-1 ml-[0.rem] rounded-md bg-gray-100 text-gray-800"
                   />
 
@@ -293,6 +300,9 @@ const [pwError, setPwError] = useState("");
               <div className="flex flex-col gap-2 pl-[2rem] pt-[1.4rem] pr-[1.8rem] ">
                 <label className=" 
                   text-[var(--blue-200)]
+                  text-[1.2rem]
+                  font-[var(--font-md)]
+                  flex
                   !font-pretendard
                   not-italic
                   font-[var(--font-md)]
@@ -512,8 +522,24 @@ const Toast = ({ message, type }) => {
 
  return (
     <div className="relative flex items-center gap-2 mt-2">
-      <img src="speechBubble.svg" className="w-[7.5rem] h-[4.4rem]" alt="bubble" />
-      <div className={`absolute left-10 top-10 !text-[1.4rem]  ${textColor}`}>
+      <div className={`
+        absolute left-4 top-[3rem] !text-[1.4rem]  
+        text-[var(--blue-300)]
+          text-center
+          !font-pretendard
+          text-[1.4rem]
+          not-italic
+          font-[var(--font-rg)]
+          leading-normal
+          w-[9.6rem]
+          h-[3.5rem]
+          bg-white
+          shadow-xl
+          rounded-xl
+          justify-center
+          items-center
+          flex
+        ${textColor}`}>
         {message}
       </div>
     </div>
@@ -528,24 +554,26 @@ const Toast = ({ message, type }) => {
       setTimeout(() => {
         setToasts((prev) => prev.filter((toast) => toast.id !== id));
       }, 2000);
+            // }, 100000);
+
     };
 
     return (
-      <div className="flex justify-between items-center px-6 py-0">
+      <div className="flex justify-between items-center px-6 mt-[3rem] ">
         {/* 왼쪽 업로드 / 다운로드 */}
         <div className="flex gap-6 items-center">
           <div 
             className="flex flex-col items-center text-blue-700 cursor-pointer"
             onClick={() => showToast('Uploading...', 'info')}
             >
-            <img src="UploadCloud.svg" alt="Upload" className="w-6 h-6 mb-1" />
+            <img src="UploadCloud.svg" alt="Upload" className="w-[3.2rem] h-[3.2rem] mb-1" />
             <span className="text-xs underline">Upload</span>
           </div>
           <div 
               className="flex flex-col items-center text-blue-700 cursor-pointer"
               onClick={() => showToast('Downloading...', 'info')}
           >
-            <img src="DownloadCloud.svg" alt="Download" className="w-6 h-6 mb-1" />
+            <img src="DownloadCloud.svg" alt="Download" className="w-[3.2rem] h-[3.2rem] mb-1" />
             <span className="text-xs underline">Download</span>
           </div>
         </div>
@@ -555,7 +583,7 @@ const Toast = ({ message, type }) => {
           <img src="settings.svg" alt="Settings" className="w-6 h-6 text-blue-700" />
         </div> */}
           <SettingModal />
-        <div className="absolute right-4 top-0 flex flex-col items-end z-50">
+        <div className="absolute top-[48rem] flex flex-col items-end z-50">
           {toasts.map((toast) => (
             <Toast key={toast.id} message={toast.message} type={toast.type} />
           ))}
@@ -601,7 +629,7 @@ const MainView = ({isTagChecked}) => {
                 type="checkbox"
                 checked={item.selected}
                 onChange={() => {}}
-                className="accent-blue-700 w-4 h-4"
+                className="accent-blue-700 w-[1.3rem] h-[1.3rem]"
               />
             </div>
             )}
@@ -1006,7 +1034,7 @@ const App= () => {
 
   return (
     <>
-      <div className="w-full h-full !bg-white/70 p-0">
+      <div className="w-full h-full bg-white opacity-87  p-0">
         {/* 최상단 손잡이, 닫기 버튼 */}
           <div className="pt-[1.6rem] pb-[2.1rem] flex justify-center ">
               {/*  손잡이 */}
