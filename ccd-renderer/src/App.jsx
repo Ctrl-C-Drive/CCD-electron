@@ -13,65 +13,345 @@ import './styles/typography.css'
 
 const options = ['일반 검색', '고급 검색'];
 
-  const LoginModal = () => {
-  const [showLogin, setShowLogin] = useState(false);
+const LoginModal = () => {
+const [modalState, setModalState] = useState(null);
+  const [userId, setUserId] = useState(""); // 로그인 성공 시 저장될 유저 ID
   const ref = useRef(null);
+const [pw, setPw] = useState("");
+const [error, setError] = useState("");
+const [isSubmitted, setIsSubmitted] = useState(false);
 
-    useEffect(() => {
-      function handleClickOutside(event) {
-        if (ref.current && !ref.current.contains(event.target)) {
-          setShowLogin(false);
-        }
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (ref.current && !ref.current.contains(event.target)) {
+        setModalState(null);
+        setIsSubmitted(false); 
+
       }
+    }
 
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
 
+    };
+  }, []);
+
+  const handleLogin = () => {
+    setIsSubmitted(true); 
+  if (!userId || !pw || userId !== "Hello1355" || pw !== "password") {
+    setError("ID 또는 PW를 확인해주세요");
+    return;
+  }
+
+  setUserId(userId); // 정상 로그인
+  setError("");  // 에러 초기화
+  setIsSubmitted(false); 
+
+  setModalState("loggedIn");
+
+
+  };
+  const handleJoin = () => {
+    // 실제 인증 로직은 여기에 연결
+    setUserId("Hello1355"); // 예시 ID
+    setModalState("menu");
+
+  };
 
   return (
     <div className="relative inline-block">
       {/* 아바타 */}
       <div
-        className="ml-3 w-[4.2rem] h-[4.2rem] border-2 border-[var(--blue-200)] rounded-full cursor-pointer"
-        onClick={() => setShowLogin(!showLogin)}
+        className="ml-3 w-[4.0rem] h-[4.0rem] border-2 border-[var(--blue-200)] rounded-full cursor-pointer"
+        onClick={() =>
+          setModalState((prev) => (prev === null ? "menu" : null))
+        }
       />
 
-      {/* 로그인 모달 */}
-      {showLogin && (
+      {/* 모달 영역 */}
+      {modalState !== null && (
         <div
           ref={ref}
-          className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg p-4 z-10"
+          className="absolute  flex flex-col
+           right-0 mt-2 w-56 bg-white rounded-xl   
+           shadow-[0_0.1rem_2.5rem_0_rgba(0,0,0,0.10)]
+            p-4 z-10"
         >
-          <div className="text-center text-blue-700 font-semibold mb-3">Login</div>
-          <div className="flex flex-col gap-2">
-            <label className="text-sm text-blue-800 flex justify-between items-center">
-              ID
-              <input
-                type="text"
-                placeholder="ID"
-                defaultValue="Hello1355"
-                className="ml-2 px-2 py-1 rounded-md bg-gray-100 text-gray-800 flex-1"
-              />
-            </label>
-            <label className="text-sm text-blue-800 flex justify-between items-center">
-              PW
-              <input
-                type="password"
-                placeholder="Password"
-                defaultValue="password"
-                className="ml-2 px-2 py-1 rounded-md bg-gray-100 text-gray-800 flex-1"
-              />
-            </label>
-          </div>
-          <button className="mt-3 text-sm text-blue-700 underline w-full text-center">
-            Login
-          </button>
+          {/* 로그인 전 메뉴 */}
+          {modalState === "menu" && (
+            <>
+              <div 
+                className="
+                  text-[var(--blue-200)]
+                  text-center
+                  !font-pretendard
+                  text-[1.4rem]
+                  not-italic
+                  font-[600]
+                  leading-normal
+                  flex
+                  justify-center
+                  px-auto     
+                  w-auto   
+                  pb-[0.8rem]        
+                ">
+                  User
+              </div>
+              <hr className="mb-2" />
+              <div className="flex flex-col gap-[1rem] pt-[1.4rem] pb-[2.2rem]">
+                <div
+                  className="
+                        text-[var(--blue-200)]
+                        !font-pretendard
+                        text-[1.2rem]
+                        font-[var(--font-md)]
+                        leading-normal
+                        text-center
+                        cursor-pointer
+                    "
+                  onClick={() => setModalState("login")}
+                >
+                  Login
+                </div>
+                <div 
+                    className="
+                        text-[var(--blue-200)]
+                        !font-pretendard
+                        text-[1.2rem]
+                        font-[var(--font-md)]
+                        leading-normal
+                        text-center
+                        cursor-pointer
+                    "
+                  onClick={() => setModalState("JoinIn")}
+                >Join
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* 로그인 입력 폼 */}
+          {modalState === "login" && (
+            <div className="w-[14.2rem] h-[15.4rem] bg-[var(--white)]">
+              <div className="
+                    text-[var(--blue-200)]
+                    text-center
+                    !font-pretendard
+                    text-[1.4rem]
+                    pb-[0.9rem]
+                    font-[var(--font-sb)]
+                    leading-normal
+              ">Login
+              </div>
+              <hr className="mb-2" />
+              <div className="flex flex-col gap-2 pl-[2rem] pt-[1.4rem] pr-[1.8rem] ">
+                <label className=" 
+                  text-[var(--blue-200)]
+                  !font-pretendard
+                  not-italic
+                  font-[var(--font-md)]
+                  leading-normal justify-between items-center
+                ">
+                  ID
+                  <input
+                    type="text"
+                    placeholder="ID"
+                    onChange={(e) => setUserId(e.target.value)}
+                    className="!w-[8.3rem]  px-2 py-1 ml-[0.917rem] rounded-md bg-gray-100 text-gray-800 flex-1"
+                  />
+                </label>
+                <label className="
+                  text-[var(--blue-200)]
+                  !font-pretendard
+                  text-[1.2rem]
+                  not-italic
+                  font-[var(--font-md)]
+                  leading-normal
+                  flex justify-between items-center
+                ">
+                  PW
+                  <input
+                    type="password"
+                    placeholder="PW"      
+                    onChange={(e) => setPw(e.target.value)}             
+                    className="!w-[8.3rem] ml-2 px-2 py-1 ml-[0.2rem] rounded-md bg-gray-100 text-gray-800 flex-1"
+                  />
+                </label>
+              </div>
+                  {isSubmitted && error && (
+                  <div className="
+                   text-center
+                   text-center
+                   !font-inter
+                   text-[0.9rem]
+                   font-[var( --font-rg)]
+                   leading-normal
+                   text-[var(--red)]
+                   mt-[1rem]
+                  ">
+                    {error}
+                  </div>
+                )}
+              <button
+                className="
+                  text-[var(--blue-200)]
+                  text-center
+                  !font-pretendard
+                  text-[1.1rem]
+                  font-[var(--font-rg)]
+                  leading-normal
+                  underline
+                  text-center
+                  justify-center
+                  flex
+                 w-full text-center
+                 pt-[1.3rem]
+                 "
+                onClick={handleLogin}
+              >
+                Login
+              </button>
+            </div>
+          )}
+
+          {/* 로그인 성공 후 */}
+          {modalState === "loggedIn" && (
+            <>
+              <div 
+                className="
+                  text-[var(--blue-200)]
+                  text-center
+                  !font-pretendard
+                  text-[1.4rem]
+                  not-italic
+                  font-[600]
+                  leading-normal
+                  flex
+                  justify-center
+                  px-auto     
+                  w-auto   
+                  pb-[0.8rem]        
+                ">
+                  User
+              </div>
+              <hr className="mb-2" />
+              <div className="py-[1.9rem] pl-[3.1rem]">
+                <div 
+                  className="
+                      text-[var(--blue-200)]
+                      !font-pretendard
+                      text-[1.4rem]
+                      not-italic
+                      font-[var(--font-md)]
+                      leading-normal
+                ">
+                  ID
+                </div>
+                <div 
+                  className="
+                      text-[var(--blue-200)]
+                      !font-pretendard
+                      text-[1.2rem]
+                      not-italic
+                      font-[var(--font-rg)]
+                      leading-normal
+                ">{userId}</div>
+              </div>
+            </>
+          )}
+
+          {/* 회원가입 입력 폼 */}
+          {modalState === "JoinIn" && (
+            <div className="w-[14.2rem] h-[15.4rem] bg-[var(--white)]">
+              <div className="
+                    text-[var(--blue-200)]
+                    text-center
+                    !font-pretendard
+                    text-[1.4rem]
+                    pb-[0.9rem]
+                    font-[var(--font-sb)]
+                    leading-normal
+              ">Join
+              </div>
+              <hr className="mb-2" />
+              <div className="flex flex-col gap-2 pl-[2rem] pt-[1.4rem] pr-[1.8rem] ">
+                <label className=" 
+                  text-[var(--blue-200)]
+                  !font-pretendard
+                  not-italic
+                  font-[var(--font-md)]
+                  leading-normal justify-between items-center
+                ">
+                  ID
+                  <input
+                    type="text"
+                    placeholder="ID"
+                    onChange={(e) => setUserId(e.target.value)}
+                    className="!w-[8.3rem]  px-2 py-1 ml-[0.917rem] rounded-md bg-gray-100 text-gray-800 flex-1"
+                  />
+                </label>
+                <label className="
+                  text-[var(--blue-200)]
+                  !font-pretendard
+                  text-[1.2rem]
+                  not-italic
+                  font-[var(--font-md)]
+                  leading-normal
+                  flex justify-between items-center
+                ">
+                  PW
+                  <input
+                    type="password"
+                    placeholder="PW"      
+                    onChange={(e) => setPw(e.target.value)}             
+                    className="!w-[8.3rem] ml-2 px-2 py-1 ml-[0.2rem] rounded-md bg-gray-100 text-gray-800 flex-1"
+                  />
+                </label>
+              </div>
+                  {isSubmitted && error && (
+                  <div className="
+                   text-center
+                   text-center
+                   !font-inter
+                   text-[0.9rem]
+                   font-[var( --font-rg)]
+                   leading-normal
+                   text-[var(--red)]
+                   mt-[1rem]
+                  ">
+                    {error}
+                  </div>
+                )}
+              <button
+                className="
+                  text-[var(--blue-200)]
+                  text-center
+                  !font-pretendard
+                  text-[1.1rem]
+                  font-[var(--font-rg)]
+                  leading-normal
+                  underline
+                  text-center
+                  justify-center
+                  flex
+                 w-full text-center
+                 pt-[1.3rem]
+                 "
+                onClick={handleJoin}
+              >
+                Join
+              </button>
+            </div>
+          )}
+        
+
         </div>
       )}
     </div>
   );
-}
+};
+
 // 환경설정
   const SettingModal = () => {
     const [isVisible, setIsVisible] = useState(false);
@@ -355,7 +635,8 @@ const MainView = () => {
     };
 
     return (
-      <div className="flex items-center gap-4 px-6 py-2  rounded-xl">
+      <>
+      <div className="flex justify-between items-center gap-4 px-[1rem] py-2  rounded-xl">
         {/* TAG 영역 */}
         <div
           className="flex items-center gap-2 cursor-pointer"
@@ -370,78 +651,82 @@ const MainView = () => {
           <span className="text-blue-700 font-bold">TAG</span>
         </div>
 
-        {/* Location 드롭다운 */}
-        <div className="relative" ref={dropdownRef}>
-          <button
-            onClick={() => setDropdownOpen((prev) => !prev)}
-            className="bg-white rounded-full px-3 py-1 flex items-center gap-2 text-sm text-blue-700 shadow"
-          >
-            <span className="text-xs text-gray-400">Location</span>
-            {location} <span className="text-xs">▼</span>
-          </button>
-          {dropdownOpen && (
-            <div className="absolute mt-2 w-32 bg-white border rounded-xl shadow-md z-50 p-2">
-              {['Local', 'Cloud'].map((opt) => (
-                <div
-                  key={opt}
-                  className="text-blue-700 px-3 py-1 hover:bg-blue-50 rounded cursor-pointer text-sm"
-                  onClick={() => {
-                    setLocation(opt);
-                    setIsLocal(opt === 'Local');
-                    setIsCloud(opt === 'Cloud');
-                    setDropdownOpen(false);
-                  }}
-                >
-                  {opt}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* 필터 버튼 */}
-        <div className="relative" ref={filterModalRef}>
-          <img
-            onClick={() => setIsOpenFilterModal(true)}
-            className="text-blue-700 text-2xl"
-            src="Filter.svg"
-          />  
-          {isOpenFilterModal && (
-            <div 
-                 className="absolute right-0 top-10 w-48 bg-white border rounded-xl shadow-xl p-4 z-50">
-              <div className="text-center text-blue-700 font-bold mb-2">Filter</div>
-              <hr className="mb-2" />
-              <div className="mb-2">
-                <label className="text-sm text-blue-700">파일 타입</label>
-                <select
-                  className="w-full mt-1 rounded  px-2 py-1"
-                  value={fileType}
-                  onChange={(e) => setFileType(e.target.value)}
-                >
-                  <option>JPG</option>
-                  <option>PNG</option>
-                  <option>SVG</option>
-                </select>
-              </div>
-              <div>
-                <label className="text-sm text-blue-700">날짜</label>
-                <input
-                  type="text"
-                  placeholder="20250102"
-                  value={dateInput}
-                  onChange={(e) => handleDateInput(e.target.value)}
-                  className="w-full mt-1 rounded bg-gray-100 px-2 py-1"
-                />
-                {year && (
-                  <div className="text-xs text-gray-500 mt-1">
-                    입력된 날짜: {year}/{month}/{day}
+        <div className="flex  items-center justify-end gap-[1.2rem]">
+  `        {/* Location 드롭다운 */}
+          <div className="relative  flex  h-[2rem]" ref={dropdownRef}>
+            <button
+              onClick={() => setDropdownOpen((prev) => !prev)}
+              className="bg-white rounded-full px-3 py-1 flex items-center gap-2 text-sm text-blue-700 shadow"
+            >
+              <span className="text-xs text-gray-400">Location</span>
+              {location} <span className="text-xs">▼</span>
+            </button>
+            {dropdownOpen && (
+              <div className="absolute mt-2 w-32 bg-white border rounded-xl shadow-md z-50 p-2">
+                {['Local', 'Cloud'].map((opt) => (
+                  <div
+                    key={opt}
+                    className="text-blue-700 px-3 py-1 hover:bg-blue-50 rounded cursor-pointer text-sm"
+                    onClick={() => {
+                      setLocation(opt);
+                      setIsLocal(opt === 'Local');
+                      setIsCloud(opt === 'Cloud');
+                      setDropdownOpen(false);
+                    }}
+                  >
+                    {opt}
                   </div>
-                )}
+                ))}
               </div>
-            </div>
-          )}
+            )}
+          </div>
+
+      {/* 필터 버튼 */}
+          <div className="relative" ref={filterModalRef}>
+            <img
+              onClick={() => setIsOpenFilterModal(true)}
+              className="text-blue-700 text-2xl cursor-pointer"
+              src="Filter.svg"
+              alt="Filter"
+            />
+            {isOpenFilterModal && (
+              <div className="absolute right-0 mt-2 w-64 bg-white border rounded-xl shadow-md z-50 p-4">
+                <div className="text-center text-blue-700 font-bold mb-2">Filter</div>
+                <hr className="mb-2" />
+                <div className="mb-2">
+                  <label className="text-sm text-blue-700">파일 타입</label>
+                  <select
+                    className="w-full mt-1 rounded px-2 py-1"
+                    value={fileType}
+                    onChange={(e) => setFileType(e.target.value)}
+                  >
+                    <option>JPG</option>
+                    <option>PNG</option>
+                    <option>SVG</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm text-blue-700">날짜</label>
+                  <input
+                    type="text"
+                    placeholder="20250102"
+                    value={dateInput}
+                    onChange={(e) => handleDateInput(e.target.value)}
+                    className="w-full mt-1 rounded bg-gray-100 px-2 py-1"
+                  />
+                  {year && (
+                    <div className="text-xs text-gray-500 mt-1">
+                      입력된 날짜: {year}/{month}/{day}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
         </div>
-      </div>
+  </div>
+      </>
     );
   };
 
@@ -466,113 +751,99 @@ const SearchBar =() => {
     }, []);
 
     return (
-      <div className=" relative flex z-100">
-        <div className="
-                  flex
-                  w-[28rem]
-                  h-[4.9rem]
-                  rounded-[1.265rem]
-                  bg-white/70
-                  shadow-[0_0.253rem_2.53rem_0_rgba(83,83,83,0.25)]
-                  py-[1.2rem]
-                  relative
-                  z-90
-                ">
-          {/* 입력 영역 */}
-          <div className="z-60 flex items-center gap-[0.7rem] pl-[1.3rem] ">
-            <img className="" alt="search-icon" src="search.svg"></img>
-            <input
-              type="text"
-              placeholder="Search"
-              className="
-                bg-transparent focus:outline-none 
-                text-[var(--blue-300)]   font-[var(--font-rg)]
-                text-[1.5rem]  w-full
-                 placeholder-[var(--blue-100)]
-              "
-            />
-          </div>
-
-          {/* 구분선 */}
-          <div className="border-l border-gray-300  h-[2.5rem] "></div>
-          <div className="absolute z-[110] right-0">
-              {dropdownOpen && (
-                <div className="
-                         h-[6rem] w-[11rem] 
-                         py-[0.5rem]
-                         absolute right-0  w-32 bg-white border rounded-xl 
-                         shadow-md  pl-[1.3rem]
-                         top-[3.8rem]
-                         flex
-                         flex-col
-                         gap-2
-                ">
-                {isMobileNetv3.map((opt) => (
-                    <div
-                      key={opt}
-                      className="
-                        cursor-pointer
-                        text-[var(--blue-200)]
-                        !font-pretendard
-                        !text-[1.3rem]
-                        !font-[var(--font-md)]
-                        leading-normal
-                        w-[7.8rem]
-                        h-[1.7rem]
-                        
-                      "
-                      onClick={() => {
-                        setCurrentSelection(opt);
-                        setDropdownOpen(false);
-                      }}
-                    >
-                      {opt}
-                    </div>
-                  ))}
-
-                </div>
-              )}
-
-            </div>
-          {/* 드롭다운 버튼 */}
+        <div className="relative flex">
           <div className="
-                          relative flex !w-[13rem]   
-                          !text-[var(--blue-200)]
-                          !font-pretendard                         
-                          text-[1.4rem]
-                          font-[var(--font-md)]
-                          leading-normal 
-                          justify-end 
-                          pr-[1.4rem]
-                          z-50
-                          " 
-                ref={dropdownRef}>
+            flex
+            w-[28rem]
+            h-[4.9rem]
+            rounded-[1.265rem]
+            bg-white/70
+            shadow-[0_0.253rem_2.53rem_0_rgba(83,83,83,0.25)]
+            py-[1.2rem]
+            relative
+          ">
+            {/* 입력 영역 */}
+            <div className="flex items-center gap-[0.7rem] pl-[1.3rem]">
+              <img className="" alt="search-icon" src="search.svg" />
+              <input
+                type="text"
+                placeholder="Search"
+                className="
+                  bg-transparent focus:outline-none 
+                  text-[var(--blue-300)] font-[var(--font-rg)]
+                  text-[1.5rem] w-full
+                  placeholder-[var(--blue-100)]
+                "
+              />
+            </div>
 
-            <button
-              className=" flex items-center 
-                          text-[1.4rem]
-                          gap-[1rem]
-                          !font-pretendard
-                          
-                          "
-              onClick={() => setDropdownOpen((prev) => !prev)}
+            {/* 구분선 */}
+            <div className="border-l border-gray-300 h-[2.5rem]"></div>
+
+            {/* 드롭다운 메뉴 */}
+            <div
+              className="
+                relative flex flex-col items-end
+                w-[13rem] pr-[1.4rem]
+              "
+              ref={dropdownRef}
             >
-              {currentSelection}
-              <div className="
-                          !text-[var(--blue-200)]
-                          !font-pretendard
-                          text-[1.4rem]
-                          font-[var(--font-md)]
-                  ">
+               <button
+                className="
+                    flex items-center gap-[1rem] 
+                    text-[var(--blue-200)]
+                    !font-pretendard
+                    text-[1.4rem]
+                    font-[var(--font-md)] !font-pretendard"
+                onClick={() => setDropdownOpen((prev) => !prev)}
+              >
+                {currentSelection}
+                <div className="
+                  text-[var(--blue-200)]
+                  !font-pretendard
+                  text-[1.4rem]
+                  font-[var(--font-md)]
+                ">
                   ▼
+                </div>
+              </button>       
+            {dropdownOpen && (
+              <div className="
+                h-[6rem] w-[11rem] 
+                py-[0.5rem]
+                absolute right-0 top-[3.8rem]
+                bg-white border rounded-xl shadow-md pl-[1.3rem]
+                flex flex-col gap-2 z-[30]
+              ">
+                {isMobileNetv3.map((opt) => (
+                  <div
+                    key={opt}
+                    className="
+                      cursor-pointer
+                      text-[var(--blue-200)]
+                      !font-pretendard
+                      !text-[1.3rem]
+                      !font-[var(--font-md)]
+                      leading-normal
+                      w-[7.8rem] h-[1.7rem]
+                    "
+                    onClick={() => {
+                      setCurrentSelection(opt);
+                      setDropdownOpen(false);
+                      console.log(opt);
+                    }}
+                  >
+                    {opt}
+                  </div>
+                ))}
               </div>
-            </button>
-
-  
+            )}
+            </div>
           </div>
+
+          <LoginModal />
         </div>
-            <LoginModal />
-    </div>
+
   );
 
 }
