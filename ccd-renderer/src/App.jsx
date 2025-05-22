@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect } from 'react';
 import clsx from 'clsx'; 
 import { twMerge } from 'tailwind-merge';
 import { colors, colorVariants } from './styles/color.ts';
@@ -20,6 +20,9 @@ const [modalState, setModalState] = useState(null);
 const [pw, setPw] = useState("");
 const [error, setError] = useState("");
 const [isSubmitted, setIsSubmitted] = useState(false);
+const [idError, setIdError] = useState("");
+const [pwError, setPwError] = useState("");
+
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -148,35 +151,47 @@ const [isSubmitted, setIsSubmitted] = useState(false);
               <div className="flex flex-col gap-2 pl-[2rem] pt-[1.4rem] pr-[1.8rem] ">
                 <label className=" 
                   text-[var(--blue-200)]
+                  text-[1.2rem]
+                  font-[var(--font-md)]
+                  flex
                   !font-pretendard
                   not-italic
                   font-[var(--font-md)]
                   leading-normal justify-between items-center
                 ">
                   ID
+                <div className="flex flex-row">
                   <input
                     type="text"
+                    maxLength={8}
                     placeholder="ID"
-                    onChange={(e) => setUserId(e.target.value)}
-                    className="!w-[8.3rem]  px-2 py-1 ml-[0.917rem] rounded-md bg-gray-100 text-gray-800 flex-1"
+                    value={userId}
+                    onChange={(e) => handleUserIdChange(e.target.value)}
+                    className="!w-[8.3rem] px-2 py-1 ml-[0.rem] rounded-md bg-gray-100 text-gray-800"
                   />
+
+                </div>
                 </label>
                 <label className="
                   text-[var(--blue-200)]
                   !font-pretendard
                   text-[1.2rem]
-                  not-italic
                   font-[var(--font-md)]
                   leading-normal
                   flex justify-between items-center
                 ">
                   PW
-                  <input
-                    type="password"
-                    placeholder="PW"      
-                    onChange={(e) => setPw(e.target.value)}             
-                    className="!w-[8.3rem] ml-2 px-2 py-1 ml-[0.2rem] rounded-md bg-gray-100 text-gray-800 flex-1"
-                  />
+                  <div className="flex flex-col">
+                    <input
+                      type="password"
+                      placeholder="PW"
+                      value={pw}
+                      maxLength={8}
+                      onChange={(e) => handlePwChange(e.target.value)}
+                      className="!w-[8.3rem] px-2 py-1 ml-[0.2rem] rounded-md bg-gray-100 text-gray-800"
+                    />
+
+                  </div>
                 </label>
               </div>
                   {isSubmitted && error && (
@@ -286,6 +301,7 @@ const [isSubmitted, setIsSubmitted] = useState(false);
                   ID
                   <input
                     type="text"
+                    maxLength={8}
                     placeholder="ID"
                     onChange={(e) => setUserId(e.target.value)}
                     className="!w-[8.3rem]  px-2 py-1 ml-[0.917rem] rounded-md bg-gray-100 text-gray-800 flex-1"
@@ -303,7 +319,8 @@ const [isSubmitted, setIsSubmitted] = useState(false);
                   PW
                   <input
                     type="password"
-                    placeholder="PW"      
+                    placeholder="PW"  
+                    maxLength={8}    
                     onChange={(e) => setPw(e.target.value)}             
                     className="!w-[8.3rem] ml-2 px-2 py-1 ml-[0.2rem] rounded-md bg-gray-100 text-gray-800 flex-1"
                   />
@@ -547,7 +564,7 @@ const Toast = ({ message, type }) => {
     );
   };
   // 기록보기
-  //기록 보기기
+  //기록 보기
 const MainView = () => {
   const [items, setItems] = useState([
     { id: 1, tag: '#고양이', selected: true },
@@ -608,6 +625,10 @@ const MainView = () => {
     const [month, setMonth] = useState('');
     const [day, setDay] = useState('');
 
+    const [dateInputRaw, setDateInputRaw] = useState("");     // 내부 로직용 (YYYYMMDD)
+    const [dateInputDisplay, setDateInputDisplay] = useState(""); // 사용자에게 보여지는 값 (YYYY/MM/DD)
+    const [dateError, setDateError] = useState("");            // 에러 메시지
+
     const dropdownRef = useRef(null);
     const filterModalRef = useRef(null);
 
@@ -625,14 +646,50 @@ const MainView = () => {
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    const handleDateInput = (value) => {
-      setDateInput(value);
-      if (/^\d{8}$/.test(value)) {
-        setYear(value.slice(0, 4));
-        setMonth(value.slice(4, 6));
-        setDay(value.slice(6, 8));
+const handleDateInput = (value) => {
+  // 숫자만 추출
+  const digits = value.replace(/\D/g, "").slice(0, 8); // 최대 8자리 숫자
+
+  // 실시간 포맷팅: YYYY/MM/DD
+  let formatted = digits;
+  if (digits.length > 4) {
+    formatted = `${digits.slice(0, 4)}/${digits.slice(4, 6)}`;
+    if (digits.length > 6) {
+      formatted += `/${digits.slice(6, 8)}`;
+    }
+  }
+
+  // 상태 업데이트
+  setDateInputRaw(digits);
+  setDateInputDisplay(formatted);
+
+    // 유효성 검사
+    // 1. 8글자 이내인지 아닌지 검사사
+    if (digits.length === 8) {
+      //8글자면 year/month/day로 사용자에게 보여지는 값만 파싱
+      // (실제 값은 여전히 20240427 식)
+      const year = parseInt(digits.slice(0, 4), 10);
+      const month = parseInt(digits.slice(4, 6), 10);
+      const day = parseInt(digits.slice(6, 8), 10);
+
+      const isValidDate =
+        month >= 1 &&
+        month <= 12 &&
+        day >= 1 &&
+        day <= 31 &&
+        new Date(`${year}-${month}-${day}`).getDate() === day &&
+        new Date(`${year}-${month}-${day}`).getMonth() + 1 === month;
+
+      //9999/04/27 같이 말이 안되는 날짜 검사
+      if (!isValidDate) {
+        setDateError("유효한 날짜를 입력해주세요");
+      } else {
+        setDateError("");
       }
-    };
+    } else {
+      setDateError(""); // 입력 중간에는 에러 숨김
+    }
+  };
 
     return (
       <>
@@ -652,21 +709,51 @@ const MainView = () => {
         </div>
 
         <div className="flex  items-center justify-end gap-[1.2rem]">
-  `        {/* Location 드롭다운 */}
-          <div className="relative  flex  h-[2rem]" ref={dropdownRef}>
+         {/* Location 드롭다운 */}
+          <div className="relative  flex  " ref={dropdownRef}>
             <button
               onClick={() => setDropdownOpen((prev) => !prev)}
-              className="bg-white rounded-full px-3 py-1 flex items-center gap-2 text-sm text-blue-700 shadow"
+              className="
+                    bg-[var(--white)]
+                    shadow-[0_0.1rem_2.5rem_0_rgba(0,0,0,0.10)]
+                    rounded-[0.7rem]
+                  pl-[0.8rem] py-[0.75rem] flex items-center 
+                  gap-2 text-sm text-blue-700 shadow
+                  h-[2.7rem] w-[10.6rem]
+                  flex justify-between flex-row
+                  pr-[0.6rem]
+            "
             >
-              <span className="text-xs text-gray-400">Location</span>
-              {location} <span className="text-xs">▼</span>
+              <div className="
+                  text-[var(--blue-100)]
+                  !font-pretendard
+                  text-[1rem]
+                  not-italic
+                  font-[var(--font-rg)]
+                  leading-[2.8rem]                        
+                  ">
+                    Location
+              </div>
+              <div className="flex justify-between gap-[0.4rem]"> {location} <span className="text-xs">▼</span></div>
             </button>
             {dropdownOpen && (
-              <div className="absolute mt-2 w-32 bg-white border rounded-xl shadow-md z-50 p-2">
-                {['Local', 'Cloud'].map((opt) => (
+              <div className="absolute flex flex-col text-end  h-auto mt-[2.7rem] ml-[2.7rem] w-32 bg-white border rounded-xl shadow-md z-50 p-2">
+                {['All','Local', 'Cloud'].map((opt, idx) => (
+                    <React.Fragment key={opt}>
+
                   <div
-                    key={opt}
-                    className="text-blue-700 px-3 py-1 hover:bg-blue-50 rounded cursor-pointer text-sm"
+                    className="
+                     px-3 py-1 hover:bg-blue-50 rounded 
+                    cursor-pointer 
+                    text-[var(--blue-200)]
+                    !font-pretendard
+                    text-[1.2rem]
+                    not-italic
+                    font-[var(--font-md)]
+                    leading-[2.8rem]   
+                    h-[2.7rem]    
+  
+                    "
                     onClick={() => {
                       setLocation(opt);
                       setIsLocal(opt === 'Local');
@@ -675,7 +762,11 @@ const MainView = () => {
                     }}
                   >
                     {opt}
+                    
                   </div>
+                  { idx===1 && <hr className="my-1 border-blue-200" />} {/* Local 다음에 hr 추가 */}
+                 { idx===0 && <hr className="my-1 border-blue-200" />} 
+                </React.Fragment>
                 ))}
               </div>
             )}
@@ -690,36 +781,84 @@ const MainView = () => {
               alt="Filter"
             />
             {isOpenFilterModal && (
-              <div className="absolute right-0 mt-2 w-64 bg-white border rounded-xl shadow-md z-50 p-4">
-                <div className="text-center text-blue-700 font-bold mb-2">Filter</div>
-                <hr className="mb-2" />
-                <div className="mb-2">
-                  <label className="text-sm text-blue-700">파일 타입</label>
+              <div className="
+                  absolute  w-[14.2rem]
+                  h-[14.5rem]  right-0 mt-2 bg-white border 
+                  rounded-xl shadow-md z-50 py-4
+              ">
+                <div 
+                className="
+                  text-[var(--blue-200)]
+                  text-center
+                  !font-pretendard
+                  text-[1.4rem]
+                  not-italic
+                  font-[600]
+                  leading-normal
+                  flex
+                  justify-center
+                  px-auto     
+        
+                  pb-[0.8rem]        
+                ">
+                  Filter
+                  </div>
+                <div className=" px-[1.7rem] flex flex-col gap-[1.3rem] ">
+                
+                 <hr className="mb-2" />
+                  <div className="flex flex-row w-auto justify-between items-center">
+                
+                   <label className="
+                    text-[var(--blue-200)]
+                    !font-pretendard
+                    font-[var(--font-md)]
+                    leading-normal justify-between items-center
+                    whitespace-nowrap
+                  ">파일 타입</label>
+                  <lable className="
+                    text-[var(--blue-200)]
+                    !font-pretendard
+                    font-[var(--font-md)]
+                    leading-normal justify-between items-center
+                  ">
                   <select
-                    className="w-full mt-1 rounded px-2 py-1"
+                    className="w-[5.2rem] mt-1 rounded px-2 py-1 "
                     value={fileType}
                     onChange={(e) => setFileType(e.target.value)}
                   >
-                    <option>JPG</option>
-                    <option>PNG</option>
-                    <option>SVG</option>
+                    <option>jpg</option>
+                    <option>png</option>
+                    <option>jpeg</option>
                   </select>
-                </div>
-                <div>
-                  <label className="text-sm text-blue-700">날짜</label>
+                  </lable>
+                  </div>
+                 <div className="flex flex-row w-auto justify-between ">
+                  <label className="  
+                    text-[var(--blue-200)]
+                    !font-pretendard
+                    font-[var(--font-md)]
+                    leading-normal justify-between items-center
+                    whitespace-nowrap
+                  ">
+                    날짜
+                  </label>
+                  <div className="flex flex-col">
                   <input
                     type="text"
-                    placeholder="20250102"
-                    value={dateInput}
+                    placeholder="YYYYMMDD"
+                    value={dateInputDisplay}
                     onChange={(e) => handleDateInput(e.target.value)}
-                    className="w-full mt-1 rounded bg-gray-100 px-2 py-1"
+                    className="!w-[5.2rem] mt-1 rounded bg-[var(--gray-200)]/50 px-2 py-1"
                   />
-                  {year && (
-                    <div className="text-xs text-gray-500 mt-1">
-                      입력된 날짜: {year}/{month}/{day}
-                    </div>
+                  {dateError && (
+                    <p className="absolute bottom-4 left-5 text-[var(--red)] text-[0.9rem] mt-1 inline-block whitespace-nowrap z-100
+                          ">{dateError}</p>
                   )}
+                  </div>
+
                 </div>
+                </div>
+
               </div>
             )}
           </div>
