@@ -1,0 +1,84 @@
+import React, { useState, useRef, useEffect } from 'react';
+import clsx from 'clsx'; 
+import { twMerge } from 'tailwind-merge';
+import "../../styles/color.css";
+import SettingModal from '../Setting/SettingModal';
+
+const Toast = ({ message, type }) => {
+  // const baseStyle = 'px-3 py-1 rounded-xl shadow bg-white border mt-2 relative';
+  // const pointerStyle = 'absolute -bottom-1 left-4 w-3 h-3 bg-white rotate-45 border-l border-b';
+  const textColor = type === 'error' ? 'text-red-700' : 'text-blue-700';
+
+ return (
+    <div className="relative flex items-center gap-2 mt-2">
+      <div className={`
+        absolute left-4 top-[3rem] !text-[1.4rem]  
+        text-[var(--blue-300)]
+          text-center
+          !font-pretendard
+          text-[1.4rem]
+          not-italic
+          font-[var(--font-rg)]
+          leading-normal
+          w-[9.6rem]
+          h-[3.5rem]
+          bg-white
+          shadow-xl
+          rounded-xl
+          justify-center
+          items-center
+          flex
+        ${textColor}`}>
+        {message}
+      </div>
+    </div>
+  );
+};
+
+  const BottomBar = () => {
+      const [toasts, setToasts] = useState([]);
+
+    const showToast = (message, type) => {
+      const id = Date.now();
+      setToasts((prev) => [...prev, { id, message, type }]);
+      setTimeout(() => {
+        setToasts((prev) => prev.filter((toast) => toast.id !== id));
+      }, 2000);
+            // }, 100000);
+
+    };
+
+    return (
+      <div className="flex justify-between items-center px-6 mt-[3rem] ">
+        {/* 왼쪽 업로드 / 다운로드 */}
+        <div className="flex gap-6 items-center">
+          <div 
+            className="flex flex-col items-center text-blue-700 cursor-pointer"
+            onClick={() => showToast('Uploading...', 'info')}
+            >
+            <img src="UploadCloud.svg" alt="Upload" className="w-[3.2rem] h-[3.2rem] mb-1" />
+            <span className="text-xs underline">Upload</span>
+          </div>
+          <div 
+              className="flex flex-col items-center text-blue-700 cursor-pointer"
+              onClick={() => showToast('Downloading...', 'info')}
+          >
+            <img src="DownloadCloud.svg" alt="Download" className="w-[3.2rem] h-[3.2rem] mb-1" />
+            <span className="text-xs underline">Download</span>
+          </div>
+        </div>
+
+        {/* 오른쪽 환경설정 아이콘 */}
+        {/* <div className="cursor-pointer">
+          <img src="settings.svg" alt="Settings" className="w-6 h-6 text-blue-700" />
+        </div> */}
+          <SettingModal />
+        <div className="absolute top-[48rem] flex flex-col items-end z-50">
+          {toasts.map((toast) => (
+            <Toast key={toast.id} message={toast.message} type={toast.type} />
+          ))}
+        </div>
+      </div>
+    );
+  };
+  export default BottomBar;
