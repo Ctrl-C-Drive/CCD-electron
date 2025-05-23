@@ -1,7 +1,6 @@
-import { useState } from 'react'
 import './App.css'
-import './index.css'
-import React, { useState, useRef, useEffect } from 'react';
+import './index.css';
+import React, { useState, useEffect } from 'react';
 import clsx from 'clsx'; 
 import { twMerge } from 'tailwind-merge';
 import { colors, colorVariants } from './styles/color.ts';
