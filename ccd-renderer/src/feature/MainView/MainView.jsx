@@ -7,10 +7,10 @@ import "../../styles/color.css";
 const MainView = ({isTagChecked}) => {
   const [items, setItems] = useState([
     { id: 1, tag: '고양이', selected: true },
-    { id: 2, tag: '고양이', selected: false },
-    { id: 3, tag: '고양이', selected: false },
-    { id: 4, tag: '고양이', selected: false },
-    { id: 5, tag: '고양이', selected: false },
+    { id: 2, tag: '숲', selected: false },
+    { id: 3, tag: '바다', selected: false },
+    { id: 4, tag: '사람', selected: false },
+    { id: 5, tag: '소', selected: false },
   ]);
     const [activeItemId, setActiveItemId] = useState(null);
   const containerRefs = useRef({});
