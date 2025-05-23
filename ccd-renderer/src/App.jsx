@@ -6,7 +6,6 @@ import { twMerge } from 'tailwind-merge';
 import { colors, colorVariants } from './styles/color.ts';
 import { typographyVariants } from './styles/typography.ts';
 
-
 import BottomBar from './feature/Bottom/BottomBar';
 import SearchBar from './feature/Search/SearchBar';
 import FilterBar from './feature/Filter/FilterBar';
