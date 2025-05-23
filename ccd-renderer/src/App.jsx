@@ -22,19 +22,29 @@ import './styles/typography.css'
 //전체 
 const App= () => {
     const [isTagChecked, setIsTagChecked] = useState(true);
+    useEffect(() => {
+      console.log("🧪 electronAPI:", window.electronAPI);
+    }, []);
 
   return (
     <>
-      <div className="w-full h-full bg-white opacity-87  p-0">
+      <div c
+        className="w-full h-full bg-white opacity-87  p-0 "
+        style={{ WebkitAppRegion: 'drag' }}
+      >
         {/* 최상단 손잡이, 닫기 버튼 */}
-          <div className="pt-[1.6rem] pb-[2.1rem] flex justify-center ">
+          <div className="pt-[1.6rem] pb-[2.1rem] flex justify-center relative">
               {/*  손잡이 */}
               <div className="w-[5.6rem]  h-[0.2rem] bg-[var(--blue-200)] [border-[var(--blue-200)]">
 
               </div>
               {/* 닫기 버튼  */}
-              <div className="">
-
+              <div className="absolute z-50 right-8 top-5">
+                <img src="X.svg"alt="닫기 버튼 "   
+                  style={{ WebkitAppRegion: 'no-drag' }}
+                onClick={() => window.electronAPI.closeWindow()}
+             />
+             
               </div>
           </div>
            <div className=" !bg-white/70 px-[3rem]  ">
