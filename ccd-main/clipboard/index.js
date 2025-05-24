@@ -1,16 +1,22 @@
 // ccd-main/features/clipboard/index.js
 // 메인 프로세스 클립보드 모듈 초기화 및 이벤트 처리
-require('dotenv').config();
+require("dotenv").config();
 
-const { app, ipcMain, globalShortcut } = require("electron");
+const { app, ipcMain, globalShortcut, BrowserWindow } = require("electron");
 const monitor = require("./monitor");
 const DataRepositoryModule = require("../db_models/DataRepository");
+const CCDError = require("../CCDError");
+
 const CLOUD_SERVER_URL = process.env.CLOUD_SERVER_URL || "http://localhost:8000";
 
-const { BrowserWindow } = require("electron");
+if (!CLOUD_SERVER_URL) {
+  throw CCDError.create("E611", {
+    module: "index",
+    context: "환경 변수 확인",
+    message: "CLOUD_SERVER_URL이 설정되지 않았습니다!",
+  });
+}
 
-if (!CLOUD_SERVER_URL)
-  throw new Error("환경 변수 CLOUD_SERVER_URL이 설정되지 않았습니다!");
 const dbmgr = new DataRepositoryModule({
   apiBaseURL: CLOUD_SERVER_URL,
 });
@@ -40,44 +46,51 @@ function setupToggleShortcut() {
     console.log(`Cloud upload ${cloudUploadEnabled ? "enabled" : "disabled"}`);
     notifyRenderer();
   });
-  console.log("Shortcut registered:", ok);
-  if (!ok) console.error(`Failed to register shortcut: ${shortcut}`);
+  if (!ok) {
+    const error = CCDError.create("E611", {
+      module: "index",
+      context: "단축키 등록 실패",
+      message: `단축키 등록에 실패했습니다: ${shortcut}`,
+    });
+    console.error(error);
+  }
 }
 
 /**
  * 1초 폴링 기반 클립보드 모니터링 시작
  */
 function addClipboard(id, type, format, content, timestamp) {
-  // 1) 아이템 데이터 생성
   const itemData = {
     id: id,
     type: type === "text" ? "txt" : "img",
     format,
     content,
     created_at: timestamp,
-    // 이미지 메타데이터 초기화
     ...(type === "img" && {
-      imageMeta: {
-        file_path: content,
-      },
+      imageMeta: { file_path: content },
     }),
   };
-  console.log("addClipboard called with content:", content);
 
-  // 2) DataRepository에 추가
-  return dbmgr.addItem(itemData, cloudUploadEnabled ? "both" : "local");
+  try {
+    return dbmgr.addItem(itemData, cloudUploadEnabled ? "both" : "local");
+  } catch (err) {
+    const error = CCDError.create("E631", {
+      module: "index",
+      context: "클립보드 아이템 추가 실패",
+      details: err,
+    });
+    console.error(error);
+    throw error;
+  }
 }
 
-// 모니터링 콜백 수정
 function startMonitoring() {
   monitor.start(async (payload) => {
     try {
-      // 1) 타입 & 포맷 설정
       const type = payload.metadata.type;
       const format = type === "text" ? "text/plain" : "image/png";
       const timestamp = payload.metadata.timestamp;
 
-      // 2) DataRepository에 추가
       const newItem = await addClipboard(
         payload.id,
         type,
@@ -86,18 +99,23 @@ function startMonitoring() {
         timestamp
       );
 
-      // 3) 클라우드 업로드 (옵션에 따라 자동 처리됨)
-      payload.id = newItem.id;
+      payload.id = newItem?.id;
     } catch (err) {
-      console.error("Clipboard handling error:", err);
+      const error = CCDError.create("E630", {
+        module: "index",
+        context: "클립보드 감지/저장 실패",
+        details: err,
+      });
+      console.error(error);
     }
   });
 }
+
 /**
  * 렌더러에 현재 클라우드 업로드 상태 전송
  */
 function notifyRenderer() {
-  const win = BrowserWindow.getAllWindows()[0]; // 첫 번째 창을 타겟으로 함
+  const win = BrowserWindow.getAllWindows()[0];
   if (win && win.webContents) {
     win.webContents.send("clipboard-upload-status", cloudUploadEnabled);
   }
