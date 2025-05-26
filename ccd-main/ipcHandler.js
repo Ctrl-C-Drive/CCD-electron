@@ -102,19 +102,35 @@ function setupIPC() {
 
   //삭제
   ipcMain.handle("delete-item", async (_, { dataId, deleteOption }) => {
-  try {
-    await dataRepo.deleteItem(dataId, deleteOption);
-    return { deletionResult: true, refreshReq: true };
-  } catch (err) {
-    const error = CCDError.create("E650", {
-      module: "ipcHandler",
-      context: "데이터 삭제",
-      details: err,
-    });
-    console.error(error);
-    return { deletionResult: false, refreshReq: false };
-  }
-});
+    try {
+      await dataRepo.deleteItem(dataId, deleteOption);
+      return { deletionResult: true, refreshReq: true };
+    } catch (err) {
+      const error = CCDError.create("E650", {
+        module: "ipcHandler",
+        context: "데이터 삭제",
+        details: err,
+      });
+      console.error(error);
+      return { deletionResult: false, refreshReq: false };
+    }
+  });
+
+  //filter
+  ipcMain.handle("filter-items", async (_, { filterType, filterValue }) => {
+    try {
+      const filteredItems = await dataRepo.filterItems(filterType, filterValue);
+      return { success: true, data: filteredItems };
+    } catch (err) {
+      const error = CCDError.create("E652", {
+        module: "ipcHandler",
+        context: "항목 필터링",
+        details: err,
+      });
+      console.error(error);
+      return error.toJSON();
+    }
+  });
 
   // 클라우드 업로드
   ipcMain.handle("upload-selected-items", async (_, itemIds) => {
