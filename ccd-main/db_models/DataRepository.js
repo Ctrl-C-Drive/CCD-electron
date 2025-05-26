@@ -11,6 +11,7 @@ const fs = require("fs-extra");
 const { app } = require("electron");
 const LocalDataModule = require("./LocalData");
 const CloudDataModule = require("./CloudData");
+const { error } = require("console");
 
 class DataRepositoryModule extends EventEmitter {
   constructor(config) {
@@ -558,6 +559,81 @@ class DataRepositoryModule extends EventEmitter {
       throw this.handleSyncError(error, "일괄 업로드 실패");
     }
   }
+
+  //선택 업로드
+  async uploadSelectedItems(itemIds) {
+  const localItems = await this.getLocalPreview();
+  const cloudItems = await this.getCloudPreview();
+  const cloudIds = new Set(cloudItems.map(item => item.id));
+
+  const targets = localItems.filter(item =>
+    item.shared === "local" && itemIds.includes(item.id) && !cloudIds.has(item.id)
+  );
+
+  let uploadResult = true;
+
+  await Promise.all(targets.map(async (item) => {
+    try {
+      if (item.type === "txt") {
+        await this.cloudDB.createTextItem(item);
+      } else if (item.type === "img") {
+        await this.cloudDB.uploadImage(
+          item.id,
+          item.content,
+          item.format,
+          item.createdAt
+        );
+      }
+      this.localDB.updateSharedStatus(item.id, "cloud");
+    } catch (err) {
+      console.error("업로드 실패:", item.id, err);
+      uploadResult = false;
+    }
+  }));
+
+  this.invalidateCache("cloud");
+  return { uploadResult };
+}
+
+  //선택 다운로드
+async downloadSelectedItems(itemIds) {
+  const cloudItems = await this.getCloudPreview();
+  const localItems = await this.getLocalPreview();
+  const localIds = new Set(localItems.map(item => item.id));
+
+  const targets = cloudItems.filter(item =>
+    itemIds.includes(item.id) && !localIds.has(item.id)
+  );
+
+  let downloadResult = true;
+
+  await Promise.all(targets.map(async (item) => {
+    try {
+      const localItem = {
+        id: item.id,
+        type: item.type,
+        format: item.format,
+        content: item.content,
+        created_at: item.created_at,
+        shared: "cloud",
+      };
+
+      this.localDB.insertClipboardItem(localItem);
+
+      if (item.type === "img") {
+        await this.downloadImageFiles(item);
+      }
+
+      await this.syncTagsForItem(item);
+    } catch (err) {
+      console.error("다운로드 실패:", item.id, err);
+      downloadResult = false;
+    }
+  }));
+
+  this.invalidateCache("local");
+  return { downloadResult };
+}
 
   // 이미지 파일 다운로드
   async downloadImageFiles(cloudItem) {

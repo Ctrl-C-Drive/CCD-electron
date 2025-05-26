@@ -267,6 +267,19 @@ class CloudDataModule {
       throw this.handleError(error, "이미지 업로드 실패");
     }
   }
+
+  // Clip 검색 함수
+  async searchByCLIP(keyword) {
+  try {
+    const response = await this.axiosInstance.post("/clip/search", {
+      text: keyword,
+    });
+
+    return response.data.map((item) => this.transformItem(item));
+  } catch (error) {
+    throw this.handleError(error, "CLIP 검색 실패");
+  }
+}
 }
 
 module.exports = CloudDataModule;
