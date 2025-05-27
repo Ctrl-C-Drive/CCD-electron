@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import clsx from 'clsx'; 
 import { twMerge } from 'tailwind-merge';
 import "../../styles/color.css";
+import CryptoJS from "crypto-js";
 
 const LoginModal = () => {
 const [modalState, setModalState] = useState(null);
@@ -31,9 +32,22 @@ console.log("electronAPI:", window.electronAPI);
     };
   }, []);
 
+  // 렌더러 ->메인으로 보내는 id, pw AES알고리즘으로 암호화화
+const encryptAES = (text) => {
+  const key = CryptoJS.enc.Utf8.parse(import.meta.env.VITE_AES_KEY);
+  const iv = CryptoJS.enc.Utf8.parse(import.meta.env.VITE_AES_IV);
+
+  const encrypted = CryptoJS.AES.encrypt(text, key, {
+    iv,
+    mode: CryptoJS.mode.CBC,
+    padding: CryptoJS.pad.Pkcs7,
+  });
+
+  return encrypted.toString(); // base64 string
+};
   const handleLogin = () => {
     setIsSubmitted(true); 
-  if (!userId || !pw || userId !== "Hello1355" || pw !== "password") {
+  if (!userId || !pw ) {
     setError("ID 또는 PW를 확인해주세요");
     return;
   }
@@ -55,7 +69,9 @@ console.log("electronAPI:", window.electronAPI);
   }
 
   try {
-    const { joinResultMsg } = await window.electronAPI.registerUser(userId, pw);
+    const encryptedId = encryptAES(userId);
+    const encryptedPw = encryptAES(pw);
+    const { joinResultMsg } = await window.electronAPI.registerUser(encryptedId, encryptedPw);
 
     if (joinResultMsg === "success") {
       setModalState("menu");
