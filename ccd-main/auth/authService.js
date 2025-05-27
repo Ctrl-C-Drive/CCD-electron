@@ -1,7 +1,7 @@
 
 require("dotenv").config();
 const crypto = require("crypto");
-const CCDError = require("./CCDError");
+const CCDError = require("../CCDError");
 const CloudDataModule = require("../db_models/CloudData");
 
 const { AES_KEY, AES_IV, CLOUD_SERVER_URL } = process.env;

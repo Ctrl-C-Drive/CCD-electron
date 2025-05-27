@@ -18,7 +18,7 @@ class CCDError extends Error {
     const errorMap = {
       // 🔐 인증/회원 관련
       E610: "데이터베이스 오류",
-      E611: "입력값 오류",
+      // E611: "입력값 오류",
 
       // 🔍 검색/요청 처리
       E620: "서버 미응답",
