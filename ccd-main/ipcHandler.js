@@ -1,16 +1,18 @@
 const { ipcMain } = require("electron");
 const { searchData } = require("./DataSearchModule");
 const { authenticate } = require("./auth/authService");
+const { registerUser } = require("./auth/authService");
+
 const DataRepositoryModule = require("./db_models/DataRepository");
 const CCDError = require("./CCDError");
 
 const CLOUD_SERVER_URL = process.env.CLOUD_SERVER_URL || "http://localhost:8000";
 if (!CLOUD_SERVER_URL) {
-  throw CCDError.create("E611", {
+  return CCDError.create("E611", {
     module: "ipcHandler",
     context: "환경 변수 확인",
     message: "CLOUD_SERVER_URL이 설정되지 않았습니다!",
-  });
+  }).toJSON();
 }
 
 const dataRepo = new DataRepositoryModule({ apiBaseURL: CLOUD_SERVER_URL });
@@ -54,7 +56,14 @@ function setupIPC() {
   ipcMain.handle("paste-item", async (_, { itemId }) => {
     try {
       const item = await dataRepo.localDB.getClipboardItem(itemId);
-      if (!item) throw new Error("해당 item을 찾을 수 없습니다.");
+      if (!item) {
+        return {
+          paste: false,
+          error: {
+            message: "해당 item을 찾을 수 없습니다."
+          }
+        };
+      }
 
       if (item.type === "txt") {
         clipboard.writeText(item.content);
@@ -163,8 +172,6 @@ function setupIPC() {
       return error.toJSON();
     }
   });
-
-
 }
 
 module.exports = { setupIPC };

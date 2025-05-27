@@ -13,6 +13,7 @@ const [isSubmitted, setIsSubmitted] = useState(false);
 const [idError, setIdError] = useState("");
 const [pwError, setPwError] = useState("");
 
+console.log("electronAPI:", window.electronAPI);
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -45,12 +46,35 @@ const [pwError, setPwError] = useState("");
 
 
   };
-  const handleJoin = () => {
-    // 실제 인증 로직은 여기에 연결
-    setUserId("Hello1355"); // 예시 ID
-    setModalState("menu");
 
-  };
+
+  const handleJoin = async() => {
+    if (!userId || !pw) {
+    setError("ID 또는 PW를 입력해주세요");
+    return;
+  }
+
+  try {
+    const { joinResultMsg } = await window.electronAPI.registerUser(userId, pw);
+
+    if (joinResultMsg === "success") {
+      setModalState("menu");
+      setError("");
+    } else if (joinResultMsg === "duplication") {
+      setError("이미 존재하는 ID입니다.");
+    } else {
+      setError("회원가입에 실패했습니다. 다시 시도해주세요.");
+    }
+  } catch (err) {
+    console.error("회원가입 중 에러:", err);
+    setError("알 수 없는 오류가 발생했습니다.");
+  }
+  
+    setUserId(userId); // ID 반영
+    setModalState(pw);  //PW 반영
+  }
+  
+
   const handleIDChange = (value) => {
     setUserId(value);
   }
