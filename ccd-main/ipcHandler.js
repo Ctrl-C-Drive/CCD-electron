@@ -1,12 +1,13 @@
 const { ipcMain } = require("electron");
-const { searchData } = require("./DataSearchModule");
+const { searchData } = require("./DataSearch");
 const { authenticate } = require("./auth/authService");
 const { registerUser } = require("./auth/authService");
 
 const DataRepositoryModule = require("./db_models/DataRepository");
 const CCDError = require("./CCDError");
 
-const CLOUD_SERVER_URL = process.env.CLOUD_SERVER_URL || "http://localhost:8000";
+const CLOUD_SERVER_URL =
+  process.env.CLOUD_SERVER_URL || "http://localhost:8000";
 if (!CLOUD_SERVER_URL) {
   return CCDError.create("E611", {
     module: "ipcHandler",
@@ -22,12 +23,10 @@ function setupIPC() {
   ipcMain.handle("user-register", async (_, { userId, password }) => {
     try {
       const { JoinResult } = await registerUser(userId, password);
-      const joinResultMsg =
-        JoinResult === true ? "success" : "fail";
+      const joinResultMsg = JoinResult === true ? "success" : "fail";
       return { joinResultMsg };
     } catch (err) {
-      const joinResultMsg =
-        err.code === "E409" ? "duplication" : "fail";
+      const joinResultMsg = err.code === "E409" ? "duplication" : "fail";
       console.error("회원가입 실패:", err);
       return { joinResultMsg };
     }
@@ -36,7 +35,10 @@ function setupIPC() {
   // 로그인
   ipcMain.handle("user-login", async (_, { userId, password }) => {
     try {
-      const { loginResult, access_token, refresh_token } = await authenticate(userId, password);
+      const { loginResult, access_token, refresh_token } = await authenticate(
+        userId,
+        password
+      );
 
       // 토큰 저장은 authService 내부 cloudDB 인스턴스에서 처리됨
       return {
@@ -60,8 +62,8 @@ function setupIPC() {
         return {
           paste: false,
           error: {
-            message: "해당 item을 찾을 수 없습니다."
-          }
+            message: "해당 item을 찾을 수 없습니다.",
+          },
         };
       }
 
@@ -79,7 +81,6 @@ function setupIPC() {
       return { paste: false };
     }
   });
-
 
   // 검색어 전송
   ipcMain.handle("search-keyword", async (_, { keyword, model }) => {
