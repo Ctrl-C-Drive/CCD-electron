@@ -75,6 +75,35 @@ class DataRepositoryModule extends EventEmitter {
     }
   }
 
+  //단일 클립보드 아이템 추가
+  async getClipboardItem(dataId, source = "local") {
+    try {
+      let item;
+
+      if (source === "local") {
+        item = this.localDB.getClipboardItem(dataId);
+      } else if (source === "cloud") {
+        item = await this.cloudDB.getClipboardItem(dataId);
+      } else {
+        throw CCDError.create("E601", {
+          module: "DataRepository",
+          context: "getClipboardItem",
+          message: `지원되지 않는 소스: ${source}`,
+        });
+      }
+
+      if (!item) return null;
+      return item;
+    } catch (error) {
+      throw CCDError.create("E602", {
+        module: "DataRepository",
+        context: "getClipboardItem",
+        message: `아이템 조회 실패 (source: ${source})`,
+        details: error.message || error,
+      });
+    }
+  }
+
   // 클립보드 항목 추가
   // 클립보드 항목 추가 (이미지 처리 포함)
   async addItem(itemData, target = "both") {
@@ -251,6 +280,9 @@ class DataRepositoryModule extends EventEmitter {
     try {
       if (target === "local" || target === "both") {
         this.localDB.deleteClipboardItem(itemId);
+        if (this.localDB.getSharedStatus(itemId) === "cloud") {
+          this.cloudDB.localDelete(itemId);
+        }
       }
 
       if (target === "cloud" || target === "both") {

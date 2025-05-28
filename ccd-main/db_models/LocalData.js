@@ -109,17 +109,17 @@ class LocalDataModule {
         .prepare("UPDATE image_meta SET thumbnail_path = ? WHERE data_id = ?")
         .run(thumbnailPath, dataId);
     } catch (error) {
-      throw CCDError.create("E610", {
-        module: "LocalData",
-        context: "내부 오류",
-        message: "썸네일 재생성 실패",
-      });
       // 재생성 실패 시 썸네일 경로 제거
       this.db
         .prepare(
           "UPDATE image_meta SET thumbnail_path = NULL WHERE data_id = ?"
         )
         .run(dataId);
+      throw CCDError.create("E610", {
+        module: "LocalData",
+        context: "내부 오류",
+        message: "썸네일 재생성 실패",
+      });
     }
   }
   _createTables() {
@@ -680,7 +680,7 @@ class LocalDataModule {
     }
   }
 
-  // 변환 함수 (CloudDataModule과 일관되게)
+  // 변환 함수
   transformItem(item, imageMeta = null, tags = []) {
     return {
       ...item,
@@ -702,6 +702,14 @@ class LocalDataModule {
       UPDATE clipboard SET shared = ? WHERE id = ?
     `);
     stmt.run(shared, id);
+  }
+
+  getSharedStatus(id) {
+    const stmt = this.db.prepare(`
+      SELECT shared FROM clipboard WHERE id = ?
+    `);
+    const row = stmt.get(id);
+    return row ? row.shared : null;
   }
 
   // 이미지 메타데이터 조회
