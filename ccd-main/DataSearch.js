@@ -33,16 +33,17 @@ async function searchData(keyword, model) {
     let resultItems = [];
 
     if (model === "mobilenet") {
-      const [localData, cloudData] = await Promise.all([
-        dataRepo.getLocalPreview(),
-        dataRepo.getCloudPreview(),
-      ]);
+      resultItems = await dataRepo.searchItems(keyword, { includeCloud: true });
+      // const [localData, cloudData] = await Promise.all([
+      //   dataRepo.getLocalPreview(),
+      //   dataRepo.getCloudPreview(),
+      // ]);
 
-      const allItems = dataRepo.mergeItems(localData, cloudData);
+      // const allItems = dataRepo.mergeItems(localData, cloudData);
 
-      resultItems = allItems.filter((item) =>
-        item.tags?.some((tag) => tag.name?.includes(keyword))
-      );
+      // resultItems = allItems.filter((item) =>
+      //   item.tags?.some((tag) => tag.name?.includes(keyword))
+      // );
     }
 
     if (model === "clip") {

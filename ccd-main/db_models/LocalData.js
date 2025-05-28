@@ -3,6 +3,8 @@ const path = require("path");
 const { app } = require("electron");
 const Database = require("better-sqlite3");
 const crypto = require("crypto");
+const fs = require("fs-extra");
+const sharp = require("sharp");
 
 class LocalDataModule {
   constructor() {
@@ -10,6 +12,8 @@ class LocalDataModule {
     // this.encryptionKey = "secure-key-1234"; // 실제 배포 시 환경변수로 관리
     this.db = null;
     this._initialize();
+    this.initializeCleanup();
+    this.setupFTS();
   }
   _initialize() {
     try {
@@ -29,6 +33,85 @@ class LocalDataModule {
   //   const keyBuffer = crypto.scryptSync(this.encryptionKey, "salt", 32); // 더 안전한 키 생성
   //   this.db.pragma(`key=x'${keyBuffer.toString("hex")}'`); // 바이너리 방식으로 전달
   // }
+
+  // 주기적 정리 작업 초기화
+  initializeCleanup() {
+    // 앱 시작 시 초기 정리
+    this.cleanupImageFiles();
+
+    // 24시간 주기로 정리
+    setInterval(() => this.cleanupImageFiles(), 86400000);
+  }
+
+  // 이미지 파일 정리 메서드
+  cleanupImageFiles() {
+    try {
+      // 모든 이미지 메타데이터 조회
+      const allMeta = this.db.prepare("SELECT * FROM image_meta").all();
+
+      for (const meta of allMeta) {
+        const { data_id, file_path, thumbnail_path } = meta;
+        const originalExists = fs.existsSync(file_path);
+        const thumbnailExists = thumbnail_path
+          ? fs.existsSync(thumbnail_path)
+          : false;
+
+        // 1. 원본 이미지가 존재하지 않는 경우
+        if (!originalExists) {
+          console.log(`원본 이미지 누락: ${file_path}`);
+
+          // 썸네일 삭제 (존재할 경우)
+          if (thumbnailExists) {
+            fs.unlink(thumbnail_path).catch((e) => console.error(e));
+          }
+
+          // 데이터베이스 항목 삭제 (CASCADE로 연관 데이터 자동 삭제)
+          this.deleteClipboardItem(data_id);
+          continue;
+        }
+
+        // 2. 썸네일이 존재하지 않는 경우
+        if (!thumbnailExists) {
+          console.log(`썸네일 누락: ${thumbnail_path}`);
+          this.regenerateThumbnail(data_id, file_path);
+        }
+      }
+    } catch (error) {
+      console.error("이미지 파일 정리 실패:", error);
+    }
+  }
+
+  // 썸네일 재생성 메서드
+  async regenerateThumbnail(dataId, imagePath) {
+    try {
+      // 새 썸네일 경로 생성
+      const ext = path.extname(imagePath);
+      const thumbnailPath = path.join(
+        path.dirname(imagePath),
+        `thumb_${path.basename(imagePath, ext)}.png`
+      );
+
+      // 썸네일 생성
+      await sharp(imagePath)
+        .resize(200, 200, { fit: "inside" })
+        .toFile(thumbnailPath);
+
+      // 데이터베이스 업데이트
+      this.db
+        .prepare("UPDATE image_meta SET thumbnail_path = ? WHERE data_id = ?")
+        .run(thumbnailPath, dataId);
+
+      console.log(`썸네일 재생성 완료: ${thumbnailPath}`);
+    } catch (error) {
+      console.error(`썸네일 재생성 실패 (${dataId}):`, error);
+      // 재생성 실패 시 썸네일 경로 제거
+      this.db
+        .prepare(
+          "UPDATE image_meta SET thumbnail_path = NULL WHERE data_id = ?"
+        )
+        .run(dataId);
+    }
+  }
   _createTables() {
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS clipboard (
@@ -90,6 +173,156 @@ class LocalDataModule {
       CREATE INDEX IF NOT EXISTS idx_tag_name ON tag(name);
       CREATE INDEX IF NOT EXISTS idx_data_tag ON data_tag(data_id, tag_id);
     `);
+  }
+  // FTS5 초기 설정
+  setupFTS() {
+    try {
+      // FTS5 가상 테이블 생성
+      this.db.exec(`
+        CREATE VIRTUAL TABLE IF NOT EXISTS clipboard_fts USING fts5(
+          data_id UNINDEXED,
+          content,
+          tags,
+          format,
+          tokenize = 'trigram'
+        );
+      `);
+
+      // 기존 트리거 삭제 (재생성 방지)
+      this.db.exec(`
+        DROP TRIGGER IF EXISTS after_clipboard_insert;
+        DROP TRIGGER IF EXISTS after_clipboard_update;
+        DROP TRIGGER IF EXISTS after_clipboard_delete;
+        DROP TRIGGER IF EXISTS after_data_tag_change;
+        DROP TRIGGER IF EXISTS after_tag_update;
+      `);
+
+      // 새 트리거 생성
+      this.db.exec(`
+        -- 항목 추가 시
+        CREATE TRIGGER after_clipboard_insert AFTER INSERT ON clipboard
+        BEGIN
+          INSERT INTO clipboard_fts (data_id, content, tags, format)
+          VALUES (
+            new.id,
+            CASE WHEN new.type = 'txt' THEN new.content ELSE '' END,
+            (SELECT GROUP_CONCAT(t.name, ' ') FROM tag t
+             JOIN data_tag dt ON t.tag_id = dt.tag_id WHERE dt.data_id = new.id),
+            new.format
+          );
+        END;
+
+        -- 항목 업데이트 시
+        CREATE TRIGGER after_clipboard_update AFTER UPDATE ON clipboard
+        BEGIN
+          UPDATE clipboard_fts
+          SET 
+            content = CASE WHEN new.type = 'txt' THEN new.content ELSE '' END,
+            tags = (SELECT GROUP_CONCAT(t.name, ' ') FROM tag t
+                    JOIN data_tag dt ON t.tag_id = dt.tag_id WHERE dt.data_id = new.id),
+            format = new.format
+          WHERE data_id = old.id;
+        END;
+
+        -- 항목 삭제 시
+        CREATE TRIGGER after_clipboard_delete AFTER DELETE ON clipboard
+        BEGIN
+          DELETE FROM clipboard_fts WHERE data_id = old.id;
+        END;
+
+        -- 태그 변경 시
+        CREATE TRIGGER after_data_tag_change AFTER INSERT OR DELETE ON data_tag
+        BEGIN
+          UPDATE clipboard_fts
+          SET tags = (SELECT GROUP_CONCAT(t.name, ' ') FROM tag t
+                     JOIN data_tag dt ON t.tag_id = dt.tag_id 
+                     WHERE dt.data_id = COALESCE(new.data_id, old.data_id))
+          WHERE data_id = COALESCE(new.data_id, old.data_id);
+        END;
+
+        -- 태그 이름 변경 시
+        CREATE TRIGGER after_tag_update AFTER UPDATE ON tag
+        BEGIN
+          UPDATE clipboard_fts
+          SET tags = (SELECT GROUP_CONCAT(t.name, ' ') FROM tag t
+                     JOIN data_tag dt ON t.tag_id = dt.tag_id 
+                     WHERE dt.data_id IN (
+                       SELECT data_id FROM data_tag WHERE tag_id = new.tag_id
+                     ))
+          WHERE data_id IN (
+            SELECT data_id FROM data_tag WHERE tag_id = new.tag_id
+          );
+        END;
+      `);
+
+      // 기존 데이터 인덱싱 (초기 실행 시)
+      this.db.exec(`
+        INSERT INTO clipboard_fts (data_id, content, tags, format)
+        SELECT 
+          c.id,
+          CASE WHEN c.type = 'txt' THEN c.content ELSE '' END,
+          (SELECT GROUP_CONCAT(t.name, ' ') FROM tag t
+           JOIN data_tag dt ON t.tag_id = dt.tag_id WHERE dt.data_id = c.id),
+          c.format
+        FROM clipboard c
+        WHERE NOT EXISTS (SELECT 1 FROM clipboard_fts WHERE data_id = c.id);
+      `);
+    } catch (err) {
+      console.error("FTS5 설정 실패:", err);
+    }
+  }
+  // FTS5 검색 메소드
+  searchItems(query, options = {}) {
+    try {
+      // 검색 쿼리 정제
+      const cleanQuery = query
+        .replace(/[^\w\s가-힣]/gi, " ") // 특수문자 제거
+        .trim()
+        .replace(/\s+/g, " "); // 중복 공백 제거
+
+      if (!cleanQuery) return [];
+
+      // FTS5 검색 쿼리 생성
+      const ftsQuery = `
+        SELECT 
+          fts.data_id,
+          snippet(clipboard_fts, 0, '', '', '...', 16) as snippet,
+          bm25(clipboard_fts) as score,
+          c.*,
+          im.*,
+          GROUP_CONCAT(t.tag_id) as tag_ids
+        FROM clipboard_fts fts
+        JOIN clipboard c ON fts.data_id = c.id
+        LEFT JOIN image_meta im ON c.id = im.data_id
+        LEFT JOIN data_tag dt ON c.id = dt.data_id
+        LEFT JOIN tag t ON dt.tag_id = t.tag_id
+        WHERE clipboard_fts MATCH ?
+        GROUP BY c.id
+        ORDER BY score ${options.sortByScore ? "DESC" : "ASC"}
+        LIMIT ? OFFSET ?
+      `;
+
+      const stmt = this.db.prepare(ftsQuery);
+      const limit = options.limit || 50;
+      const offset = options.offset || 0;
+
+      // 와일드카드 검색 지원
+      const searchTerm = cleanQuery.includes(" ")
+        ? `"${cleanQuery}"`
+        : `${cleanQuery}*`;
+
+      return stmt.all(searchTerm, limit, offset).map((row) => ({
+        ...row,
+        tags: row.tag_ids
+          ? row.tag_ids.split(",").map((tag_id) => ({ tag_id }))
+          : [],
+        // 검색 스니펫 하이라이팅
+        highlight: row.snippet,
+      }));
+    } catch (err) {
+      console.error("로컬 검색 실패:", err);
+      return [];
+    }
   }
   // 설정 조회
   getConfig() {
@@ -168,11 +401,10 @@ class LocalDataModule {
   //클립보드 항목 삭제
   deleteClipboardItem(id) {
     const deleteChain = this.db.transaction((id) => {
-      this.delete("data_tag", { data_id: id });
-      this.delete("image_meta", { data_id: id });
-      this.delete("clipboard", { id: id });
+      this.db.prepare("DELETE FROM clipboard WHERE id = ?").run(id);
     });
     deleteChain(id);
+    console.log(`삭제 완료: ${id}`);
   }
   // 이미지 메타데이터 조회
   getImageMeta(dataId) {
@@ -315,9 +547,30 @@ class LocalDataModule {
         .prepare(`SELECT * FROM clipboard WHERE id = ?`)
         .get(id);
       if (!item) return null;
+
+      // 이미지 메타데이터 조회
       const meta = this.db
         .prepare(`SELECT * FROM image_meta WHERE data_id = ?`)
         .get(id);
+
+      // 이미지 항목인 경우 파일 존재 여부 확인
+      if (item.type === "img" && meta) {
+        const fileExists = fs.existsSync(meta.file_path);
+
+        // 원본 이미지가 존재하지 않으면 데이터 정리
+        if (!fileExists) {
+          console.warn(`원본 이미지 누락: ${meta.file_path}`);
+          this.deleteClipboardItem(id); // 데이터베이스에서 항목 삭제
+          return null;
+        }
+
+        // 썸네일이 존재하지 않으면 재생성
+        if (meta.thumbnail_path && !fs.existsSync(meta.thumbnail_path)) {
+          console.warn(`썸네일 누락: ${meta.thumbnail_path}`);
+          this.regenerateThumbnail(id, meta.file_path);
+        }
+      }
+
       const tags = this.db
         .prepare(
           `
@@ -327,6 +580,7 @@ class LocalDataModule {
       `
         )
         .all(id);
+
       return this.transformItem(item, meta, tags);
     } catch (error) {
       throw this.handleError(error, "클립보드 아이템 조회 실패");

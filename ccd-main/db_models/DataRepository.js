@@ -407,6 +407,32 @@ class DataRepositoryModule extends EventEmitter {
       return [];
     }
   }
+  async searchItems(query, options = {}) {
+    try {
+      if (options.includeCloud) {
+        try {
+          const fetchedCloudItems = await this.cloudDB.searchItems(query);
+          await this.syncCloudItems(fetchedCloudItems);
+        } catch (err) {
+          throw new DatabaseError("CLOUD_SEARCH_FAILED", err);
+        }
+      }
+
+      const results = await this.localDB.searchItems(query, options);
+      return results.map((item) => this.transformItem(item));
+    } catch (error) {
+      console.error("검색 오류:", error);
+      throw error; // 상위 핸들러로 전파
+    }
+  }
+
+  async syncCloudItems(cloudItems) {
+    const BATCH_SIZE = 50;
+    for (let i = 0; i < cloudItems.length; i += BATCH_SIZE) {
+      const batch = cloudItems.slice(i, i + BATCH_SIZE);
+      await this.localDB.bulkUpsert(batch);
+    }
+  }
 
   mergeItems(localItems, cloudItems) {
     const mergedMap = new Map();
@@ -446,6 +472,7 @@ class DataRepositoryModule extends EventEmitter {
       thumbnailUrl: item.imageMeta?.thumbnailUrl,
       tags: item.tags || [],
       source: item.source || "local",
+      score: item.score || 0,
     };
   }
 
@@ -562,78 +589,85 @@ class DataRepositoryModule extends EventEmitter {
 
   //선택 업로드
   async uploadSelectedItems(itemIds) {
-  const localItems = await this.getLocalPreview();
-  const cloudItems = await this.getCloudPreview();
-  const cloudIds = new Set(cloudItems.map(item => item.id));
+    const localItems = await this.getLocalPreview();
+    const cloudItems = await this.getCloudPreview();
+    const cloudIds = new Set(cloudItems.map((item) => item.id));
 
-  const targets = localItems.filter(item =>
-    item.shared === "local" && itemIds.includes(item.id) && !cloudIds.has(item.id)
-  );
+    const targets = localItems.filter(
+      (item) =>
+        item.shared === "local" &&
+        itemIds.includes(item.id) &&
+        !cloudIds.has(item.id)
+    );
 
-  let uploadResult = true;
+    let uploadResult = true;
 
-  await Promise.all(targets.map(async (item) => {
-    try {
-      if (item.type === "txt") {
-        await this.cloudDB.createTextItem(item);
-      } else if (item.type === "img") {
-        await this.cloudDB.uploadImage(
-          item.id,
-          item.content,
-          item.format,
-          item.createdAt
-        );
-      }
-      this.localDB.updateSharedStatus(item.id, "cloud");
-    } catch (err) {
-      console.error("업로드 실패:", item.id, err);
-      uploadResult = false;
-    }
-  }));
+    await Promise.all(
+      targets.map(async (item) => {
+        try {
+          if (item.type === "txt") {
+            await this.cloudDB.createTextItem(item);
+          } else if (item.type === "img") {
+            await this.cloudDB.uploadImage(
+              item.id,
+              item.content,
+              item.format,
+              item.createdAt
+            );
+          }
+          this.localDB.updateSharedStatus(item.id, "cloud");
+        } catch (err) {
+          console.error("업로드 실패:", item.id, err);
+          uploadResult = false;
+        }
+      })
+    );
 
-  this.invalidateCache("cloud");
-  return { uploadResult };
-}
+    this.invalidateCache("cloud");
+    return { uploadResult };
+  }
 
   //선택 다운로드
-async downloadSelectedItems(itemIds) {
-  const cloudItems = await this.getCloudPreview();
-  const localItems = await this.getLocalPreview();
-  const localIds = new Set(localItems.map(item => item.id));
+  async downloadSelectedItems(itemIds) {
+    const cloudItems = await this.getCloudPreview();
+    const localItems = await this.getLocalPreview();
+    const localIds = new Set(localItems.map((item) => item.id));
 
-  const targets = cloudItems.filter(item =>
-    itemIds.includes(item.id) && !localIds.has(item.id)
-  );
+    const targets = cloudItems.filter(
+      (item) => itemIds.includes(item.id) && !localIds.has(item.id)
+    );
 
-  let downloadResult = true;
+    let downloadResult = true;
 
-  await Promise.all(targets.map(async (item) => {
-    try {
-      const localItem = {
-        id: item.id,
-        type: item.type,
-        format: item.format,
-        content: item.content,
-        created_at: item.created_at,
-        shared: "cloud",
-      };
+    await Promise.all(
+      targets.map(async (item) => {
+        try {
+          const localItem = {
+            id: item.id,
+            type: item.type,
+            format: item.format,
+            content: item.content,
+            created_at: item.created_at,
+            shared: "cloud",
+          };
 
-      this.localDB.insertClipboardItem(localItem);
+          this.localDB.insertClipboardItem(localItem);
 
-      if (item.type === "img") {
-        await this.downloadImageFiles(item);
-      }
+          if (item.type === "img") {
+            await this.downloadImageFiles(item);
+          }
 
-      await this.syncTagsForItem(item);
-    } catch (err) {
-      console.error("다운로드 실패:", item.id, err);
-      downloadResult = false;
-    }
-  }));
+          await this.syncTagsForItem(item);
+        } catch (err) {
+          console.error("다운로드 실패:", item.id, err);
+          downloadResult = false;
+        }
+      })
+    );
 
-  this.invalidateCache("local");
-  return { downloadResult };
-}
+    this.invalidateCache("local");
+    return { downloadResult };
+  }
 
   // 이미지 파일 다운로드
   async downloadImageFiles(cloudItem) {
