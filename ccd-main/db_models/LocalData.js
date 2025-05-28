@@ -231,14 +231,24 @@ class LocalDataModule {
         END;
 
         -- 태그 변경 시
-        CREATE TRIGGER after_data_tag_change AFTER INSERT OR DELETE ON data_tag
+        CREATE TRIGGER after_data_tag_insert AFTER INSERT ON data_tag
         BEGIN
           UPDATE clipboard_fts
           SET tags = (SELECT GROUP_CONCAT(t.name, ' ') FROM tag t
-                     JOIN data_tag dt ON t.tag_id = dt.tag_id 
-                     WHERE dt.data_id = COALESCE(new.data_id, old.data_id))
-          WHERE data_id = COALESCE(new.data_id, old.data_id);
+                    JOIN data_tag dt ON t.tag_id = dt.tag_id 
+                    WHERE dt.data_id = new.data_id)
+          WHERE data_id = new.data_id;
         END;
+
+        CREATE TRIGGER after_data_tag_delete AFTER DELETE ON data_tag
+        BEGIN
+          UPDATE clipboard_fts
+          SET tags = (SELECT GROUP_CONCAT(t.name, ' ') FROM tag t
+                    JOIN data_tag dt ON t.tag_id = dt.tag_id 
+                    WHERE dt.data_id = old.data_id)
+          WHERE data_id = old.data_id;
+        END;
+
 
         -- 태그 이름 변경 시
         CREATE TRIGGER after_tag_update AFTER UPDATE ON tag
