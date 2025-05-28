@@ -1,10 +1,5 @@
 const { ipcMain } = require("electron");
-const DataRepositoryModule = require("./db_models/DataRepository");
-
-const { CLOUD_SERVER_URL } = process.env.CLOUD_SERVER_URL || "http://localhost:8000"; // 기본값 설정
-if (!CLOUD_SERVER_URL) throw new Error("환경 변수 CLOUD_SERVER_URL이 설정되지 않았습니다.");
-
-const dataRepo = new DataRepositoryModule({ apiBaseURL: CLOUD_SERVER_URL });
+const dataRepo = require("./db_models/DataRepository");
 
 /**
  * 선택한 항목 클라우드 업로드

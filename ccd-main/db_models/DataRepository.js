@@ -10,14 +10,14 @@ const sharp = require("sharp");
 const fs = require("fs-extra");
 const { app } = require("electron");
 const LocalDataModule = require("./LocalData");
-const CloudDataModule = require("./CloudData");
 const { error } = require("console");
+const CCDError = require("../CCDError");
 
 class DataRepositoryModule extends EventEmitter {
-  constructor(config) {
+  constructor() {
     super();
-    this.localDB = new LocalDataModule();
-    this.cloudDB = new CloudDataModule(config);
+    this.localDB = require("./LocalData");
+    this.cloudDB = require("./CloudData");
     this._loadConfig();
     this.initializeCleanup();
     this.cache = {
@@ -188,7 +188,11 @@ class DataRepositoryModule extends EventEmitter {
       this.invalidateCache(target === "both" ? "all" : target);
       return this.transformItem(newItem);
     } catch (error) {
-      this.handleSyncError(error, "항목 추가 실패");
+      throw CCDError.create("E610", {
+        module: "DataRepository",
+        context: "항목 추가 실패",
+        message: error.details,
+      });
     }
   }
 
@@ -262,7 +266,11 @@ class DataRepositoryModule extends EventEmitter {
 
       return true;
     } catch (error) {
-      this.handleSyncError(error, "항목 삭제 실패");
+      throw CCDError.create("E610", {
+        module: "DataRepository",
+        context: "항목 삭제 실패",
+        message: error.details,
+      });
     }
   }
 
@@ -282,8 +290,11 @@ class DataRepositoryModule extends EventEmitter {
           finalTagId = cloudTagId; // 클라우드 ID를 기본으로 사용
           sync_status = "synced";
         } catch (error) {
-          console.error("클라우드 태그 생성 실패:", error);
-          throw error;
+          throw CCDError.create("E610", {
+            module: "DataRepository",
+            context: "클라우드 태그 생성 실패",
+            message: error.details,
+          });
         }
       }
 
@@ -330,7 +341,11 @@ class DataRepositoryModule extends EventEmitter {
         sync_status: sync_status,
       };
     } catch (error) {
-      this.handleSyncError(error, "태그 추가 실패");
+      throw CCDError.create("E610", {
+        module: "DataRepository",
+        context: "태그 추가 실패",
+        message: error.details,
+      });
     }
   }
 
@@ -347,7 +362,11 @@ class DataRepositoryModule extends EventEmitter {
 
       return true;
     } catch (error) {
-      this.handleSyncError(error, "태그 매핑 추가 실패");
+      throw CCDError.create("E610", {
+        module: "DataRepository",
+        context: "태그 매핑 추가 실패",
+        message: error.details,
+      });
     }
   }
 
@@ -414,15 +433,22 @@ class DataRepositoryModule extends EventEmitter {
           const fetchedCloudItems = await this.cloudDB.searchItems(query);
           await this.syncCloudItems(fetchedCloudItems);
         } catch (err) {
-          throw new DatabaseError("CLOUD_SEARCH_FAILED", err);
+          throw CCDError.create("E610", {
+            module: "DataRepository",
+            context: "클라우드검색 실패",
+            message: error.details,
+          });
         }
       }
 
       const results = await this.localDB.searchItems(query, options);
       return results.map((item) => this.transformItem(item));
     } catch (error) {
-      console.error("검색 오류:", error);
-      throw error; // 상위 핸들러로 전파
+      throw CCDError.create("E610", {
+        module: "DataRepository",
+        context: "검색 오류",
+        message: error.details,
+      });
     }
   }
 
@@ -476,14 +502,6 @@ class DataRepositoryModule extends EventEmitter {
     };
   }
 
-  handleSyncError(error, context) {
-    console.error(`${context}:`, error);
-    throw {
-      code: error.code || "E500",
-      message: error.message || context,
-      details: error.details,
-    };
-  }
   // 클라우드 → 로컬 다운로드
   async downloadCloudData() {
     try {
@@ -534,7 +552,11 @@ class DataRepositoryModule extends EventEmitter {
       this.invalidateCache("local");
       return { successCount, errorCount };
     } catch (error) {
-      throw this.handleSyncError(error, "일괄 다운로드 실패");
+      throw CCDError.create("E610", {
+        module: "DataRepository",
+        context: "일괄 다운로드 실패",
+        message: error.details,
+      });
     }
   }
 
@@ -583,7 +605,11 @@ class DataRepositoryModule extends EventEmitter {
       this.invalidateCache("cloud");
       return { successCount, errorCount };
     } catch (error) {
-      throw this.handleSyncError(error, "일괄 업로드 실패");
+      throw CCDError.create("E610", {
+        module: "DataRepository",
+        context: "일괄 업로드 실패",
+        message: error.details,
+      });
     }
   }
 
@@ -734,4 +760,5 @@ class DataRepositoryModule extends EventEmitter {
   }
 }
 
-module.exports = DataRepositoryModule;
+const dataRepositoryInstance = new DataRepositoryModule();
+module.exports = dataRepositoryInstance;

@@ -3,21 +3,9 @@ const { searchData } = require("./DataSearch");
 const { authenticate } = require("./auth/authService");
 const { registerUser } = require("./auth/authService");
 
-const DataRepositoryModule = require("./db_models/DataRepository");
 const CCDError = require("./CCDError");
 
-const CLOUD_SERVER_URL =
-  process.env.CLOUD_SERVER_URL || "http://localhost:8000";
-if (!CLOUD_SERVER_URL) {
-  return CCDError.create("E611", {
-    module: "ipcHandler",
-    context: "환경 변수 확인",
-    message: "CLOUD_SERVER_URL이 설정되지 않았습니다!",
-  }).toJSON();
-}
-
-const dataRepo = new DataRepositoryModule({ apiBaseURL: CLOUD_SERVER_URL });
-
+const dataRepo = require("./db_models/DataRepository");
 function setupIPC() {
   // 회원가입
   ipcMain.handle("user-register", async (_, { userId, password }) => {
