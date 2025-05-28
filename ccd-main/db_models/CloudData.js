@@ -270,16 +270,16 @@ class CloudDataModule {
 
   // Clip 검색 함수
   async searchByCLIP(keyword) {
-  try {
-    const response = await this.axiosInstance.post("/clip/search", {
-      text: keyword,
-    });
+    try {
+      const response = await this.axiosInstance.post("/search-text", {
+        text: keyword,
+      });
 
-    return response.data.map((item) => this.transformItem(item));
-  } catch (error) {
-    throw this.handleError(error, "CLIP 검색 실패");
+      return response.data.map((item) => this.transformItem(item));
+    } catch (error) {
+      throw this.handleError(error, "CLIP 검색 실패");
+    }
   }
-}
 }
 
 module.exports = CloudDataModule;
