@@ -1,7 +1,8 @@
 // ccd-main/modules/DataSearchModule.js
-const DataRepositoryModule = require("../db_models/DataRepository");
+const DataRepositoryModule = require("./db_models/DataRepository");
 const CCDError = require("./CCDError");
-const CLOUD_SERVER_URL = process.env.CLOUD_SERVER_URL || "http://localhost:8000";
+const CLOUD_SERVER_URL =
+  process.env.CLOUD_SERVER_URL || "http://localhost:8000";
 
 if (!CLOUD_SERVER_URL) {
   throw CCDError.create("E611", {
@@ -39,8 +40,8 @@ async function searchData(keyword, model) {
 
       const allItems = dataRepo.mergeItems(localData, cloudData);
 
-      resultItems = allItems.filter(item =>
-        item.tags?.some(tag => tag.name?.includes(keyword))
+      resultItems = allItems.filter((item) =>
+        item.tags?.some((tag) => tag.name?.includes(keyword))
       );
     }
 
@@ -48,7 +49,7 @@ async function searchData(keyword, model) {
       resultItems = await dataRepo.cloudDB.searchByCLIP(keyword);
     }
 
-    const sendData = resultItems.map(item => ({
+    const sendData = resultItems.map((item) => ({
       fileType: item.format,
       source: item.source,
       date: item.createdAt,
@@ -58,13 +59,14 @@ async function searchData(keyword, model) {
 
     return { sendResult: true, sendData };
   } catch (error) {
-    const wrapped = error instanceof CCDError
-      ? error
-      : CCDError.create("E621", {
-          module: "DataSearchModule",
-          context: "검색 처리 중",
-          details: error,
-        });
+    const wrapped =
+      error instanceof CCDError
+        ? error
+        : CCDError.create("E621", {
+            module: "DataSearchModule",
+            context: "검색 처리 중",
+            details: error,
+          });
 
     console.error("searchData 오류:", wrapped);
     return wrapped.toJSON();
