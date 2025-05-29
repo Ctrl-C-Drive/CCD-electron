@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import clsx from 'clsx'; 
 import { twMerge } from 'tailwind-merge';
 import "../../styles/color.css";
+import CryptoJS from "crypto-js";
 
 const LoginModal = () => {
 const [modalState, setModalState] = useState(null);
@@ -13,6 +14,7 @@ const [isSubmitted, setIsSubmitted] = useState(false);
 const [idError, setIdError] = useState("");
 const [pwError, setPwError] = useState("");
 
+// console.log("electronAPI:", window.electronAPI);
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -30,9 +32,30 @@ const [pwError, setPwError] = useState("");
     };
   }, []);
 
+  // 렌더러 ->메인으로 보내는 id, pw AES알고리즘으로 암호화화
+  const encryptAES = (text) => {
+
+    const key = CryptoJS.enc.Hex.parse(import.meta.env.VITE_AES_KEY); // 🔁 바뀐 부분
+    const iv = CryptoJS.enc.Hex.parse(import.meta.env.VITE_AES_IV);   // 🔁 바뀐 부분
+    //enc.Hex.parse()를 통해 hex문자열을 진짜 binary로 변환환
+    console.log("thisis key: ", key);
+        console.log("thisis iv: ", iv);
+
+    if (!key|| !iv) {
+      throw new Error("AES_KEY 또는 AES_IV 환경변수가 정의되지 않았습니다.");
+    }
+    const encrypted = CryptoJS.AES.encrypt(text, key, {
+      iv,
+      mode: CryptoJS.mode.CBC,
+      padding: CryptoJS.pad.Pkcs7,
+    });
+
+    return encrypted.toString(); // Base64 문자열
+  };
+
   const handleLogin = () => {
     setIsSubmitted(true); 
-  if (!userId || !pw || userId !== "Hello1355" || pw !== "password") {
+  if (!userId || !pw ) {
     setError("ID 또는 PW를 확인해주세요");
     return;
   }
@@ -45,12 +68,37 @@ const [pwError, setPwError] = useState("");
 
 
   };
-  const handleJoin = () => {
-    // 실제 인증 로직은 여기에 연결
-    setUserId("Hello1355"); // 예시 ID
-    setModalState("menu");
 
-  };
+
+  const handleJoin = async() => {
+    if (!userId || !pw) {
+    setError("ID 또는 PW를 입력해주세요");
+    return;
+  }
+
+  try {
+    const encryptedId = encryptAES(userId);
+    const encryptedPw = encryptAES(pw);
+    const { joinResultMsg } = await window.electronAPI.registerUser(encryptedId, encryptedPw);
+
+    if (joinResultMsg === "success") {
+      setModalState("menu");
+      setError("");
+    } else if (joinResultMsg === "duplication") {
+      setError("이미 존재하는 ID입니다.");
+    } else {
+      setError("회원가입에 실패했습니다. 다시 시도해주세요.");
+    }
+  } catch (err) {
+    console.error("회원가입 중 에러:", err);
+    setError("알 수 없는 오류가 발생했습니다.");
+  }
+  
+    setUserId(userId); // ID 반영
+    setModalState(pw);  //PW 반영
+  }
+  
+
   const handleIDChange = (value) => {
     setUserId(value);
   }

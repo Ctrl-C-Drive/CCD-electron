@@ -12,6 +12,7 @@
   "dependencies": {
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "crypto-js": "^4.2.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
   },
@@ -32,4 +33,3 @@
     "vite": "^6.3.5"
   }
 }
-
