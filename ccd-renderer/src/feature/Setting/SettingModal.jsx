@@ -2,10 +2,13 @@ import React, { useState, useRef, useEffect } from 'react';
 import clsx from 'clsx'; 
 import { twMerge } from 'tailwind-merge';
 import "../../styles/color.css";
+import useClipboardRecords from "../../utils/useClipboardRecords";
 
 
 
- const SettingModal = () => {
+ const SettingModal = ({onClose }) => {
+  const { refetch } = useClipboardRecords();
+
     const [isVisible, setIsVisible] = useState(false);
     const [retentionOpen, setRetentionOpen] = useState(false);
     const [localLimitOpen, setLocalLimitOpen] = useState(false);
@@ -31,8 +34,29 @@ import "../../styles/color.css";
     }, []);
 
     const retentionOptions = ['1일', '7일', '10일', '30일', '∞'];
-    const limitOptions = ['30개','10개', '50개' ];
+    const limitOptions = ['30개','10개', '50개' ]; 
+    const handleApplySetting = async () => {
+  const settings = {
+    storagePeriod: Number(retention),             // ex) "7"
+    localStorageCount: Number(localLimit),        // ex) "30"
+    cloudStorageCount: Number(cloudLimit),        // ex) "10"
+    cloudUploadEnabled: isAutoCloudSave === true,
+  };
 
+  try {
+    const response = await window.electronAPI.updateSearchSetting(settings);
+    if (response.success) {
+      await refetch();   // 기록 다시 불러오기
+      onClose();         // 모달 닫기
+    } else {
+      console.error("❌ 설정 전송 실패", response.error);
+    }
+  } catch (err) {
+    console.error("❌ IPC 오류:", err);
+  }
+};
+ 
+  
 return (
   <div className="relative">
     <div className="cursor-pointer" onClick={() => setIsVisible(true)}>
@@ -46,7 +70,7 @@ return (
           shadow-[0_0.1rem_2.5rem_0_rgba(0,0,0,0.10)]
           rounded-[0.7rem]
           gap-2 text-blue-700 
-          h-[18.6rem] w-[26rem]
+          h-[22.6rem] w-[26rem]
           flex justify-between flex-row
           absolute
           z-50
@@ -278,12 +302,24 @@ return (
               `}
             />
           </div>
+          
         </div>
-       
+           <div className="flex justify-center mt-6">
+              <button
+                className="text-[var(--blue-200)] text-[1.4rem] font-[600] underline !font-pretendard"
+                onClick={handleApplySetting}
+              >
+                확인
+              </button>
+            </div>
         </div>
+
+
       </div>
+      
     )}
   </div>
 );
  }
+
 export default SettingModal;
