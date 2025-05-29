@@ -59,7 +59,16 @@ const addItem = (newItem) => {
     ];
   });
 };
-  return { items, refetch, toggleSelect, addItem  };
+const setItemsFromSearchResult = (newItems) => {
+  const formatted = newItems.map((item) => ({
+    ...item,
+    selected: false,
+    itemId: item.itemId ?? uuidv4(),
+  }));
+  setItems(formatted);
+};
+
+  return { items, refetch, toggleSelect, addItem, setItemsFromSearchResult   };
 };
 
 export default useClipboardRecords;

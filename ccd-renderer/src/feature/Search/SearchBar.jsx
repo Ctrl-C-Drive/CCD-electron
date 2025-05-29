@@ -14,7 +14,18 @@ const SearchBar =() => {
   const [currentSelection, setCurrentSelection] = useState('일반 검색');
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
-
+const [keyword, setKeyword] = useState("");
+const handleSearch = async () => {
+  const model = currentSelection === "일반 검색" ? "mobilenet" : "clip";
+  const result = await window.electronAPI.searchKeyword(keyword, model);
+  
+  if (result.sendResult) {
+    // 📌 검색 결과를 상태로 저장하거나, Context 혹은 props로 전달
+    updateClipboardRecords(result.sendData);  // 예시
+  } else {
+    console.error("검색 실패", result);
+  }
+};
 
     useEffect(() => {
       const handleClickOutside = (event) => {
@@ -50,6 +61,11 @@ const SearchBar =() => {
                   text-[1.5rem] w-full
                   placeholder-[var(--blue-100)]
                 "
+              value={keyword}
+              onChange={(e) => setKeyword(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleSearch();
+              }}
               />
             </div>
 
