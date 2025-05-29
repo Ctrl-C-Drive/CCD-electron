@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-
+import { v4 as uuidv4 } from 'uuid';
 const useClipboardRecords = () => {
   const [items, setItems] = useState([]);
 
@@ -10,7 +10,7 @@ const useClipboardRecords = () => {
         const formatted = response.data.map((item) => ({
           ...item,
           selected: false,
-          id: item.id ?? null
+           itemId: item.itemId ?? item.id ?? uuidv4(),
         }));
         setItems(formatted);
       } else {
@@ -27,15 +27,17 @@ const useClipboardRecords = () => {
   useEffect(() => {
     console.log("🧾 현재 items 상태:", items);
   }, [items]);
-  const toggleSelect = (id) => {
+  const toggleSelect = (itemId) => {
     setItems((prev) =>
       prev.map((item) =>
-        item.id === id ? { ...item, selected: !item.selected } : item
+        item.itemId === itemId ? { ...item, selected: !item.selected } : item
       )
     );
   };
  //  드래그앤드랍으로 받은 아이템 추가
 const addItem = (newItem) => {
+   const itemId = newItem.itemId ?? uuidv4();
+
   setItems((prev) => {
     const isDuplicate = prev.some(
       (item) =>
@@ -48,7 +50,7 @@ const addItem = (newItem) => {
       {
         ...newItem,
         selected: false,
-        id: newItem.id ?? `temp-${Date.now()}`,
+        itemId,
         timestamp: newItem.timestamp ?? Date.now(),
         fileName: newItem.fileName ?? "unnamed",
         ext: newItem.ext ?? "unknown",

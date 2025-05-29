@@ -30,30 +30,31 @@ const MainView = ({isTagChecked}) => {
   const toggleModal = (id) => {
     setActiveItemId((prev) => (prev === id ? null : id));
   };
+
   useEffect(() => {
-const handleDrop = (e) => {
-  e.preventDefault();
+  const handleDrop = (e) => {
+    e.preventDefault();
 
-  const file = e.dataTransfer.files[0];
-  if (!file) return;
+    const file = e.dataTransfer.files[0];
+    if (!file) return;
 
-  const fileType = file.type;
+    const fileType = file.type;
 
-  if (fileType.startsWith("image/")) {
-    console.log("input된 데이터는 예쁜 img네요^^");
-    const reader = new FileReader();
-    reader.onload = (event) => {
-    const dataUrl = event.target.result;
-    const fileName = file.name;
-    const ext = fileName.split('.').pop().toLowerCase();      
-      addItem({
-        type: "image",
-        src: dataUrl,
-        fileName,
-        ext,
-        timestamp: Date.now(),
-        tags: [],
-      });
+    if (fileType.startsWith("image/")) {
+      console.log("input된 데이터는 예쁜 img네요^^");
+      const reader = new FileReader();
+      reader.onload = (event) => {
+      const dataUrl = event.target.result;
+      const fileName = file.name;
+      const ext = fileName.split('.').pop().toLowerCase();      
+        addItem({
+          type: "image",
+          src: dataUrl,
+          fileName,
+          ext,
+          timestamp: Date.now(),
+          tags: [],
+        });
     };
     reader.readAsDataURL(file);
   } else if (fileType === "text/plain") {
@@ -77,9 +78,6 @@ const handleDrop = (e) => {
     console.warn("지원하지 않는 파일 형식:", fileType);
   }
 };
-
-
-
     const handleDragOver = (e) => {
       e.preventDefault();
     console.log("💨 DragOver 이벤트 감지됨");
@@ -94,7 +92,29 @@ const handleDrop = (e) => {
       window.removeEventListener("dragover", handleDragOver);
     };
   }, [addItem]);
-
+const handlePaste = async (id) => {
+  try {
+    const res = await window.electronAPI.pasteItem(id);
+    if (res.paste) {
+      console.log("📋 클립보드에 복사 성공!");
+    } else {
+      console.warn("❌ 클립보드 복사 실패:", res.error);
+    }
+  } catch (err) {
+    console.error("IPC 에러:", err);
+  }
+};
+//삭제
+const handleDelete = async (itemId, deleteOption) => {
+  try {
+    const res = await window.electronAPI.deleteItem(itemId, deleteOption);
+    if (res.deletionResult && res.refreshReq) {
+      refetch(); // 화면 갱신
+    }
+  } catch (err) {
+    console.error("삭제 중 오류:", err);
+  }
+};
 
   return (
     <div className="grid grid-cols-2 gap-3 px-6 py-4  !w-screen  "
@@ -106,9 +126,14 @@ const handleDrop = (e) => {
     >
       {items.map((item) => (
         <div
-          key={item.id}
+          key={item.itemId}
           className="w-[17rm] !h-auto relative  border border-blue-700 rounded-md overflow-hidden cursor-pointer"
-          onClick={(e) => {toggleModal(item.id);   e.stopPropagation();}}
+          onContextMenu={(e) => {
+            toggleModal(item.itemId);
+            e.stopPropagation();
+            handlePaste(item.itemId);
+
+          }}
         >
           <div className="relative  h-[9.2rem] bg-blue-100">
             {item.type === "image" && item.src && (
@@ -125,7 +150,7 @@ const handleDrop = (e) => {
               <input
                 type="checkbox"
                 checked={item.selected}
-                onClick={()=> toggleSelect(item.id)}
+                onClick={()=> toggleSelect(item.itemId)}
                 onChange={() => {}}
                 className="accent-blue-700 w-[1.3rem] h-[1.3rem]"
               />
@@ -156,9 +181,9 @@ const handleDrop = (e) => {
             )}          
             </div>
             )}
-           {activeItemId === item.id && (
+           {activeItemId === item.itemId && (
             <div
-              ref={(el) => (containerRefs.current[item.id] = el)}
+              ref={(el) => (containerRefs.current[item.itemId] = el)}
                 onClick={(e) => e.stopPropagation()}
               className="absolute w-[11rem] h-auto px-[1.2rem] top-[2rem] right-[2.2rem] 
               bg-white border rounded-2xl shadow-md z-50 
@@ -170,15 +195,23 @@ const handleDrop = (e) => {
                 font-[var(--font-md)]
                 leading-normal
               ">
-              <div className="py-2 hover:bg-blue-50 cursor-pointer">
+              <div className="py-2 hover:bg-blue-50 cursor-pointer"
+                   onClick={() => handleDelete(item.itemId, "all")}
+
+              >
                 모두 삭제
               </div>
               <hr />
-              <div className="py-2 hover:bg-blue-50 cursor-pointer">
+              <div className="py-2 hover:bg-blue-50 cursor-pointer"
+                   onClick={() => handleDelete(item.itemId, "local")}
+              >
                 Local에서 삭제
               </div>
               <hr />
-              <div className="py-2 hover:bg-blue-50 cursor-pointer">
+              <div className="py-2 hover:bg-blue-50 cursor-pointer"
+                   onClick={() => handleDelete(item.itemId, "cloud")}
+
+              >
                 Cloud에서 삭제
               </div>
             </div>
