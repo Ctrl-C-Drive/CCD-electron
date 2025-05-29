@@ -32,7 +32,7 @@ const [pwError, setPwError] = useState("");
     };
   }, []);
 
-  // 렌더러 ->메인으로 보내는 id, pw AES알고리즘으로 암호화화
+  // 렌더러 ->메인으로 보내는 id, pw AES알고리즘으로 암호화
   const encryptAES = (text) => {
 
     const key = CryptoJS.enc.Hex.parse(import.meta.env.VITE_AES_KEY); // 🔁 바뀐 부분
@@ -53,21 +53,40 @@ const [pwError, setPwError] = useState("");
     return encrypted.toString(); // Base64 문자열
   };
 
-  const handleLogin = () => {
-    setIsSubmitted(true); 
-  if (!userId || !pw ) {
-    setError("ID 또는 PW를 확인해주세요");
+ const handleLogin = async () => {
+  setIsSubmitted(true);
+
+  if (!userId || !pw) {
+    setError("ID 또는 PW를 입력해주세요");
+    setIsSubmitted(false);
     return;
   }
 
-  setUserId(userId); // 정상 로그인
-  setError("");  // 에러 초기화
-  setIsSubmitted(false); 
+  try {
+    const encryptedId = encryptAES(userId);
+    const encryptedPw = encryptAES(pw);
 
-  setModalState("loggedIn");
+    const { tokenMsg, accessToken } = await window.electronAPI.loginUser(
+      encryptedId,
+      encryptedPw
+    );
 
-
-  };
+    if (!tokenMsg) {
+      setError("로그인 실패: 계정 정보를 확인하세요.");
+    } else if (!accessToken) {
+      setError("Access Token이 존재하지 않습니다.");
+    } else {
+      setUserId(userId); // 실제 userId 저장 (암호화된 값 아님)
+      setError("");
+      setModalState("loggedIn");
+    }
+  } catch (error) {
+    console.error("로그인 중 오류 발생:", error);
+    setError("로그인 중 오류가 발생했습니다.");
+  } finally {
+    setIsSubmitted(false);
+  }
+};
 
 
   const handleJoin = async() => {
