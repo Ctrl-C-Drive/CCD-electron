@@ -22,11 +22,13 @@ const dataRepo = new DataRepositoryModule({ apiBaseURL: CLOUD_SERVER_URL });
 async function searchData(keyword, model) {
   try {
     if (!keyword || !model) {
-      throw CCDError.create("E611", {
+      const error = CCDError.create("E611", {
         module: "DataSearchModule",
         context: "검색 요청 유효성 검사",
         message: "검색어 또는 모델 정보가 없습니다.",
       });
+      console.error(error);
+      return error.toJSON();
     }
 
     let resultItems = [];

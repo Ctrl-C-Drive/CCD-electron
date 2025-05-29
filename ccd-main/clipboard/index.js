@@ -53,6 +53,7 @@ function setupToggleShortcut() {
       message: `단축키 등록에 실패했습니다: ${shortcut}`,
     });
     console.error(error);
+    return error.toJSON();
   }
 }
 
@@ -80,7 +81,7 @@ function addClipboard(id, type, format, content, timestamp) {
       details: err,
     });
     console.error(error);
-    throw error;
+    return error.toJSON();
   }
 }
 
@@ -107,6 +108,7 @@ function startMonitoring() {
         details: err,
       });
       console.error(error);
+      return error.toJSON();
     }
   });
 }
