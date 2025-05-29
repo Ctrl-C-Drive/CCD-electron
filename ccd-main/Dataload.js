@@ -1,9 +1,6 @@
 // main process
 const { ipcMain } = require("electron");
-const DataRepositoryModule = require("./db_models/DataRepository");
-const { CLOUD_SERVER_URL } = process.env;
-
-const dataRepo = new DataRepositoryModule({ apiBaseURL: CLOUD_SERVER_URL });
+const dataRepo = require("./db_models/DataRepository");
 
 ipcMain.handle("load-clipboard-records", async (_, isLogin) => {
   try {
