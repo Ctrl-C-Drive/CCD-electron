@@ -1,5 +1,5 @@
 // ccd-main/modules/DataSearchModule.js
-const DataRepositoryModule = require("../db_models/DataRepository");
+const DataRepositoryModule = require("./db_models/DataRepository");
 const CCDError = require("./CCDError");
 const CLOUD_SERVER_URL = process.env.CLOUD_SERVER_URL || "http://localhost:8000";
 

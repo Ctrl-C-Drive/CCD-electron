@@ -1,6 +1,7 @@
-const { ipcMain, clipboard } = require("electron");
-const { searchData } = require("./DataSearchModule");
+const { ipcMain } = require("electron");
+const { searchData } = require("./DataSearch");
 const { authenticate, registerUser } = require("./auth/authService");
+
 const DataRepositoryModule = require("./db_models/DataRepository");
 const CCDError = require("./CCDError");
 

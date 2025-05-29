@@ -94,7 +94,6 @@ async function authenticate(encryptedId, encryptedPwd) {
       success: true,
       loginResult: true,
       accessToken: result.access_token,
-      refreshToken: result.refresh_token,
     };
   } catch (err) {
     const code = err.response?.data?.errorCode || err.code || "E610";
