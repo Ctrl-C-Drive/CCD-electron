@@ -2,12 +2,14 @@ import React, { useState, useRef, useEffect } from 'react';
 import clsx from 'clsx'; 
 import { twMerge } from 'tailwind-merge';
 import "../../styles/color.css";
+import useClipboardRecords from '../../utils/useClipboardRecords';
 
 
 const MainView = ({isTagChecked}) => {
-  const [items, setItems] = useState([]);
+  // const [items, setItems] = useState([]);
   const [activeItemId, setActiveItemId] = useState(null);
   const containerRefs = useRef({});
+  const { items, refetch, toggleSelect } = useClipboardRecords();
 
     // 모달 외부 클릭 시 닫기
   useEffect(() => {
@@ -24,53 +26,51 @@ const MainView = ({isTagChecked}) => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-useEffect(() => {
-  const fetchClipboardRecords = async () => {
-    try {
-      const response = await window.electronAPI.loadClipboardRecords(true); // 또는 false
-      if (response.success) {
-      const formattedData = response.data.map((item) => ({
-        id: item.id,
-        selected: false,
-        tag: item.tags?.[0]?.tag ?? "태그 없음",  // 첫 번째 태그만 보여줄 경우
-        fileType: item.fileType,
-        date: item.date,
-        source: item.source,
-        imgURL: item.imgURL,
-        thumbnailURL: item.thumbnailURL,
-      }));
-    //  {
-    //   "fileType": "jpg" | "png" | "jpeg",
-    //   "date": 20240422 //Number
-    //   "source": "local" | "cloud" | "all" ,
-    //   "imgURL": "http://어쩌고~",
-    //   "thumnailURL": "http://어쩌고~"
-    //   "tags": [ 
-    //             { "tag": "고양이" }, 
-    //             {"tag": "동물" }
-    //         ] 
-    //   }
+  // const fetchClipboardRecords = async () => {
+  //     try {
+  //       const response = await window.electronAPI.loadClipboardRecords(true); // 또는 false
+  //       if (response.success) {
+  //       const formattedData = response.data.map((item) => ({
+  //         id: item.id,
+  //         selected: false,
+  //         tag: item.tags?.[0]?.tag ?? "태그 없음",  // 첫 번째 태그만 보여줄 경우
+  //         fileType: item.fileType,
+  //         date: item.date,
+  //         source: item.source,
+  //         imgURL: item.imgURL,
+  //         thumbnailURL: item.thumbnailURL,
+  //       }));
+  //     //  {
+  //     //   "fileType": "jpg" | "png" | "jpeg",
+  //     //   "date": 20240422 //Number
+  //     //   "source": "local" | "cloud" | "all" ,
+  //     //   "imgURL": "http://어쩌고~",
+  //     //   "thumnailURL": "http://어쩌고~"
+  //     //   "tags": [ 
+  //     //             { "tag": "고양이" }, 
+  //     //             {"tag": "동물" }
+  //     //         ] 
+  //     //   }
 
-        setItems(formattedData);
-      } else {
-        console.error("기록 불러오기 실패:", response);
-      }
-    } catch (err) {
-      console.error("기록 불러오기 중 에러:", err);
-    }
-  };
+  //         setItems(formattedData);
+  //       } else {
+  //         console.error("기록 불러오기 실패:", response);
+  //       }
+  //     } catch (err) {
+  //       console.error("기록 불러오기 중 에러:", err);
+  //     }
+  //   };
+  // useEffect(() => {
+  //   fetchClipboardRecords();
+  // }, []);
 
-  fetchClipboardRecords();
-}, []);
-
-
-  const toggleSelect = (id) => {
-    setItems((prev) =>
-      prev.map((item) =>
-        item.id === id ? { ...item, selected: !item.selected } : item
-      )
-    );
-  };
+  // const toggleSelect = (id) => {
+  //   setItems((prev) =>
+  //     prev.map((item) =>
+  //       item.id === id ? { ...item, selected: !item.selected } : item
+  //     )
+  //   );
+  // };
   const toggleModal = (id) => {
     setActiveItemId((prev) => (prev === id ? null : id));
   };
