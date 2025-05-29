@@ -4,22 +4,9 @@ require("dotenv").config();
 
 const { app, ipcMain, globalShortcut, BrowserWindow } = require("electron");
 const monitor = require("./monitor");
-const DataRepositoryModule = require("../db_models/DataRepository");
 const CCDError = require("../CCDError");
 
-const CLOUD_SERVER_URL = process.env.CLOUD_SERVER_URL || "http://localhost:8000";
-
-if (!CLOUD_SERVER_URL) {
-  throw CCDError.create("E611", {
-    module: "index",
-    context: "환경 변수 확인",
-    message: "CLOUD_SERVER_URL이 설정되지 않았습니다!",
-  });
-}
-
-const dbmgr = new DataRepositoryModule({
-  apiBaseURL: CLOUD_SERVER_URL,
-});
+const dbmgr = require("../db_models/DataRepository");
 
 let cloudUploadEnabled = false;
 
@@ -53,6 +40,7 @@ function setupToggleShortcut() {
       message: `단축키 등록에 실패했습니다: ${shortcut}`,
     });
     console.error(error);
+    return error.toJSON();
   }
 }
 
@@ -80,7 +68,7 @@ function addClipboard(id, type, format, content, timestamp) {
       details: err,
     });
     console.error(error);
-    throw error;
+    return error.toJSON();
   }
 }
 
@@ -107,6 +95,7 @@ function startMonitoring() {
         details: err,
       });
       console.error(error);
+      return error.toJSON();
     }
   });
 }

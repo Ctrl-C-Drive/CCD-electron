@@ -30,6 +30,7 @@
   },
   "dependencies": {
     "better-sqlite3": "^11.10.0",
+    "crypto-js": "^4.2.0",
     "node-fetch": "^3.3.2",
     "sharp": "^0.34.2",
     "uuid": "^11.1.0"
