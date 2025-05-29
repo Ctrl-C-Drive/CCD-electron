@@ -5,28 +5,11 @@ import "../../styles/color.css";
 
 
 const MainView = ({isTagChecked}) => {
-  const [items, setItems] = useState([
-    { id: 1, tag: '고양이', selected: true },
-    { id: 2, tag: '숲', selected: false },
-    { id: 3, tag: '바다', selected: false },
-    { id: 4, tag: '사람', selected: false },
-    { id: 5, tag: '소', selected: false },
-  ]);
-    const [activeItemId, setActiveItemId] = useState(null);
+  const [items, setItems] = useState([]);
+  const [activeItemId, setActiveItemId] = useState(null);
   const containerRefs = useRef({});
 
-  const toggleSelect = (id) => {
-    setItems((prev) =>
-      prev.map((item) =>
-        item.id === id ? { ...item, selected: !item.selected } : item
-      )
-    );
-  };
-  const toggleModal = (id) => {
-    setActiveItemId((prev) => (prev === id ? null : id));
-  };
-
-  // 모달 외부 클릭 시 닫기
+    // 모달 외부 클릭 시 닫기
   useEffect(() => {
     const handleClickOutside = (e) => {
       const clickedInsideSomeModal = Object.values(containerRefs.current).some(
@@ -40,6 +23,59 @@ const MainView = ({isTagChecked}) => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+useEffect(() => {
+  const fetchClipboardRecords = async () => {
+    try {
+      const response = await window.electronAPI.loadClipboardRecords(true); // 또는 false
+      if (response.success) {
+      const formattedData = response.data.map((item) => ({
+        id: item.id,
+        selected: false,
+        tag: item.tags?.[0]?.tag ?? "태그 없음",  // 첫 번째 태그만 보여줄 경우
+        fileType: item.fileType,
+        date: item.date,
+        source: item.source,
+        imgURL: item.imgURL,
+        thumbnailURL: item.thumbnailURL,
+      }));
+    //  {
+    //   "fileType": "jpg" | "png" | "jpeg",
+    //   "date": 20240422 //Number
+    //   "source": "local" | "cloud" | "all" ,
+    //   "imgURL": "http://어쩌고~",
+    //   "thumnailURL": "http://어쩌고~"
+    //   "tags": [ 
+    //             { "tag": "고양이" }, 
+    //             {"tag": "동물" }
+    //         ] 
+    //   }
+
+        setItems(formattedData);
+      } else {
+        console.error("기록 불러오기 실패:", response);
+      }
+    } catch (err) {
+      console.error("기록 불러오기 중 에러:", err);
+    }
+  };
+
+  fetchClipboardRecords();
+}, []);
+
+
+  const toggleSelect = (id) => {
+    setItems((prev) =>
+      prev.map((item) =>
+        item.id === id ? { ...item, selected: !item.selected } : item
+      )
+    );
+  };
+  const toggleModal = (id) => {
+    setActiveItemId((prev) => (prev === id ? null : id));
+  };
+
+
 
   return (
     <div className="grid grid-cols-2 gap-3 px-6 py-4  ">
@@ -75,8 +111,14 @@ const MainView = ({isTagChecked}) => {
              border-t h-[2.6rem] border-[var(--blue-200)] pl-[1.6rem] "
 
              >
-            # {item.tag}
-          </div>
+            {item.tags && item.tags.length > 0 ? (
+              item.tags.map((t, idx) => (
+                <span key={idx}># {t.tag}</span>
+              ))
+            ) : (
+              <span># 태그 없음</span>
+            )}          
+            </div>
            {activeItemId === item.id && (
             <div
               ref={(el) => (containerRefs.current[item.id] = el)}
