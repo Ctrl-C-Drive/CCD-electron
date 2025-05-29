@@ -11,12 +11,15 @@ function setupIPC() {
   ipcMain.handle("user-register", async (_, { userId, password }) => {
     try {
       const { JoinResult } = await registerUser(userId, password);
-      const joinResultMsg = JoinResult === true ? "success" : "fail";
-      return { joinResultMsg };
+      return { joinResultMsg: JoinResult ? "success" : "fail" };
     } catch (err) {
-      const joinResultMsg = err.code === "E409" ? "duplication" : "fail";
-      console.error("회원가입 실패:", err);
-      return { joinResultMsg };
+      const error = CCDError.create(err.code || "E632", {
+        module: "ipcHandler",
+        context: "회원가입 처리",
+        details: err.message,
+      });
+      console.error(error);
+      return error.toJSON();
     }
   });
 
@@ -34,25 +37,26 @@ function setupIPC() {
         accessToken: !!access_token,
       };
     } catch (err) {
-      console.error("로그인 실패:", err);
-      return {
-        tokenMsg: false,
-        accessToken: false,
-      };
+      const error = CCDError.create(err.code || "E610", {
+        module: "ipcHandler",
+        context: "로그인 처리",
+        details: err.message,
+      });
+      console.error(error);
+      return error.toJSON();
     }
   });
 
-  //붙여넣기
+  // 붙여넣기
   ipcMain.handle("paste-item", async (_, { itemId }) => {
     try {
       const item = await dataRepo.localDB.getClipboardItem(itemId);
       if (!item) {
-        return {
-          paste: false,
-          error: {
-            message: "해당 item을 찾을 수 없습니다.",
-          },
-        };
+        throw CCDError.create("E655", {
+          module: "ipcHandler",
+          context: "붙여넣기",
+          message: "해당 item을 찾을 수 없습니다.",
+        });
       }
 
       if (item.type === "txt") {
@@ -65,8 +69,13 @@ function setupIPC() {
 
       return { paste: true };
     } catch (err) {
-      console.error("붙여넣기 실패:", err);
-      return { paste: false };
+      const error = err instanceof CCDError ? err : CCDError.create("E630", {
+        module: "ipcHandler",
+        context: "붙여넣기",
+        details: err.message,
+      });
+      console.error(error);
+      return error.toJSON();
     }
   });
 
@@ -79,26 +88,21 @@ function setupIPC() {
   ipcMain.handle("load-clipboard-records", async (_, isLogin) => {
     try {
       const localData = await dataRepo.getLocalPreview();
-      let cloudData = [];
-
-      if (isLogin) {
-        cloudData = await dataRepo.getCloudPreview();
-      }
-
+      const cloudData = isLogin ? await dataRepo.getCloudPreview() : [];
       const merged = dataRepo.mergeItems(localData, cloudData);
       return { success: true, data: merged };
     } catch (err) {
       const error = CCDError.create("E655", {
         module: "ipcHandler",
         context: "기록 보기 로딩",
-        details: err,
+        details: err.message,
       });
       console.error(error);
       return error.toJSON();
     }
   });
 
-  //삭제
+  // 삭제
   ipcMain.handle("delete-item", async (_, { dataId, deleteOption }) => {
     try {
       await dataRepo.deleteItem(dataId, deleteOption);
@@ -107,14 +111,14 @@ function setupIPC() {
       const error = CCDError.create("E650", {
         module: "ipcHandler",
         context: "데이터 삭제",
-        details: err,
+        details: err.message,
       });
       console.error(error);
-      return { deletionResult: false, refreshReq: false };
+      return error.toJSON();
     }
   });
 
-  //filter
+  // 필터링
   ipcMain.handle("filter-items", async (_, { filterType, filterValue }) => {
     try {
       const filteredItems = await dataRepo.filterItems(filterType, filterValue);
@@ -123,7 +127,7 @@ function setupIPC() {
       const error = CCDError.create("E652", {
         module: "ipcHandler",
         context: "항목 필터링",
-        details: err,
+        details: err.message,
       });
       console.error(error);
       return error.toJSON();
@@ -139,7 +143,7 @@ function setupIPC() {
       const error = CCDError.create("E653", {
         module: "ipcHandler",
         context: "선택 항목 업로드",
-        details: err,
+        details: err.message,
       });
       console.error(error);
       return error.toJSON();
@@ -155,14 +159,12 @@ function setupIPC() {
       const error = CCDError.create("E653", {
         module: "ipcHandler",
         context: "선택 항목 다운로드",
-        details: err,
+        details: err.message,
       });
       console.error(error);
       return error.toJSON();
     }
   });
-
-
 }
 
 module.exports = { setupIPC };
