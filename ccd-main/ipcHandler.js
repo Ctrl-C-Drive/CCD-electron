@@ -2,20 +2,10 @@ const { ipcMain } = require("electron");
 const { searchData } = require("./DataSearch");
 const { authenticate, registerUser } = require("./auth/authService");
 
-const DataRepositoryModule = require("./db_models/DataRepository");
 const CCDError = require("./CCDError");
 
-const CLOUD_SERVER_URL = process.env.CLOUD_SERVER_URL || "http://localhost:8000";
-if (!CLOUD_SERVER_URL) {
-  throw CCDError.create("E611", {
-    module: "ipcHandler",
-    context: "환경 변수 확인",
-    message: "CLOUD_SERVER_URL이 설정되지 않았습니다!",
-  });
-}
 
-const dataRepo = new DataRepositoryModule({ apiBaseURL: CLOUD_SERVER_URL });
-
+const dataRepo = require("./db_models/DataRepository");
 function setupIPC() {
   // 회원가입
   ipcMain.handle("user-register", async (_, { userId, password }) => {
@@ -37,6 +27,8 @@ function setupIPC() {
   ipcMain.handle("user-login", async (_, { userId, password }) => {
     try {
       const { loginResult, access_token } = await authenticate(userId, password);
+
+      // 토큰 저장은 authService 내부 cloudDB 인스턴스에서 처리됨
       return {
         tokenMsg: loginResult === true,
         accessToken: !!access_token,

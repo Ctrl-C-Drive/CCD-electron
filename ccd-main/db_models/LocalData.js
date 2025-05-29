@@ -3,6 +3,9 @@ const path = require("path");
 const { app } = require("electron");
 const Database = require("better-sqlite3");
 const crypto = require("crypto");
+const fs = require("fs-extra");
+const sharp = require("sharp");
+const CCDError = require("../CCDError");
 
 class LocalDataModule {
   constructor() {
@@ -10,6 +13,8 @@ class LocalDataModule {
     // this.encryptionKey = "secure-key-1234"; // 실제 배포 시 환경변수로 관리
     this.db = null;
     this._initialize();
+    this.initializeCleanup();
+    this.setupFTS();
   }
   _initialize() {
     try {
@@ -20,8 +25,11 @@ class LocalDataModule {
       this._createIndexes();
       console.log("Database initialized successfully");
     } catch (error) {
-      console.error("Database initialization failed:", error);
-      throw error;
+      throw CCDError.create("E610", {
+        module: "LocalData",
+        context: "데이터베이스 초기화 실패",
+        message: "sqlite 초기화에 실패했습니다.",
+      });
     }
   }
 
@@ -29,6 +37,91 @@ class LocalDataModule {
   //   const keyBuffer = crypto.scryptSync(this.encryptionKey, "salt", 32); // 더 안전한 키 생성
   //   this.db.pragma(`key=x'${keyBuffer.toString("hex")}'`); // 바이너리 방식으로 전달
   // }
+
+  // 주기적 정리 작업 초기화
+  initializeCleanup() {
+    // 앱 시작 시 초기 정리
+    this.cleanupImageFiles();
+
+    // 24시간 주기로 정리
+    setInterval(() => this.cleanupImageFiles(), 86400000);
+  }
+
+  // 이미지 파일 정리 메서드
+  cleanupImageFiles() {
+    try {
+      // 모든 이미지 메타데이터 조회
+      const allMeta = this.db.prepare("SELECT * FROM image_meta").all();
+
+      for (const meta of allMeta) {
+        const { data_id, file_path, thumbnail_path } = meta;
+        const originalExists = fs.existsSync(file_path);
+        const thumbnailExists = thumbnail_path
+          ? fs.existsSync(thumbnail_path)
+          : false;
+
+        // 1. 원본 이미지가 존재하지 않는 경우
+        if (!originalExists) {
+          console.log(`원본 이미지 누락: ${file_path}`);
+
+          // 썸네일 삭제 (존재할 경우)
+          if (thumbnailExists) {
+            fs.unlink(thumbnail_path).catch((e) => console.error(e));
+          }
+
+          // 데이터베이스 항목 삭제 (CASCADE로 연관 데이터 자동 삭제)
+          this.deleteClipboardItem(data_id);
+          continue;
+        }
+
+        // 2. 썸네일이 존재하지 않는 경우
+        if (!thumbnailExists) {
+          console.log(`썸네일 누락: ${thumbnail_path}`);
+          this.regenerateThumbnail(data_id, file_path);
+        }
+      }
+    } catch (error) {
+      throw CCDError.create("E610", {
+        module: "LocalData",
+        context: "내부 오류",
+        message: "이미지 파일 정리 실패패",
+      });
+    }
+  }
+
+  // 썸네일 재생성 메서드
+  async regenerateThumbnail(dataId, imagePath) {
+    try {
+      // 새 썸네일 경로 생성
+      const ext = path.extname(imagePath);
+      const thumbnailPath = path.join(
+        path.dirname(imagePath),
+        `thumb_${path.basename(imagePath, ext)}.png`
+      );
+
+      // 썸네일 생성
+      await sharp(imagePath)
+        .resize(200, 200, { fit: "inside" })
+        .toFile(thumbnailPath);
+
+      // 데이터베이스 업데이트
+      this.db
+        .prepare("UPDATE image_meta SET thumbnail_path = ? WHERE data_id = ?")
+        .run(thumbnailPath, dataId);
+    } catch (error) {
+      // 재생성 실패 시 썸네일 경로 제거
+      this.db
+        .prepare(
+          "UPDATE image_meta SET thumbnail_path = NULL WHERE data_id = ?"
+        )
+        .run(dataId);
+      throw CCDError.create("E610", {
+        module: "LocalData",
+        context: "내부 오류",
+        message: "썸네일 재생성 실패",
+      });
+    }
+  }
   _createTables() {
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS clipboard (
@@ -81,7 +174,11 @@ class LocalDataModule {
       `);
       insertStmt.run();
     } catch (error) {
-      console.error("초기 설정 생성 실패:", error);
+      throw CCDError.create("E610", {
+        module: "LocalData",
+        context: "환경 변수 초기 설정 생성 실패",
+        message: "initializeDeaultConfig 오류",
+      });
     }
   }
   _createIndexes() {
@@ -90,6 +187,171 @@ class LocalDataModule {
       CREATE INDEX IF NOT EXISTS idx_tag_name ON tag(name);
       CREATE INDEX IF NOT EXISTS idx_data_tag ON data_tag(data_id, tag_id);
     `);
+  }
+  // FTS5 초기 설정
+  setupFTS() {
+    try {
+      // FTS5 가상 테이블 생성
+      this.db.exec(`
+        CREATE VIRTUAL TABLE IF NOT EXISTS clipboard_fts USING fts5(
+          data_id UNINDEXED,
+          content,
+          tags,
+          format,
+          tokenize = 'trigram'
+        );
+      `);
+
+      // 기존 트리거 삭제 (재생성 방지)
+      this.db.exec(`
+        DROP TRIGGER IF EXISTS after_clipboard_insert;
+        DROP TRIGGER IF EXISTS after_clipboard_update;
+        DROP TRIGGER IF EXISTS after_clipboard_delete;
+        DROP TRIGGER IF EXISTS after_data_tag_insert;
+        DROP TRIGGER IF EXISTS after_data_tag_delete;
+        DROP TRIGGER IF EXISTS after_tag_update;
+      `);
+
+      // 새 트리거 생성
+      this.db.exec(`
+        -- 항목 추가 시
+        CREATE TRIGGER after_clipboard_insert AFTER INSERT ON clipboard
+        BEGIN
+          INSERT INTO clipboard_fts (data_id, content, tags, format)
+          VALUES (
+            new.id,
+            CASE WHEN new.type = 'txt' THEN new.content ELSE '' END,
+            (SELECT GROUP_CONCAT(t.name, ' ') FROM tag t
+             JOIN data_tag dt ON t.tag_id = dt.tag_id WHERE dt.data_id = new.id),
+            new.format
+          );
+        END;
+
+        -- 항목 업데이트 시
+        CREATE TRIGGER after_clipboard_update AFTER UPDATE ON clipboard
+        BEGIN
+          UPDATE clipboard_fts
+          SET 
+            content = CASE WHEN new.type = 'txt' THEN new.content ELSE '' END,
+            tags = (SELECT GROUP_CONCAT(t.name, ' ') FROM tag t
+                    JOIN data_tag dt ON t.tag_id = dt.tag_id WHERE dt.data_id = new.id),
+            format = new.format
+          WHERE data_id = old.id;
+        END;
+
+        -- 항목 삭제 시
+        CREATE TRIGGER after_clipboard_delete AFTER DELETE ON clipboard
+        BEGIN
+          DELETE FROM clipboard_fts WHERE data_id = old.id;
+        END;
+
+        -- 태그 변경 시
+        CREATE TRIGGER after_data_tag_insert AFTER INSERT ON data_tag
+        BEGIN
+          UPDATE clipboard_fts
+          SET tags = (SELECT GROUP_CONCAT(t.name, ' ') FROM tag t
+                    JOIN data_tag dt ON t.tag_id = dt.tag_id 
+                    WHERE dt.data_id = new.data_id)
+          WHERE data_id = new.data_id;
+        END;
+
+        CREATE TRIGGER after_data_tag_delete AFTER DELETE ON data_tag
+        BEGIN
+          UPDATE clipboard_fts
+          SET tags = (SELECT GROUP_CONCAT(t.name, ' ') FROM tag t
+                    JOIN data_tag dt ON t.tag_id = dt.tag_id 
+                    WHERE dt.data_id = old.data_id)
+          WHERE data_id = old.data_id;
+        END;
+
+
+        -- 태그 이름 변경 시
+        CREATE TRIGGER after_tag_update AFTER UPDATE ON tag
+        BEGIN
+          UPDATE clipboard_fts
+          SET tags = (SELECT GROUP_CONCAT(t.name, ' ') FROM tag t
+                     JOIN data_tag dt ON t.tag_id = dt.tag_id 
+                     WHERE dt.data_id IN (
+                       SELECT data_id FROM data_tag WHERE tag_id = new.tag_id
+                     ))
+          WHERE data_id IN (
+            SELECT data_id FROM data_tag WHERE tag_id = new.tag_id
+          );
+        END;
+      `);
+
+      // 기존 데이터 인덱싱 (초기 실행 시)
+      this.db.exec(`
+        INSERT INTO clipboard_fts (data_id, content, tags, format)
+        SELECT 
+          c.id,
+          CASE WHEN c.type = 'txt' THEN c.content ELSE '' END,
+          (SELECT GROUP_CONCAT(t.name, ' ') FROM tag t
+           JOIN data_tag dt ON t.tag_id = dt.tag_id WHERE dt.data_id = c.id),
+          c.format
+        FROM clipboard c
+        WHERE NOT EXISTS (SELECT 1 FROM clipboard_fts WHERE data_id = c.id);
+      `);
+    } catch (err) {
+      throw CCDError.create("E610", {
+        module: "LocalData",
+        context: "FTS5 생성 실패",
+        message: err.message,
+      });
+    }
+  }
+  // FTS5 검색 메소드
+  searchItems(query, options = {}) {
+    try {
+      // 검색 쿼리 정제
+      const cleanQuery = query
+        .replace(/[^\w\s가-힣]/gi, " ") // 특수문자 제거
+        .trim()
+        .replace(/\s+/g, " "); // 중복 공백 제거
+
+      if (!cleanQuery) return [];
+
+      // FTS5 검색 쿼리 생성
+      const ftsQuery = `
+        SELECT 
+          fts.data_id,
+          snippet(clipboard_fts, 0, '', '', '...', 16) as snippet,
+          bm25(clipboard_fts) as score,
+          c.*,
+          im.*,
+          GROUP_CONCAT(t.tag_id) as tag_ids
+        FROM clipboard_fts fts
+        JOIN clipboard c ON fts.data_id = c.id
+        LEFT JOIN image_meta im ON c.id = im.data_id
+        LEFT JOIN data_tag dt ON c.id = dt.data_id
+        LEFT JOIN tag t ON dt.tag_id = t.tag_id
+        WHERE clipboard_fts MATCH ?
+        GROUP BY c.id
+        ORDER BY score ${options.sortByScore ? "DESC" : "ASC"}
+        LIMIT ? OFFSET ?
+      `;
+
+      const stmt = this.db.prepare(ftsQuery);
+      const limit = options.limit || 50;
+      const offset = options.offset || 0;
+
+      // 와일드카드 검색 지원
+      const searchTerm = cleanQuery.includes(" ")
+        ? `"${cleanQuery}"`
+        : `${cleanQuery}*`;
+
+      return stmt.all(searchTerm, limit, offset).map((row) => ({
+        ...row,
+        tags: row.tag_ids
+          ? row.tag_ids.split(",").map((tag_id) => ({ tag_id }))
+          : [],
+        // 검색 스니펫 하이라이팅
+        highlight: row.snippet,
+      }));
+    } catch (err) {
+      console.error("로컬 검색 실패:", err);
+      return [];
+    }
   }
   // 설정 조회
   getConfig() {
@@ -104,7 +366,11 @@ class LocalDataModule {
         )
         .get();
     } catch (error) {
-      throw this.handleError(error, "설정 조회 실패");
+      throw CCDError.create("E610", {
+        module: "LocalData",
+        context: "설정 조회 실패",
+        message: "설정 조회 실패. getconfig",
+      });
     }
   }
   // 설정 업데이트 메서드
@@ -132,7 +398,11 @@ class LocalDataModule {
       tx(newConfig);
       return { success: true, message: "설정이 업데이트 되었습니다" };
     } catch (error) {
-      throw this.handleError(error, "설정 업데이트 실패");
+      throw CCDError.create("E610", {
+        module: "LocalData",
+        context: "설정 업데이트트 실패",
+        message: "updateconfig",
+      });
     }
   }
 
@@ -156,7 +426,11 @@ class LocalDataModule {
       `);
       stmt.run(item);
     } catch (error) {
-      throw this.handleError(error, "클립보드 항목 삽입 실패");
+      throw CCDError.create("E610", {
+        module: "LocalData",
+        context: "클립보드 항목 삽입 실패",
+        message: "insertClipboardItem",
+      });
     }
   }
   delete(table, whereClause) {
@@ -168,11 +442,10 @@ class LocalDataModule {
   //클립보드 항목 삭제
   deleteClipboardItem(id) {
     const deleteChain = this.db.transaction((id) => {
-      this.delete("data_tag", { data_id: id });
-      this.delete("image_meta", { data_id: id });
-      this.delete("clipboard", { id: id });
+      this.db.prepare("DELETE FROM clipboard WHERE id = ?").run(id);
     });
     deleteChain(id);
+    console.log(`삭제 완료: ${id}`);
   }
   // 이미지 메타데이터 조회
   getImageMeta(dataId) {
@@ -185,7 +458,11 @@ class LocalDataModule {
         )
         .get(dataId);
     } catch (error) {
-      throw this.handleError(error, "이미지 메타데이터 조회 실패");
+      throw CCDError.create("E610", {
+        module: "LocalData",
+        context: "이미지 메타데이터 조회 실패",
+        message: "getImageMeta",
+      });
     }
   }
 
@@ -199,7 +476,11 @@ class LocalDataModule {
       `);
       stmt.run(meta);
     } catch (error) {
-      throw this.handleError(error, "이미지 메타 삽입 실패");
+      throw CCDError.create("E610", {
+        module: "LocalData",
+        context: "이미지 메타 삽입 실패",
+        message: "insertimagemeta",
+      });
     }
   }
   // 태그 삽입
@@ -211,14 +492,22 @@ class LocalDataModule {
       `);
       stmt.run(tag);
     } catch (error) {
-      throw this.handleError(error, "태그 삽입 실패");
+      throw CCDError.create("E610", {
+        module: "LocalData",
+        context: "태그 삽입 실패",
+        message: "insertTag",
+      });
     }
   }
   // 태그 동기화 상태 변경
   updateTagSyncStatus(tagId, newStatus) {
     try {
       if (!["synced", "pending"].includes(newStatus)) {
-        throw new Error("sync_status는 'synced' 또는 'pending'만 허용됩니다.");
+        throw CCDError.create("E610", {
+          module: "LocalData",
+          context: "updateTagSyncStatus 중 sync_status 허용 안 되는 값 삽입 ",
+          message: "sync_status는 'synced' 또는 'pending'만 허용됩니다.",
+        });
       }
 
       const stmt = this.db.prepare(`
@@ -227,7 +516,11 @@ class LocalDataModule {
       const result = stmt.run(newStatus, tagId);
 
       if (result.changes === 0) {
-        throw new Error(`tag_id ${tagId}에 해당하는 태그가 존재하지 않습니다.`);
+        throw CCDError.create("E610", {
+          module: "LocalData",
+          context: "updateTagSyncStatus 중 tagId 태그 검색 불가 ",
+          message: `tag_id ${tagId}에 해당하는 태그가 존재하지 않습니다.`,
+        });
       }
 
       return {
@@ -235,7 +528,11 @@ class LocalDataModule {
         message: `태그(${tagId})의 sync_status가 '${newStatus}'로 변경되었습니다.`,
       };
     } catch (error) {
-      throw this.handleError(error, "태그 동기화 상태 변경 실패");
+      throw CCDError.create("E610", {
+        module: "LocalData",
+        context: "태그 동기화 상태 변경 실패",
+        message: "updateTagSyncStatus",
+      });
     }
   }
   // name과 source로 태그 조회
@@ -248,10 +545,14 @@ class LocalDataModule {
       `);
       return stmt.get(name, source);
     } catch (error) {
-      throw this.handleError(error, "태그 조회 실패");
+      throw CCDError.create("E610", {
+        module: "LocalData",
+        context: "태그 조회 실패",
+        message: "getTagByNameAndSource",
+      });
     }
   }
-  //태그 id 변경
+  // 태그 id 변경
   updateTagId(oldId, newId) {
     try {
       const tx = this.db.transaction((oldId, newId) => {
@@ -259,20 +560,32 @@ class LocalDataModule {
         const existing = this.db
           .prepare(`SELECT * FROM tag WHERE tag_id = ?`)
           .get(oldId);
-        if (!existing) throw new Error(`Tag with ID ${oldId} does not exist`);
+        if (!existing) {
+          throw CCDError.create("E610", {
+            module: "LocalData",
+            context: `태그 ID 확인 실패`,
+            message: `존재하지 않는 태그 ID: ${oldId}`,
+          });
+        }
 
         // 새로운 ID가 이미 존재하면 충돌이 발생하므로 예외 처리
         const conflict = this.db
           .prepare(`SELECT * FROM tag WHERE tag_id = ?`)
           .get(newId);
-        if (conflict) throw new Error(`Tag with ID ${newId} already exists`);
+        if (conflict) {
+          throw CCDError.create("E610", {
+            module: "LocalData",
+            context: `태그 ID 충돌`,
+            message: `이미 존재하는 태그 ID: ${newId}`,
+          });
+        }
 
         // 먼저 태그 ID 변경
         this.db
           .prepare(
             `
-          UPDATE tag SET tag_id = ? WHERE tag_id = ?
-        `
+        UPDATE tag SET tag_id = ? WHERE tag_id = ?
+      `
           )
           .run(newId, oldId);
 
@@ -280,8 +593,8 @@ class LocalDataModule {
         this.db
           .prepare(
             `
-          UPDATE data_tag SET tag_id = ? WHERE tag_id = ?
-        `
+        UPDATE data_tag SET tag_id = ? WHERE tag_id = ?
+      `
           )
           .run(newId, oldId);
       });
@@ -292,7 +605,11 @@ class LocalDataModule {
         message: `Tag ID updated from ${oldId} to ${newId}`,
       };
     } catch (error) {
-      throw this.handleError(error, "태그 ID 변경 실패");
+      throw CCDError.create("E610", {
+        module: "LocalData",
+        context: "태그 ID 변경 실패",
+        message: error.message || "updateTagId. 태그 동기화 오류",
+      });
     }
   }
 
@@ -305,7 +622,11 @@ class LocalDataModule {
       `);
       stmt.run(dataId, tagId);
     } catch (error) {
-      throw this.handleError(error, "데이터-태그 연결 실패");
+      throw CCDError.create("E610", {
+        module: "LocalData",
+        context: "데이터-태그 연결 실패",
+        message: "insertDataTag",
+      });
     }
   }
   // 항목 조회
@@ -315,9 +636,30 @@ class LocalDataModule {
         .prepare(`SELECT * FROM clipboard WHERE id = ?`)
         .get(id);
       if (!item) return null;
+
+      // 이미지 메타데이터 조회
       const meta = this.db
         .prepare(`SELECT * FROM image_meta WHERE data_id = ?`)
         .get(id);
+
+      // 이미지 항목인 경우 파일 존재 여부 확인
+      if (item.type === "img" && meta) {
+        const fileExists = fs.existsSync(meta.file_path);
+
+        // 원본 이미지가 존재하지 않으면 데이터 정리
+        if (!fileExists) {
+          console.warn(`원본 이미지 누락: ${meta.file_path}`);
+          this.deleteClipboardItem(id); // 데이터베이스에서 항목 삭제
+          return null;
+        }
+
+        // 썸네일이 존재하지 않으면 재생성
+        if (meta.thumbnail_path && !fs.existsSync(meta.thumbnail_path)) {
+          console.warn(`썸네일 누락: ${meta.thumbnail_path}`);
+          this.regenerateThumbnail(id, meta.file_path);
+        }
+      }
+
       const tags = this.db
         .prepare(
           `
@@ -327,22 +669,18 @@ class LocalDataModule {
       `
         )
         .all(id);
+
       return this.transformItem(item, meta, tags);
     } catch (error) {
-      throw this.handleError(error, "클립보드 아이템 조회 실패");
+      throw CCDError.create("E610", {
+        module: "LocalData",
+        context: "클립보드 아이템 조회 실패",
+        message: "getClipboardItem",
+      });
     }
   }
-  // 공통 에러 핸들러
-  handleError(error, defaultMessage) {
-    console.error(error);
-    return {
-      code: "E500",
-      message: defaultMessage,
-      details: error.message,
-    };
-  }
 
-  // 변환 함수 (CloudDataModule과 일관되게)
+  // 변환 함수
   transformItem(item, imageMeta = null, tags = []) {
     return {
       ...item,
@@ -364,6 +702,14 @@ class LocalDataModule {
       UPDATE clipboard SET shared = ? WHERE id = ?
     `);
     stmt.run(shared, id);
+  }
+
+  getSharedStatus(id) {
+    const stmt = this.db.prepare(`
+      SELECT shared FROM clipboard WHERE id = ?
+    `);
+    const row = stmt.get(id);
+    return row ? row.shared : null;
   }
 
   // 이미지 메타데이터 조회
@@ -399,7 +745,11 @@ class LocalDataModule {
           .run(deleteCount);
       }
     } catch (error) {
-      throw this.handleError(error, "최대 항목 수 제한 실패");
+      throw CCDError.create("E610", {
+        module: "LocalData",
+        context: "최대 항목 수 제한 실패",
+        message: "enforceMaxClipboardItems",
+      });
     }
   }
 
@@ -417,9 +767,14 @@ class LocalDataModule {
         )
         .run(cutoff);
     } catch (error) {
-      throw this.handleError(error, "오래된 데이터 삭제 실패");
+      throw CCDError.create("E610", {
+        module: "LocalData",
+        context: "오래된 데이터 삭제 실패",
+        message: "deleteOldClipboardItems",
+      });
     }
   }
 }
 
-module.exports = LocalDataModule;
+const localDataInstance = new LocalDataModule();
+module.exports = localDataInstance;

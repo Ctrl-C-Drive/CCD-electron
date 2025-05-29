@@ -15,6 +15,7 @@ class CCDError extends Error {
   }
 
   static create(code, details = {}) {
+    console.warn("CCDError.create called with:", code, details);
     const errorMap = {
       // 🔐 인증/회원 관련
       E610: "데이터베이스 오류",

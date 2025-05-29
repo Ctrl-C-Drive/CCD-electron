@@ -19,7 +19,6 @@ if (!AES_KEY || !AES_IV || !CLOUD_SERVER_URL) {
 }
 
 const cloudDB = new CloudDataModule({ apiBaseURL: CLOUD_SERVER_URL });
-
 // AES-256-CBC 복호화 함수
 function decryptAES(encrypted) {
   try {

@@ -10,14 +10,14 @@ const sharp = require("sharp");
 const fs = require("fs-extra");
 const { app } = require("electron");
 const LocalDataModule = require("./LocalData");
-const CloudDataModule = require("./CloudData");
 const { error } = require("console");
+const CCDError = require("../CCDError");
 
 class DataRepositoryModule extends EventEmitter {
-  constructor(config) {
+  constructor() {
     super();
-    this.localDB = new LocalDataModule();
-    this.cloudDB = new CloudDataModule(config);
+    this.localDB = require("./LocalData");
+    this.cloudDB = require("./CloudData");
     this._loadConfig();
     this.initializeCleanup();
     this.cache = {
@@ -72,6 +72,35 @@ class DataRepositoryModule extends EventEmitter {
     }
     if (source === "cloud" || source === "all") {
       this.cache.cloud.valid = false;
+    }
+  }
+
+  //단일 클립보드 아이템 추가
+  async getClipboardItem(dataId, source = "local") {
+    try {
+      let item;
+
+      if (source === "local") {
+        item = this.localDB.getClipboardItem(dataId);
+      } else if (source === "cloud") {
+        item = await this.cloudDB.getClipboardItem(dataId);
+      } else {
+        throw CCDError.create("E601", {
+          module: "DataRepository",
+          context: "getClipboardItem",
+          message: `지원되지 않는 소스: ${source}`,
+        });
+      }
+
+      if (!item) return null;
+      return item;
+    } catch (error) {
+      throw CCDError.create("E602", {
+        module: "DataRepository",
+        context: "getClipboardItem",
+        message: `아이템 조회 실패 (source: ${source})`,
+        details: error.message || error,
+      });
     }
   }
 
@@ -188,7 +217,11 @@ class DataRepositoryModule extends EventEmitter {
       this.invalidateCache(target === "both" ? "all" : target);
       return this.transformItem(newItem);
     } catch (error) {
-      this.handleSyncError(error, "항목 추가 실패");
+      throw CCDError.create("E610", {
+        module: "DataRepository",
+        context: "항목 추가 실패",
+        message: error.details,
+      });
     }
   }
 
@@ -247,6 +280,9 @@ class DataRepositoryModule extends EventEmitter {
     try {
       if (target === "local" || target === "both") {
         this.localDB.deleteClipboardItem(itemId);
+        if (this.localDB.getSharedStatus(itemId) === "cloud") {
+          this.cloudDB.localDelete(itemId);
+        }
       }
 
       if (target === "cloud" || target === "both") {
@@ -262,7 +298,11 @@ class DataRepositoryModule extends EventEmitter {
 
       return true;
     } catch (error) {
-      this.handleSyncError(error, "항목 삭제 실패");
+      throw CCDError.create("E610", {
+        module: "DataRepository",
+        context: "항목 삭제 실패",
+        message: error.details,
+      });
     }
   }
 
@@ -282,8 +322,11 @@ class DataRepositoryModule extends EventEmitter {
           finalTagId = cloudTagId; // 클라우드 ID를 기본으로 사용
           sync_status = "synced";
         } catch (error) {
-          console.error("클라우드 태그 생성 실패:", error);
-          throw error;
+          throw CCDError.create("E610", {
+            module: "DataRepository",
+            context: "클라우드 태그 생성 실패",
+            message: error.details,
+          });
         }
       }
 
@@ -330,7 +373,11 @@ class DataRepositoryModule extends EventEmitter {
         sync_status: sync_status,
       };
     } catch (error) {
-      this.handleSyncError(error, "태그 추가 실패");
+      throw CCDError.create("E610", {
+        module: "DataRepository",
+        context: "태그 추가 실패",
+        message: error.details,
+      });
     }
   }
 
@@ -347,7 +394,11 @@ class DataRepositoryModule extends EventEmitter {
 
       return true;
     } catch (error) {
-      this.handleSyncError(error, "태그 매핑 추가 실패");
+      throw CCDError.create("E610", {
+        module: "DataRepository",
+        context: "태그 매핑 추가 실패",
+        message: error.details,
+      });
     }
   }
 
@@ -407,6 +458,39 @@ class DataRepositoryModule extends EventEmitter {
       return [];
     }
   }
+  async searchItems(query, options = {}) {
+    try {
+      if (options.includeCloud) {
+        try {
+          const fetchedCloudItems = await this.cloudDB.searchItems(query);
+          await this.syncCloudItems(fetchedCloudItems);
+        } catch (err) {
+          throw CCDError.create("E610", {
+            module: "DataRepository",
+            context: "클라우드검색 실패",
+            message: error.details,
+          });
+        }
+      }
+
+      const results = await this.localDB.searchItems(query, options);
+      return results.map((item) => this.transformItem(item));
+    } catch (error) {
+      throw CCDError.create("E610", {
+        module: "DataRepository",
+        context: "검색 오류",
+        message: error.details,
+      });
+    }
+  }
+
+  async syncCloudItems(cloudItems) {
+    const BATCH_SIZE = 50;
+    for (let i = 0; i < cloudItems.length; i += BATCH_SIZE) {
+      const batch = cloudItems.slice(i, i + BATCH_SIZE);
+      await this.localDB.bulkUpsert(batch);
+    }
+  }
 
   mergeItems(localItems, cloudItems) {
     const mergedMap = new Map();
@@ -446,17 +530,10 @@ class DataRepositoryModule extends EventEmitter {
       thumbnailUrl: item.imageMeta?.thumbnailUrl,
       tags: item.tags || [],
       source: item.source || "local",
+      score: item.score || 0,
     };
   }
 
-  handleSyncError(error, context) {
-    console.error(`${context}:`, error);
-    throw {
-      code: error.code || "E500",
-      message: error.message || context,
-      details: error.details,
-    };
-  }
   // 클라우드 → 로컬 다운로드
   async downloadCloudData() {
     try {
@@ -507,7 +584,11 @@ class DataRepositoryModule extends EventEmitter {
       this.invalidateCache("local");
       return { successCount, errorCount };
     } catch (error) {
-      throw this.handleSyncError(error, "일괄 다운로드 실패");
+      throw CCDError.create("E610", {
+        module: "DataRepository",
+        context: "일괄 다운로드 실패",
+        message: error.details,
+      });
     }
   }
 
@@ -556,84 +637,95 @@ class DataRepositoryModule extends EventEmitter {
       this.invalidateCache("cloud");
       return { successCount, errorCount };
     } catch (error) {
-      throw this.handleSyncError(error, "일괄 업로드 실패");
+      throw CCDError.create("E610", {
+        module: "DataRepository",
+        context: "일괄 업로드 실패",
+        message: error.details,
+      });
     }
   }
 
   //선택 업로드
   async uploadSelectedItems(itemIds) {
-  const localItems = await this.getLocalPreview();
-  const cloudItems = await this.getCloudPreview();
-  const cloudIds = new Set(cloudItems.map(item => item.id));
+    const localItems = await this.getLocalPreview();
+    const cloudItems = await this.getCloudPreview();
+    const cloudIds = new Set(cloudItems.map((item) => item.id));
 
-  const targets = localItems.filter(item =>
-    item.shared === "local" && itemIds.includes(item.id) && !cloudIds.has(item.id)
-  );
+    const targets = localItems.filter(
+      (item) =>
+        item.shared === "local" &&
+        itemIds.includes(item.id) &&
+        !cloudIds.has(item.id)
+    );
 
-  let uploadResult = true;
+    let uploadResult = true;
 
-  await Promise.all(targets.map(async (item) => {
-    try {
-      if (item.type === "txt") {
-        await this.cloudDB.createTextItem(item);
-      } else if (item.type === "img") {
-        await this.cloudDB.uploadImage(
-          item.id,
-          item.content,
-          item.format,
-          item.createdAt
-        );
-      }
-      this.localDB.updateSharedStatus(item.id, "cloud");
-    } catch (err) {
-      console.error("업로드 실패:", item.id, err);
-      uploadResult = false;
-    }
-  }));
+    await Promise.all(
+      targets.map(async (item) => {
+        try {
+          if (item.type === "txt") {
+            await this.cloudDB.createTextItem(item);
+          } else if (item.type === "img") {
+            await this.cloudDB.uploadImage(
+              item.id,
+              item.content,
+              item.format,
+              item.createdAt
+            );
+          }
+          this.localDB.updateSharedStatus(item.id, "cloud");
+        } catch (err) {
+          console.error("업로드 실패:", item.id, err);
+          uploadResult = false;
+        }
+      })
+    );
 
-  this.invalidateCache("cloud");
-  return { uploadResult };
-}
+    this.invalidateCache("cloud");
+    return { uploadResult };
+  }
 
   //선택 다운로드
-async downloadSelectedItems(itemIds) {
-  const cloudItems = await this.getCloudPreview();
-  const localItems = await this.getLocalPreview();
-  const localIds = new Set(localItems.map(item => item.id));
+  async downloadSelectedItems(itemIds) {
+    const cloudItems = await this.getCloudPreview();
+    const localItems = await this.getLocalPreview();
+    const localIds = new Set(localItems.map((item) => item.id));
 
-  const targets = cloudItems.filter(item =>
-    itemIds.includes(item.id) && !localIds.has(item.id)
-  );
+    const targets = cloudItems.filter(
+      (item) => itemIds.includes(item.id) && !localIds.has(item.id)
+    );
 
-  let downloadResult = true;
+    let downloadResult = true;
 
-  await Promise.all(targets.map(async (item) => {
-    try {
-      const localItem = {
-        id: item.id,
-        type: item.type,
-        format: item.format,
-        content: item.content,
-        created_at: item.created_at,
-        shared: "cloud",
-      };
+    await Promise.all(
+      targets.map(async (item) => {
+        try {
+          const localItem = {
+            id: item.id,
+            type: item.type,
+            format: item.format,
+            content: item.content,
+            created_at: item.created_at,
+            shared: "cloud",
+          };
 
-      this.localDB.insertClipboardItem(localItem);
+          this.localDB.insertClipboardItem(localItem);
 
-      if (item.type === "img") {
-        await this.downloadImageFiles(item);
-      }
+          if (item.type === "img") {
+            await this.downloadImageFiles(item);
+          }
 
-      await this.syncTagsForItem(item);
-    } catch (err) {
-      console.error("다운로드 실패:", item.id, err);
-      downloadResult = false;
-    }
-  }));
+          await this.syncTagsForItem(item);
+        } catch (err) {
+          console.error("다운로드 실패:", item.id, err);
+          downloadResult = false;
+        }
+      })
+    );
 
-  this.invalidateCache("local");
-  return { downloadResult };
-}
+    this.invalidateCache("local");
+    return { downloadResult };
+  }
 
   // 이미지 파일 다운로드
   async downloadImageFiles(cloudItem) {
@@ -700,4 +792,5 @@ async downloadSelectedItems(itemIds) {
   }
 }
 
-module.exports = DataRepositoryModule;
+const dataRepositoryInstance = new DataRepositoryModule();
+module.exports = dataRepositoryInstance;
