@@ -23,9 +23,9 @@ import './styles/typography.css'
 //전체 
 const App= () => {
     const [isTagChecked, setIsTagChecked] = useState(true);
-    useEffect(() => {
-      console.log("🧪 electronAPI:", window.electronAPI);
-    }, []);
+    // useEffect(() => {
+    //   console.log("🧪 electronAPI:", window.electronAPI);
+    // }, []);
 
   return (
     <>

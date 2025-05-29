@@ -24,7 +24,9 @@ const useClipboardRecords = () => {
   useEffect(() => {
     refetch();
   }, [refetch]);
-
+  useEffect(() => {
+    console.log("🧾 현재 items 상태:", items);
+  }, [items]);
   const toggleSelect = (id) => {
     setItems((prev) =>
       prev.map((item) =>
@@ -32,8 +34,30 @@ const useClipboardRecords = () => {
       )
     );
   };
+ //  드래그앤드랍으로 받은 아이템 추가
+const addItem = (newItem) => {
+  setItems((prev) => {
+    const isDuplicate = prev.some(
+      (item) =>
+        item.fileName === newItem.fileName &&
+        item.timestamp === newItem.timestamp
+    );
+    if (isDuplicate) return prev;
 
-  return { items, refetch, toggleSelect };
+    return [
+      {
+        ...newItem,
+        selected: false,
+        id: newItem.id ?? `temp-${Date.now()}`,
+        timestamp: newItem.timestamp ?? Date.now(),
+        fileName: newItem.fileName ?? "unnamed",
+        ext: newItem.ext ?? "unknown",
+      },
+      ...prev,
+    ];
+  });
+};
+  return { items, refetch, toggleSelect, addItem  };
 };
 
 export default useClipboardRecords;
