@@ -337,5 +337,5 @@ class CloudDataModule {
   }
 }
 
-const cloudDataInstance = new CloudDataModule(config);
-module.exports = cloudDataInstance;
+// const cloudDataInstance = new CloudDataModule(config);
+module.exports = CloudDataModule;

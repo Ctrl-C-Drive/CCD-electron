@@ -4,7 +4,6 @@ const { initClipboardModule } = require("./clipboard");
 const { registerUser } = require('./auth/authService');
 const { setupIPC } = require("./ipcHandler");
 
-
 const path = require("path");
 
 const isDev = !app.isPackaged;

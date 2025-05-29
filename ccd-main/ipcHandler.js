@@ -1,9 +1,6 @@
 const { ipcMain, clipboard } = require("electron");
-const { searchData } = require("./DataSearchModule");
+const { searchData } = require("./DataSearch");
 const { authenticate, registerUser } = require("./auth/authService");
-const DataRepositoryModule = require("./db_models/DataRepository");
-const CCDError = require("./CCDError");
-
 
 const CCDError = require("./CCDError");
 
@@ -29,10 +26,7 @@ function setupIPC() {
   ipcMain.handle("user-login", async (_, { userId, password }) => {
     try {
       const { loginResult, access_token } = await authenticate(userId, password);
-      const { loginResult, access_token, refresh_token } = await authenticate(
-        userId,
-        password
-      );
+
 
       // 토큰 저장은 authService 내부 cloudDB 인스턴스에서 처리됨
       return {
