@@ -1,9 +1,7 @@
-const { ipcMain, clipboard } = require("electron");
-const { searchData } = require("./DataSearchModule");
-const { authenticate, registerUser } = require("./auth/authService");
-const DataRepositoryModule = require("./db_models/DataRepository");
-const CCDError = require("./CCDError");
-
+const { ipcMain } = require("electron");
+const { searchData } = require("./DataSearch");
+const { authenticate } = require("./auth/authService");
+const { registerUser } = require("./auth/authService");
 
 const CCDError = require("./CCDError");
 
@@ -28,7 +26,6 @@ function setupIPC() {
   // 로그인
   ipcMain.handle("user-login", async (_, { userId, password }) => {
     try {
-      const { loginResult, access_token } = await authenticate(userId, password);
       const { loginResult, access_token, refresh_token } = await authenticate(
         userId,
         password

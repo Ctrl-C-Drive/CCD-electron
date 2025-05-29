@@ -1,7 +1,9 @@
 require("dotenv").config();
 const crypto = require("crypto");
 const CCDError = require("../CCDError");
-const CloudDataModule = require("../db_models/CloudData");
+
+const cloudDB = require("../db_models/CloudData");
+
 
 const { AES_KEY, AES_IV, CLOUD_SERVER_URL } = process.env;
 
@@ -18,8 +20,8 @@ if (!AES_KEY || !AES_IV || !CLOUD_SERVER_URL) {
   return;
 }
 
-const cloudDB = new CloudDataModule({ apiBaseURL: CLOUD_SERVER_URL });
-// AES-256-CBC 복호화 함수
+
+//AES-256-CBC 복호화 함수
 function decryptAES(encrypted) {
   try {
     const decipher = crypto.createDecipheriv(
