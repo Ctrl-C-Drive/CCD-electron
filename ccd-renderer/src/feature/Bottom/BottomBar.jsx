@@ -12,9 +12,9 @@ const Toast = ({ message, type }) => {
   const textColor = type === 'error' ? 'text-red-700' : 'text-blue-700';
 
  return (
-    <div className="relative flex items-center gap-2 mt-2">
+    <div className="relative flex items-center gap-2 z-20 bottom-[1rem]">
       <div className={`
-        absolute left-4 top-[3rem] !text-[1.4rem]  
+        fixed left-4 bottom-0 !text-[1.4rem]  
         text-[var(--blue-300)]
           text-center
           !font-pretendard
@@ -27,8 +27,11 @@ const Toast = ({ message, type }) => {
           bg-white
           shadow-xl
           rounded-xl
-          justify-center
-          items-center
+          !justify-center
+          !items-center
+          text-center
+          bottom-[3rem]
+          left-[3rem]
           flex
         ${textColor}`}>
         {message}
@@ -45,7 +48,7 @@ const Toast = ({ message, type }) => {
       setToasts((prev) => [...prev, { id, message, type }]);
       setTimeout(() => {
         setToasts((prev) => prev.filter((toast) => toast.id !== id));
-      }, 2000);
+      }, 1000);
             // }, 100000);
 
     };
@@ -99,7 +102,7 @@ const Toast = ({ message, type }) => {
                 try {
                   const result = await window.electronAPI.downloadSelectedItems(selectedIds);
                   console.log("📥 다운로드 결과:", result);
-                  if (result.uploadResult) {
+                  if (result.downloadResult) {
                     showToast('다운로드 성공!', 'info');
                   } else {
                     showToast('다운로드 실패', 'error');
