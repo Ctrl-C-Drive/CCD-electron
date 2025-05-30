@@ -5,11 +5,11 @@ import "../../styles/color.css";
 import useClipboardRecords from '../../utils/useClipboardRecords';
 
 
-const MainView = ({isTagChecked}) => {
+const MainView = ({isTagChecked, items, toggleSelect,addItem }) => {
   // const [items, setItems] = useState([]);
   const [activeItemId, setActiveItemId] = useState(null);
   const containerRefs = useRef({});
-  const { items, refetch, toggleSelect, addItem } = useClipboardRecords();
+  // const { items, refetch, toggleSelect, addItem } = useClipboardRecords();
 
     // 모달 외부 클릭 시 닫기
   useEffect(() => {

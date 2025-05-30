@@ -14,6 +14,8 @@ import './App.css'
 import './index.css'
 import './styles/color.css'
 import './styles/typography.css'
+import useClipboardRecords from './utils/useClipboardRecords.js'
+
 //typo, color util 예시 (복붙해서 쓰기)
 // {`${colorVariants({ bg: 'gray-50' })}`}
 //  {`${typographyVariants({ variant: 'h1-sb' })} `}
@@ -23,6 +25,8 @@ import './styles/typography.css'
 //전체 
 const App= () => {
     const [isTagChecked, setIsTagChecked] = useState(true);
+    const { items, refetch, toggleSelect, addItem, setItemsFromSearchResult, getSelectedItemIds   } = useClipboardRecords();
+
     // useEffect(() => {
     //   console.log("🧪 electronAPI:", window.electronAPI);
     // }, []);
@@ -59,11 +63,11 @@ const App= () => {
               </div>
               {/* grid-view 데이터 존 */}
               <div className="">
-                  <MainView isTagChecked={isTagChecked} />
+                  <MainView isTagChecked={isTagChecked} items={items} toggleSelect={toggleSelect}   addItem={addItem} />
               </div>
               {/* 하단 bar */}
               <div className="">
-                <BottomBar />
+                <BottomBar getSelectedItemIds={getSelectedItemIds} />
               </div>
             </div>
       </div>

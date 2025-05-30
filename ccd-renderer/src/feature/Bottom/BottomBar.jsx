@@ -3,6 +3,8 @@ import clsx from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import "../../styles/color.css";
 import SettingModal from '../Setting/SettingModal';
+import useClipboardRecords from '../../utils/useClipboardRecords';
+
 
 const Toast = ({ message, type }) => {
   // const baseStyle = 'px-3 py-1 rounded-xl shadow bg-white border mt-2 relative';
@@ -35,7 +37,7 @@ const Toast = ({ message, type }) => {
   );
 };
 
-  const BottomBar = () => {
+  const BottomBar = ({getSelectedItemIds }) => {
       const [toasts, setToasts] = useState([]);
 
     const showToast = (message, type) => {
@@ -47,6 +49,7 @@ const Toast = ({ message, type }) => {
             // }, 100000);
 
     };
+    // const { getSelectedItemIds } = useClipboardRecords();
 
     return (
       <div className="flex justify-between items-center px-6 mt-[3rem] ">
@@ -54,7 +57,29 @@ const Toast = ({ message, type }) => {
         <div className="flex gap-6 items-center">
           <div 
             className="flex flex-col items-center text-blue-700 cursor-pointer"
-            onClick={() => showToast('Uploading...', 'info')}
+            onClick={async () => {
+              const selectedIds = getSelectedItemIds(); 
+              console.log("selectedIds:",selectedIds);
+              if (selectedIds.length === 0) {
+                showToast('선택된 항목이 없습니다.', 'error');
+                return;
+              }
+
+              showToast('업로드 중...', 'info');
+              try {
+                const result = await window.electronAPI.uploadSelectedItems(selectedIds);
+                console.log("this is result: ",result);
+                if (result.uploadResult) {
+                  showToast('업로드 성공!', 'info');
+                } else {
+                  showToast('업로드 실패', 'error');
+                }
+              } catch (err) {
+                console.error("업로드 중 오류:", err);
+                showToast('오류 발생', 'error');
+              }
+            }}
+
             >
             <img src="UploadCloud.svg" alt="Upload" className="w-[3.2rem] h-[3.2rem] mb-1" />
             <span className="text-xs underline">Upload</span>

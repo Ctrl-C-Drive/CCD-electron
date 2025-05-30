@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 const useClipboardRecords = () => {
   const [items, setItems] = useState([]);
 
+
   const refetch = useCallback(async () => {
     try {
       const response = await window.electronAPI.loadClipboardRecords(true);
@@ -67,8 +68,12 @@ const setItemsFromSearchResult = (newItems) => {
   }));
   setItems(formatted);
 };
+  const getSelectedItemIds = useCallback(() => {
+    return items.filter(item => item.selected).map(item => item.itemId);
+  }, [items]);
 
-  return { items, refetch, toggleSelect, addItem, setItemsFromSearchResult   };
+
+  return { items, refetch, toggleSelect, addItem, setItemsFromSearchResult, getSelectedItemIds   };
 };
 
 export default useClipboardRecords;
