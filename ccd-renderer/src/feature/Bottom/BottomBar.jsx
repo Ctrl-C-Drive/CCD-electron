@@ -86,8 +86,31 @@ const Toast = ({ message, type }) => {
           </div>
           <div 
               className="flex flex-col items-center text-blue-700 cursor-pointer"
-              onClick={() => showToast('Downloading...', 'info')}
-          >
+              onClick={async () => {
+                const selectedIds = getSelectedItemIds(); 
+                console.log("selectedIds:", selectedIds);
+
+                if (selectedIds.length === 0) {
+                  showToast('선택된 항목이 없습니다.', 'error');
+                  return;
+                }
+
+                showToast('다운로드 중...', 'info');
+                try {
+                  const result = await window.electronAPI.downloadSelectedItems(selectedIds);
+                  console.log("📥 다운로드 결과:", result);
+                  if (result.uploadResult) {
+                    showToast('다운로드 성공!', 'info');
+                  } else {
+                    showToast('다운로드 실패', 'error');
+                  }
+                } catch (err) {
+                  console.error("다운로드 중 오류:", err);
+                  showToast('오류 발생', 'error');
+                }
+              }}
+
+>
             <img src="DownloadCloud.svg" alt="Download" className="w-[3.2rem] h-[3.2rem] mb-1" />
             <span className="text-xs underline">Download</span>
           </div>
