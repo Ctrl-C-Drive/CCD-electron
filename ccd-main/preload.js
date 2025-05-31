@@ -2,7 +2,16 @@ window.addEventListener('DOMContentLoaded', () => {
   console.log('Preload loaded.');
 });
 
-// preload.js
+window.addEventListener("dragover", (e) => {
+  e.preventDefault();
+});
+window.addEventListener("drop", (e) => {
+  e.preventDefault();
+});
+
+
+
+
 const { contextBridge, ipcRenderer } = require("electron");
 
 contextBridge.exposeInMainWorld("electronAPI", {

@@ -11,7 +11,7 @@ const isDev = !app.isPackaged;
 
 const createWindow = () => {
   const win = new BrowserWindow({
-    width: 417,
+    width: 617,
     height: 646,
     resizable: false,
     webPreferences: {

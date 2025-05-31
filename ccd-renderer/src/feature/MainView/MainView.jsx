@@ -5,11 +5,11 @@ import "../../styles/color.css";
 import useClipboardRecords from '../../utils/useClipboardRecords';
 
 
-const MainView = ({isTagChecked}) => {
+const MainView = ({isTagChecked, items, toggleSelect,addItem }) => {
   // const [items, setItems] = useState([]);
   const [activeItemId, setActiveItemId] = useState(null);
   const containerRefs = useRef({});
-  const { items, refetch, toggleSelect } = useClipboardRecords();
+  // const { items, refetch, toggleSelect, addItem } = useClipboardRecords();
 
     // 모달 외부 클릭 시 닫기
   useEffect(() => {
@@ -26,81 +26,141 @@ const MainView = ({isTagChecked}) => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // const fetchClipboardRecords = async () => {
-  //     try {
-  //       const response = await window.electronAPI.loadClipboardRecords(true); // 또는 false
-  //       if (response.success) {
-  //       const formattedData = response.data.map((item) => ({
-  //         id: item.id,
-  //         selected: false,
-  //         tag: item.tags?.[0]?.tag ?? "태그 없음",  // 첫 번째 태그만 보여줄 경우
-  //         fileType: item.fileType,
-  //         date: item.date,
-  //         source: item.source,
-  //         imgURL: item.imgURL,
-  //         thumbnailURL: item.thumbnailURL,
-  //       }));
-  //     //  {
-  //     //   "fileType": "jpg" | "png" | "jpeg",
-  //     //   "date": 20240422 //Number
-  //     //   "source": "local" | "cloud" | "all" ,
-  //     //   "imgURL": "http://어쩌고~",
-  //     //   "thumnailURL": "http://어쩌고~"
-  //     //   "tags": [ 
-  //     //             { "tag": "고양이" }, 
-  //     //             {"tag": "동물" }
-  //     //         ] 
-  //     //   }
 
-  //         setItems(formattedData);
-  //       } else {
-  //         console.error("기록 불러오기 실패:", response);
-  //       }
-  //     } catch (err) {
-  //       console.error("기록 불러오기 중 에러:", err);
-  //     }
-  //   };
-  // useEffect(() => {
-  //   fetchClipboardRecords();
-  // }, []);
-
-  // const toggleSelect = (id) => {
-  //   setItems((prev) =>
-  //     prev.map((item) =>
-  //       item.id === id ? { ...item, selected: !item.selected } : item
-  //     )
-  //   );
-  // };
   const toggleModal = (id) => {
     setActiveItemId((prev) => (prev === id ? null : id));
   };
 
+  useEffect(() => {
+  const handleDrop = (e) => {
+    e.preventDefault();
 
+    const file = e.dataTransfer.files[0];
+    if (!file) return;
+
+    const fileType = file.type;
+
+    if (fileType.startsWith("image/")) {
+      console.log("input된 데이터는 예쁜 img네요^^");
+      const reader = new FileReader();
+      reader.onload = (event) => {
+      const dataUrl = event.target.result;
+      const fileName = file.name;
+      const ext = fileName.split('.').pop().toLowerCase();      
+        addItem({
+          type: "image",
+          src: dataUrl,
+          fileName,
+          ext,
+          timestamp: Date.now(),
+          tags: [],
+        });
+    };
+    reader.readAsDataURL(file);
+  } else if (fileType === "text/plain") {
+    console.log("input된 데이터는 예쁜 text네요^^");
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const content = event.target.result;
+      const fileName = file.name;
+      const ext = fileName.split('.').pop().toLowerCase();
+      addItem({
+        type: "text",
+        content,
+        fileName,
+        ext,
+        timestamp: Date.now(),
+        tags: [],
+      });
+    };
+    reader.readAsText(file);
+  } else {
+    console.warn("지원하지 않는 파일 형식:", fileType);
+  }
+};
+    const handleDragOver = (e) => {
+      e.preventDefault();
+    console.log("💨 DragOver 이벤트 감지됨");
+
+    };
+
+    window.addEventListener("drop", handleDrop);
+    window.addEventListener("dragover", handleDragOver);
+
+    return () => {
+      window.removeEventListener("drop", handleDrop);
+      window.removeEventListener("dragover", handleDragOver);
+    };
+  }, [addItem]);
+const handlePaste = async (id) => {
+  try {
+    const res = await window.electronAPI.pasteItem(id);
+    if (res.paste) {
+      console.log("📋 클립보드에 복사 성공!");
+    } else {
+      console.warn("❌ 클립보드 복사 실패:", res.error);
+    }
+  } catch (err) {
+    console.error("IPC 에러:", err);
+  }
+};
+//삭제
+const handleDelete = async (itemId, deleteOption) => {
+  try {
+    const res = await window.electronAPI.deleteItem(itemId, deleteOption);
+    if (res.deletionResult && res.refreshReq) {
+      refetch(); // 화면 갱신
+    }
+  } catch (err) {
+    console.error("삭제 중 오류:", err);
+  }
+};
 
   return (
-    <div className="grid grid-cols-2 gap-3 px-6 py-4  ">
+    <div className="grid grid-cols-2 gap-3 px-6 py-4  !w-screen  "
+          onDragOver={(e) => e.preventDefault()}
+            onDrop={(e) => {
+              e.preventDefault();
+              console.log("Drop 이벤트 내부 div에서 감지됨");
+            }}
+    >
       {items.map((item) => (
         <div
-          key={item.id}
-          className="w-[17rm]  relative  border border-blue-700 rounded-md overflow-hidden cursor-pointer"
-          onClick={(e) => {toggleModal(item.id);   e.stopPropagation();}}
+          key={item.itemId}
+          className="w-[17rm] !h-auto relative  border border-blue-700 rounded-md overflow-hidden cursor-pointer"
+          onContextMenu={(e) => {
+            toggleModal(item.itemId);
+            e.stopPropagation();
+            handlePaste(item.itemId);
+
+          }}
         >
           <div className="relative  h-[9.2rem] bg-blue-100">
-            {isTagChecked && (
+            {item.type === "image" && item.src && (
+              <img
+                src={item.src}
+                alt="dropped-img"
+                className="w-full h-[9.2rem] object-cover"
+              />
+            )}
+            {item.type === "text" && item.content && (
+              <p className="p-2 text-sm text-gray-700">{item.content}</p>
+            )}
             <div className="absolute top-1 left-1">
               <input
                 type="checkbox"
                 checked={item.selected}
-                onClick={()=> toggleSelect(item.id)}
+                onClick={()=> toggleSelect(item.itemId)}
                 onChange={() => {}}
                 className="accent-blue-700 w-[1.3rem] h-[1.3rem]"
               />
             </div>
-            )}
+          
             <div className="absolute bottom-1 right-1">
               <img src="folder.svg" alt="folder" className="w-[1.7rem] h-[1.5rem]" />
             </div>
           </div>
+            {isTagChecked && (
 
           <div className="
             text-[var(--blue-200)]
@@ -111,6 +171,7 @@ const MainView = ({isTagChecked}) => {
              border-t h-[2.6rem] border-[var(--blue-200)] pl-[1.6rem] "
 
              >
+            
             {item.tags && item.tags.length > 0 ? (
               item.tags.map((t, idx) => (
                 <span key={idx}># {t.tag}</span>
@@ -119,9 +180,10 @@ const MainView = ({isTagChecked}) => {
               <span># 태그 없음</span>
             )}          
             </div>
-           {activeItemId === item.id && (
+            )}
+           {activeItemId === item.itemId && (
             <div
-              ref={(el) => (containerRefs.current[item.id] = el)}
+              ref={(el) => (containerRefs.current[item.itemId] = el)}
                 onClick={(e) => e.stopPropagation()}
               className="absolute w-[11rem] h-auto px-[1.2rem] top-[2rem] right-[2.2rem] 
               bg-white border rounded-2xl shadow-md z-50 
@@ -133,15 +195,23 @@ const MainView = ({isTagChecked}) => {
                 font-[var(--font-md)]
                 leading-normal
               ">
-              <div className="py-2 hover:bg-blue-50 cursor-pointer">
+              <div className="py-2 hover:bg-blue-50 cursor-pointer"
+                   onClick={() => handleDelete(item.itemId, "all")}
+
+              >
                 모두 삭제
               </div>
               <hr />
-              <div className="py-2 hover:bg-blue-50 cursor-pointer">
+              <div className="py-2 hover:bg-blue-50 cursor-pointer"
+                   onClick={() => handleDelete(item.itemId, "local")}
+              >
                 Local에서 삭제
               </div>
               <hr />
-              <div className="py-2 hover:bg-blue-50 cursor-pointer">
+              <div className="py-2 hover:bg-blue-50 cursor-pointer"
+                   onClick={() => handleDelete(item.itemId, "cloud")}
+
+              >
                 Cloud에서 삭제
               </div>
             </div>
