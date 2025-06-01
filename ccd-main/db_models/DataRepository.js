@@ -66,6 +66,10 @@ class DataRepositoryModule extends EventEmitter {
     this._loadConfig(); // 변경된 설정 다시 로드
   }
 
+  async handleLimitChange(limit) {
+    await this.cloudDB.handleLimitChange(limit);
+  }
+
   invalidateCache(source = "all") {
     if (source === "local" || source === "all") {
       this.cache.local.valid = false;

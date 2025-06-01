@@ -336,6 +336,20 @@ class CloudDataModule {
     }
   }
 }
+async function handleLimitChange(newLimit) {
+  try {
+    const result = await cloudModule.updateMaxCountCloud(newLimit);
+    console.log("설정 변경 성공:", result);
+    alert(`저장 한도가 변경되었습니다 (현재 항목: ${result.current_count})`);
+  } catch (err) {
+    throw CCDError.create("E621", {
+      module: "CloudData",
+      context: "설정 변경 실패",
+      message: "CLIP 검색 실패",
+      details: err.response?.data,
+    });
+  }
+}
 
 const cloudDataInstance = new CloudDataModule(config);
 module.exports = cloudDataInstance;
