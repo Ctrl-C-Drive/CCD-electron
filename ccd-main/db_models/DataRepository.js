@@ -66,8 +66,8 @@ class DataRepositoryModule extends EventEmitter {
     this._loadConfig(); // 변경된 설정 다시 로드
   }
 
-  async handleLimitChange(limit) {
-    await this.cloudDB.handleLimitChange(limit);
+  async updateMaxCountCloud(limit) {
+    const result = await this.cloudDB.updateMaxCountCloud(limit);
   }
 
   invalidateCache(source = "all") {
