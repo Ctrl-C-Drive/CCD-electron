@@ -47,6 +47,52 @@ function setupIPC() {
     }
   });
 
+  // 드래그앤드랍으로 들어온 파일 처리
+  ipcMain.handle("add-dropped-file", async (_, { filePath }) => {
+    try {
+      const ext = path.extname(filePath).replace(".", "").toLowerCase();
+      const imageExtensions = ["png", "jpg", "jpeg", "gif", "bmp", "webp"];
+      const textExtensions = ["txt", "md", "csv", "log"];
+
+      let item;
+
+      if (imageExtensions.includes(ext)) {
+        item = {
+          type: "img",
+          content: filePath,
+          format: ext,
+        };
+      } else if (textExtensions.includes(ext)) {
+        const text = await fs.promises.readFile(filePath, "utf-8");
+        item = {
+          type: "txt",
+          content: text,
+          format: ext,
+        };
+      } else {
+        throw CCDError.create("E643", {
+          module: "ipcHandler",
+          context: "드래그 파일 확장자 검사",
+          message: `지원되지 않는 파일 형식입니다. (${ext})`,
+        });
+      }
+
+      await dataRepo.addItem(item, "local");
+      return { success: true, message: "파일이 추가되었습니다." };
+    } catch (err) {
+      const error = err instanceof CCDError
+        ? err
+        : CCDError.create("E631", {
+          module: "ipcHandler",
+          context: "드래그 파일 처리",
+          details: err.message,
+        });
+      console.error(error);
+      return error.toJSON();
+    }
+  });
+
+
   // 붙여넣기
   ipcMain.handle("paste-item", async (_, { itemId }) => {
     try {
@@ -102,6 +148,31 @@ function setupIPC() {
     }
   });
 
+  // 환경설정 저장
+  ipcMain.handle("update-settings", async (_, { localLimit, cloudLimit, retentionDays }) => {
+    try {
+      // 1. 로컬 설정 업데이트
+      await dataRepo.updateConfig({
+        local_limit: localLimit,
+        day_limit: retentionDays,
+      });
+
+      // 2. 클라우드 설정 업데이트
+      await dataRepo.updateMaxCountCloud(cloudLimit);
+
+      return { success: true, message: "설정이 성공적으로 반영되었습니다." };
+    } catch (err) {
+      const error = CCDError.create("E652", {
+        module: "ipcHandler",
+        context: "환경설정 업데이트",
+        details: err.message,
+      });
+      console.error(error);
+      return error.toJSON();
+    }
+  });
+
+
   // 삭제
   ipcMain.handle("delete-item", async (_, { dataId, deleteOption }) => {
     try {
@@ -118,21 +189,7 @@ function setupIPC() {
     }
   });
 
-  // 필터링
-  ipcMain.handle("filter-items", async (_, { filterType, filterValue }) => {
-    try {
-      const filteredItems = await dataRepo.filterItems(filterType, filterValue);
-      return { success: true, data: filteredItems };
-    } catch (err) {
-      const error = CCDError.create("E652", {
-        module: "ipcHandler",
-        context: "항목 필터링",
-        details: err.message,
-      });
-      console.error(error);
-      return error.toJSON();
-    }
-  });
+  // 
 
   // 클라우드 업로드
   ipcMain.handle("upload-selected-items", async (_, itemIds) => {

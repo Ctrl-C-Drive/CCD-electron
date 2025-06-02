@@ -24,6 +24,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
   loginUser: (userId, password) =>
     ipcRenderer.invoke("user-login", { userId, password }),
 
+  // 드래그앤 드랍 복사
+  addDroppedFile: (filePath) =>
+  ipcRenderer.invoke("add-dropped-file", { filePath }),
+
   // 붙여넣기
   pasteItem: (itemId) =>
     ipcRenderer.invoke("paste-item", { itemId }),
@@ -40,9 +44,13 @@ contextBridge.exposeInMainWorld("electronAPI", {
   deleteItem: (dataId, deleteOption) =>
     ipcRenderer.invoke("delete-item", { dataId, deleteOption }),
 
-  // 필터링
-  filterItems: (filterType, filterValue) =>
-    ipcRenderer.invoke("filter-items", { filterType, filterValue }),
+  // 환경설정 저장
+  updateSettings: (localLimit, cloudLimit, retentionDays) =>
+    ipcRenderer.invoke("update-settings", {
+      localLimit,
+      cloudLimit,
+      retentionDays,
+    }),
 
   // 클라우드 업로드
   uploadSelectedItems: (itemIds) =>
