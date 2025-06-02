@@ -222,6 +222,12 @@ function setupIPC() {
       return error.toJSON();
     }
   });
+
+  ipcMain.on("toggle-cloud-upload", () => {
+    cloudUploadEnabled = !cloudUploadEnabled;
+    console.log(`Cloud upload ${cloudUploadEnabled ? "enabled" : "disabled"}`);
+    notifyRenderer(); // 렌더러에 변경된 상태 전송
+  });
 }
 
 module.exports = { setupIPC };

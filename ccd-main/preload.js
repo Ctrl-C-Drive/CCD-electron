@@ -63,4 +63,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // 클라우드 업로드 상태 수신 (예: 단축키 토글 등)
   onCloudUploadStatusChange: (callback) =>
     ipcRenderer.on("clipboard-upload-status", (_, status) => callback(status)),
+
+  toggleCloudUpload: () => ipcRenderer.send("toggle-cloud-upload"),
+
 });
