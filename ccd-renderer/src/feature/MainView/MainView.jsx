@@ -5,11 +5,11 @@ import "../../styles/color.css";
 import useClipboardRecords from '../../utils/useClipboardRecords';
 
 
-const MainView = ({isTagChecked, items, toggleSelect,addItem }) => {
+const MainView = ({isTagChecked,refetch, items, toggleSelect,addItem }) => {
   // const [items, setItems] = useState([]);
   const [activeItemId, setActiveItemId] = useState(null);
   const containerRefs = useRef({});
-  // const { items, refetch, toggleSelect, addItem } = useClipboardRecords();
+
 
     // 모달 외부 클릭 시 닫기
   useEffect(() => {
@@ -32,52 +32,52 @@ const MainView = ({isTagChecked, items, toggleSelect,addItem }) => {
   };
 
   useEffect(() => {
-  const handleDrop = (e) => {
-    e.preventDefault();
+    const handleDrop = (e) => {
+      e.preventDefault();
 
-    const file = e.dataTransfer.files[0];
-    if (!file) return;
+      const file = e.dataTransfer.files[0];
+      if (!file) return;
 
-    const fileType = file.type;
+      const fileType = file.type;
 
-    if (fileType.startsWith("image/")) {
-      console.log("input된 데이터는 예쁜 img네요^^");
+      if (fileType.startsWith("image/")) {
+        console.log("input된 데이터는 예쁜 img네요^^");
+        const reader = new FileReader();
+        reader.onload = (event) => {
+        const dataUrl = event.target.result;
+        const fileName = file.name;
+        const ext = fileName.split('.').pop().toLowerCase();      
+          addItem({
+            type: "image",
+            src: dataUrl,
+            fileName,
+            ext,
+            timestamp: Date.now(),
+            tags: [],
+          });
+      };
+      reader.readAsDataURL(file);
+    } else if (fileType === "text/plain") {
+      console.log("input된 데이터는 예쁜 text네요^^");
       const reader = new FileReader();
       reader.onload = (event) => {
-      const dataUrl = event.target.result;
-      const fileName = file.name;
-      const ext = fileName.split('.').pop().toLowerCase();      
+        const content = event.target.result;
+        const fileName = file.name;
+        const ext = fileName.split('.').pop().toLowerCase();
         addItem({
-          type: "image",
-          src: dataUrl,
+          type: "text",
+          content,
           fileName,
           ext,
           timestamp: Date.now(),
           tags: [],
         });
-    };
-    reader.readAsDataURL(file);
-  } else if (fileType === "text/plain") {
-    console.log("input된 데이터는 예쁜 text네요^^");
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const content = event.target.result;
-      const fileName = file.name;
-      const ext = fileName.split('.').pop().toLowerCase();
-      addItem({
-        type: "text",
-        content,
-        fileName,
-        ext,
-        timestamp: Date.now(),
-        tags: [],
-      });
-    };
-    reader.readAsText(file);
-  } else {
-    console.warn("지원하지 않는 파일 형식:", fileType);
-  }
-};
+      };
+      reader.readAsText(file);
+    } else {
+      console.warn("지원하지 않는 파일 형식:", fileType);
+    }
+  };
     const handleDragOver = (e) => {
       e.preventDefault();
     console.log("💨 DragOver 이벤트 감지됨");
@@ -92,29 +92,31 @@ const MainView = ({isTagChecked, items, toggleSelect,addItem }) => {
       window.removeEventListener("dragover", handleDragOver);
     };
   }, [addItem]);
-const handlePaste = async (id) => {
-  try {
-    const res = await window.electronAPI.pasteItem(id);
-    if (res.paste) {
-      console.log("📋 클립보드에 복사 성공!");
-    } else {
-      console.warn("❌ 클립보드 복사 실패:", res.error);
+
+
+  const handlePaste = async (id) => {
+    try {
+      const res = await window.electronAPI.pasteItem(id);
+      if (res.paste) {
+        console.log("📋 클립보드에 복사 성공!");
+      } else {
+        console.warn("❌ 클립보드 복사 실패:", res.error);
+      }
+    } catch (err) {
+      console.error("IPC 에러:", err);
     }
-  } catch (err) {
-    console.error("IPC 에러:", err);
-  }
-};
-//삭제
-const handleDelete = async (itemId, deleteOption) => {
-  try {
-    const res = await window.electronAPI.deleteItem(itemId, deleteOption);
-    if (res.deletionResult && res.refreshReq) {
-      refetch(); // 화면 갱신
+  };
+  //삭제
+  const handleDelete = async (itemId, deleteOption) => {
+    try {
+      const res = await window.electronAPI.deleteItem(itemId, deleteOption);
+      if (res.deletionResult && res.refreshReq) {
+        refetch(); // 화면 갱신
+      }
+    } catch (err) {
+      console.error("삭제 중 오류:", err);
     }
-  } catch (err) {
-    console.error("삭제 중 오류:", err);
-  }
-};
+  };
 
   return (
     <div className="grid grid-cols-2 gap-3 px-6 py-4  !w-screen  "
