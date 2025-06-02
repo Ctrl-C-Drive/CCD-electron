@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import clsx from 'clsx'; 
 import { twMerge } from 'tailwind-merge';
 import "../../styles/color.css";
-
+import useClipboardRecords from "../../utils/useClipboardRecords"
 
 import LoginModal from '../Login/LoginModal';
 
@@ -15,13 +15,15 @@ const SearchBar =() => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
 const [keyword, setKeyword] = useState("");
+const { items, setItems, refetch } = useClipboardRecords();
+
+
 const handleSearch = async () => {
   const model = currentSelection === "일반 검색" ? "mobilenet" : "clip";
   const result = await window.electronAPI.searchKeyword(keyword, model);
-  
+  console.log("this is Search model: ", model);
   if (result.sendResult) {
-    // 📌 검색 결과를 상태로 저장하거나, Context 혹은 props로 전달
-    updateClipboardRecords(result.sendData);  // 예시
+     setItems(result.sendData); //기록보기 창 리렌더링링
   } else {
     console.error("검색 실패", result);
   }
