@@ -5,10 +5,13 @@ require("dotenv").config();
 const { app, ipcMain, globalShortcut, BrowserWindow } = require("electron");
 const monitor = require("./monitor");
 const CCDError = require("../CCDError");
-
+const notifyRenderer = require("../notifyRenderer");
 const dbmgr = require("../db_models/DataRepository");
 
-let cloudUploadEnabled = false;
+const {
+  getCloudUploadEnabled,
+  toggleCloudUploadEnabled,
+} = require("../cloudUploadState");
 
 /**
  * 클립보드 기능 모듈 초기화
@@ -16,7 +19,7 @@ let cloudUploadEnabled = false;
 function initClipboardModule() {
   setupToggleShortcut();
   startMonitoring();
-  notifyRenderer();
+  notifyRenderer("clipboard-upload-status", getCloudUploadEnabled());
 }
 
 /**
@@ -28,11 +31,13 @@ function setupToggleShortcut() {
     console.log(`${shortcut} already registered, skipping.`);
     return;
   }
+
   const ok = globalShortcut.register(shortcut, () => {
-    cloudUploadEnabled = !cloudUploadEnabled;
-    console.log(`Cloud upload ${cloudUploadEnabled ? "enabled" : "disabled"}`);
-    notifyRenderer();
+    toggleCloudUploadEnabled();
+    console.log(`Cloud upload ${getCloudUploadEnabled() ? "enabled" : "disabled"}`);
+    notifyRenderer("clipboard-upload-status", getCloudUploadEnabled());
   });
+
   if (!ok) {
     const error = CCDError.create("E611", {
       module: "index",
@@ -60,7 +65,7 @@ function addClipboard(id, type, format, content, timestamp) {
   };
 
   try {
-    return dbmgr.addItem(itemData, cloudUploadEnabled ? "both" : "local");
+    return dbmgr.addItem(itemData, getCloudUploadEnabled() ? "both" : "local");
   } catch (err) {
     const error = CCDError.create("E631", {
       module: "index",
@@ -98,16 +103,6 @@ function startMonitoring() {
       return error.toJSON();
     }
   });
-}
-
-/**
- * 렌더러에 현재 클라우드 업로드 상태 전송
- */
-function notifyRenderer() {
-  const win = BrowserWindow.getAllWindows()[0];
-  if (win && win.webContents) {
-    win.webContents.send("clipboard-upload-status", cloudUploadEnabled);
-  }
 }
 
 module.exports = { initClipboardModule };

@@ -2,6 +2,8 @@ const { ipcMain } = require("electron");
 const { searchData } = require("./DataSearch");
 const { authenticate } = require("./auth/authService");
 const { registerUser } = require("./auth/authService");
+const notifyRenderer = require("./notifyRenderer")
+const { getCloudUploadEnabled, setCloudUploadEnabled } = require("./cloudUploadState");
 
 const CCDError = require("./CCDError");
 
@@ -224,10 +226,12 @@ function setupIPC() {
   });
 
   ipcMain.on("toggle-cloud-upload", () => {
-    cloudUploadEnabled = !cloudUploadEnabled;
-    console.log(`Cloud upload ${cloudUploadEnabled ? "enabled" : "disabled"}`);
-    notifyRenderer(); // 렌더러에 변경된 상태 전송
+    const newState = !getCloudUploadEnabled();
+    setCloudUploadEnabled(newState);
+    console.log(`Cloud upload ${newState ? "enabled" : "disabled"}`);
+    notifyRenderer("clipboard-upload-status", newState);
   });
+
 }
 
 module.exports = { setupIPC };

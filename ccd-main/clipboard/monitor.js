@@ -5,6 +5,7 @@ const fs = require("fs-extra");
 const crypto = require("crypto");
 const CCDError = require("../CCDError");
 
+
 const documentsDir = app.getPath("documents");
 const imageDir = path.join(documentsDir, "CCD", "clipboard_images");
 fs.ensureDirSync(imageDir);
