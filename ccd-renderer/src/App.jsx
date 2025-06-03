@@ -33,7 +33,7 @@ const App= () => {
 
   return (
     <>
-      <div c
+      <div 
         className="w-full h-full bg-white opacity-87  p-0 "
         style={{ WebkitAppRegion: 'drag' }}
       >
