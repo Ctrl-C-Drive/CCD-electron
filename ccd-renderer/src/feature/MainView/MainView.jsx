@@ -160,8 +160,12 @@ const MainView = ({isTagChecked,refetch, items, toggleSelect,addItem }) => {
               />
             )}
             {item.type === "text" && item.content && (
-              <p className="p-2 text-sm text-gray-700">{item.content}</p>
+              <p className="pt-[1rem]  px-[2rem] text-xl text-gray-700   line-clamp-3 h-auto">
+                {item.content}
+                </p>
             )}
+ 
+
             <div className="absolute top-1 left-1">
               <input
                 type="checkbox"
