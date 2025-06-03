@@ -32,19 +32,24 @@ import useClipboardRecords from "../../utils/useClipboardRecords";
       document.addEventListener('mousedown', handleClickOutside);
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
+    useEffect(() => {
+      window.electronAPI.onCloudUploadStatusChange((status) => {
+        setIsAutoCloudSave(status);
+      });
+    }, []);
 
     const retentionOptions = ['1일', '7일', '10일', '30일', '∞'];
     const limitOptions = ['30개','10개', '50개' ]; 
     const handleApplySetting = async () => {
-  const settings = {
-    storagePeriod: Number(retention),             // ex) "7"
-    localStorageCount: Number(localLimit),        // ex) "30"
-    cloudStorageCount: Number(cloudLimit),        // ex) "10"
-    cloudUploadEnabled: isAutoCloudSave === true,
-  };
+    const settings = {
+      retentionDays : Number(retention),             // ex) "7"
+      localLimitNum : Number(localLimit),        // ex) "30"
+      cloudLimitNum : Number(cloudLimit),        // ex) "10"
+      // cloudUploadEnabled: isAutoCloudSave === true,
+    };
 
   try {
-    const response = await window.electronAPI.updateSearchSetting(settings);
+    const response = await window.electronAPI.updateSettings(settings);
     if (response.success) {
       await refetch();   // 기록 다시 불러오기
       onClose();         // 모달 닫기
@@ -287,7 +292,11 @@ return (
 
           {/* 토글 스위치 */}
           <div
-            onClick={() => setIsAutoCloudSave((prev) => !prev)}
+            // onClick={() => setIsAutoCloudSave((prev) => !prev)}
+            onClick={() => {
+              window.electronAPI.toggleCloudUpload(); // 메인 프로세스로 토글 신호 보내기
+              console.log("클라우드 업로드 여부 토글 신호 갔슴다~(렌->메)");
+            }}           
             className={`
               w-[3.4rem] h-[1.9rem] rounded-full p-[0.2rem]
               cursor-pointer transition-all duration-200
