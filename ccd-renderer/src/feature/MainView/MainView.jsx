@@ -10,8 +10,7 @@ const MainView = ({isTagChecked,refetch, items, toggleSelect,addItem }) => {
   const [activeItemId, setActiveItemId] = useState(null);
   const containerRefs = useRef({});
 
-
-    // 모달 외부 클릭 시 닫기
+  // 모달 외부 클릭 시 닫기
   useEffect(() => {
     const handleClickOutside = (e) => {
       const clickedInsideSomeModal = Object.values(containerRefs.current).some(
@@ -26,62 +25,78 @@ const MainView = ({isTagChecked,refetch, items, toggleSelect,addItem }) => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-
   const toggleModal = (id) => {
     setActiveItemId((prev) => (prev === id ? null : id));
   };
 
   useEffect(() => {
-    const handleDrop = (e) => {
+    const handleDrop = async (e) => {
       e.preventDefault();
 
       const file = e.dataTransfer.files[0];
       if (!file) return;
 
       const fileType = file.type;
+      const fileName = file.name;
+      const ext = fileName.split(".").pop().toLowerCase();
+      const timestamp = Date.now();
+
+      const readFileAsDataURL = (file) =>
+        new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+
+      const readFileAsText = (file) =>
+        new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsText(file);
+        });
 
       if (fileType.startsWith("image/")) {
-        console.log("input된 데이터는 예쁜 img네요^^");
-        const reader = new FileReader();
-        reader.onload = (event) => {
-        const dataUrl = event.target.result;
-        const fileName = file.name;
-        const ext = fileName.split('.').pop().toLowerCase();      
-          addItem({
-            type: "image",
-            src: dataUrl,
-            fileName,
-            ext,
-            timestamp: Date.now(),
-            tags: [],
-          });
-      };
-      reader.readAsDataURL(file);
-    } else if (fileType === "text/plain") {
-      console.log("input된 데이터는 예쁜 text네요^^");
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const content = event.target.result;
-        const fileName = file.name;
-        const ext = fileName.split('.').pop().toLowerCase();
+        const dataUrl = await readFileAsDataURL(file);
+
+        addItem({
+          type: "image",
+          src: dataUrl,
+          fileName,
+          ext,
+          timestamp,
+          tags: [],
+        });
+
+        const result = await window.electronAPI.addDroppedFile(file.path);
+        if (!result.success) {
+          console.warn("파일 저장 실패:", result.message || result.error);
+        }
+      } else if (fileType === "text/plain") {
+        const content = await readFileAsText(file);
+
         addItem({
           type: "text",
           content,
           fileName,
           ext,
-          timestamp: Date.now(),
+          timestamp,
           tags: [],
         });
-      };
-      reader.readAsText(file);
-    } else {
-      console.warn("지원하지 않는 파일 형식:", fileType);
-    }
-  };
+
+        const result = await window.electronAPI.addDroppedFile(file.path);
+        if (!result.success) {
+          console.warn("파일 저장 실패:", result.message || result.error);
+        }
+      } else {
+        console.warn("지원하지 않는 파일 형식:", fileType);
+      }
+    };
+
     const handleDragOver = (e) => {
       e.preventDefault();
-    console.log("💨 DragOver 이벤트 감지됨");
-
+      console.log("💨 DragOver 이벤트 감지됨");
     };
 
     window.addEventListener("drop", handleDrop);
@@ -92,7 +107,6 @@ const MainView = ({isTagChecked,refetch, items, toggleSelect,addItem }) => {
       window.removeEventListener("dragover", handleDragOver);
     };
   }, [addItem]);
-
 
   const handlePaste = async (id) => {
     try {
@@ -106,6 +120,7 @@ const MainView = ({isTagChecked,refetch, items, toggleSelect,addItem }) => {
       console.error("IPC 에러:", err);
     }
   };
+
   //삭제
   const handleDelete = async (itemId, deleteOption) => {
     try {
@@ -120,11 +135,11 @@ const MainView = ({isTagChecked,refetch, items, toggleSelect,addItem }) => {
 
   return (
     <div className="grid grid-cols-2 gap-3 px-6 py-4  !w-screen  "
-          onDragOver={(e) => e.preventDefault()}
-            onDrop={(e) => {
-              e.preventDefault();
-              console.log("Drop 이벤트 내부 div에서 감지됨");
-            }}
+      onDragOver={(e) => e.preventDefault()}
+      onDrop={(e) => {
+        e.preventDefault();
+        console.log("Drop 이벤트 내부 div에서 감지됨");
+      }}
     >
       {items.map((item) => (
         <div
@@ -134,7 +149,6 @@ const MainView = ({isTagChecked,refetch, items, toggleSelect,addItem }) => {
             toggleModal(item.itemId);
             e.stopPropagation();
             handlePaste(item.itemId);
-
           }}
         >
           <div className="relative  h-[9.2rem] bg-blue-100">
@@ -152,76 +166,71 @@ const MainView = ({isTagChecked,refetch, items, toggleSelect,addItem }) => {
               <input
                 type="checkbox"
                 checked={item.selected}
-                onClick={()=> toggleSelect(item.itemId)}
+                onClick={() => toggleSelect(item.itemId)}
                 onChange={() => {}}
                 className="accent-blue-700 w-[1.3rem] h-[1.3rem]"
               />
             </div>
-          
+
             <div className="absolute bottom-1 right-1">
               <img src="folder.svg" alt="folder" className="w-[1.7rem] h-[1.5rem]" />
             </div>
           </div>
-            {isTagChecked && (
-
-          <div className="
-            text-[var(--blue-200)]
-            !font-pretendard
-            text-[1.3rem]
-            font-[var(--font-rg)]
-            leading-[2.8rem]
-             border-t h-[2.6rem] border-[var(--blue-200)] pl-[1.6rem] "
-
-             >
-            
-            {item.tags && item.tags.length > 0 ? (
-              item.tags.map((t, idx) => (
-                <span key={idx}># {t.tag}</span>
-              ))
-            ) : (
-              <span># 태그 없음</span>
-            )}          
+          {isTagChecked && (
+            <div className="
+              text-[var(--blue-200)]
+              !font-pretendard
+              text-[1.3rem]
+              font-[var(--font-rg)]
+              leading-[2.8rem]
+              border-t h-[2.6rem] border-[var(--blue-200)] pl-[1.6rem] "
+            >
+              {item.tags && item.tags.length > 0 ? (
+                item.tags.map((t, idx) => (
+                  <span key={idx}># {t.tag}</span>
+                ))
+              ) : (
+                <span># 태그 없음</span>
+              )}
             </div>
-            )}
-           {activeItemId === item.itemId && (
+          )}
+          {activeItemId === item.itemId && (
             <div
               ref={(el) => (containerRefs.current[item.itemId] = el)}
-                onClick={(e) => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
               className="absolute w-[11rem] h-auto px-[1.2rem] top-[2rem] right-[2.2rem] 
               bg-white border rounded-2xl shadow-md z-50 
-               text-[var(--blue-200)]
-                text-center
-                !font-pretendard
-                text-[1.1rem]
-                not-italic
-                font-[var(--font-md)]
-                leading-normal
+              text-[var(--blue-200)]
+              text-center
+              !font-pretendard
+              text-[1.1rem]
+              not-italic
+              font-[var(--font-md)]
+              leading-normal
               ">
               <div className="py-2 hover:bg-blue-50 cursor-pointer"
-                   onClick={() => handleDelete(item.itemId, "all")}
-
+                onClick={() => handleDelete(item.itemId, "all")}
               >
                 모두 삭제
               </div>
               <hr />
               <div className="py-2 hover:bg-blue-50 cursor-pointer"
-                   onClick={() => handleDelete(item.itemId, "local")}
+                onClick={() => handleDelete(item.itemId, "local")}
               >
                 Local에서 삭제
               </div>
               <hr />
               <div className="py-2 hover:bg-blue-50 cursor-pointer"
-                   onClick={() => handleDelete(item.itemId, "cloud")}
-
+                onClick={() => handleDelete(item.itemId, "cloud")}
               >
                 Cloud에서 삭제
               </div>
             </div>
           )}
         </div>
-
       ))}
     </div>
-  );
-  };
+  )
+};
+
 export default MainView;
