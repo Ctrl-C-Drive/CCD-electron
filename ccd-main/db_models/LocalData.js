@@ -353,6 +353,19 @@ class LocalDataModule {
       return [];
     }
   }
+
+  getAllClipboardWithMetaAndTags() {
+    const stmt = this.db.prepare(`
+      SELECT c.*, im.*, GROUP_CONCAT(t.tag_id) as tag_ids 
+      FROM clipboard c
+      LEFT JOIN image_meta im ON c.id = im.data_id
+      LEFT JOIN data_tag dt ON c.id = dt.data_id
+      LEFT JOIN tag t ON dt.tag_id = t.tag_id
+      GROUP BY c.id
+    `);
+    return stmt.all();
+  }
+
   // 설정 조회
   getConfig() {
     try {
@@ -375,6 +388,7 @@ class LocalDataModule {
   }
   // 설정 업데이트 메서드
   updateConfig(newConfig) {
+    console.log(newConfig);
     const tx = this.db.transaction((config) => {
       this.db
         .prepare(
@@ -401,7 +415,7 @@ class LocalDataModule {
       throw CCDError.create("E610", {
         module: "LocalData",
         context: "설정 업데이트트 실패",
-        message: "updateconfig",
+        message: error.message || error,
       });
     }
   }

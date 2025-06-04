@@ -426,16 +426,9 @@ class DataRepositoryModule extends EventEmitter {
       return this.cache.local.data;
     }
 
-    const stmt = this.localDB.db.prepare(`
-    SELECT c.*, im.*, GROUP_CONCAT(t.tag_id) as tag_ids 
-    FROM clipboard c
-    LEFT JOIN image_meta im ON c.id = im.data_id
-    LEFT JOIN data_tag dt ON c.id = dt.data_id
-    LEFT JOIN tag t ON dt.tag_id = t.tag_id
-    GROUP BY c.id
-  `);
+    const rawItems = this.localDB.getAllClipboardWithMetaAndTags();
 
-    const data = stmt.all().map((item) =>
+    const data = rawItems.map((item) =>
       this.transformItem(item, {
         ...item,
         tags: item.tag_ids
