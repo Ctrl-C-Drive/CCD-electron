@@ -44,7 +44,7 @@ async function searchData(keyword, model) {
       source: item.source,
       date: item.createdAt,
       imgURL: item.content,
-      thumbnailURL: item.thumbnailUrl || null,
+      thumbnailURL: item.thumbnail_path || null,
     }));
 
     return { sendResult: true, sendData };
