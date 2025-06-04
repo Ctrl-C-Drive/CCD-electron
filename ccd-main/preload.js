@@ -31,7 +31,12 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // 붙여넣기
   pasteItem: (itemId) =>
     ipcRenderer.invoke("paste-item", { itemId }),
+  //클립보드의 실시간 업데이트되는 데이터
+  onClipboardUpdated: (callback) =>
+    ipcRenderer.on("clipboard-updated", (_, args) => callback(args)),
 
+  offClipboardUpdated: (callback) =>
+    ipcRenderer.removeListener("clipboard-updated", callback),
   // 검색
   searchKeyword: (keyword, model) =>
     ipcRenderer.invoke("search-keyword", { keyword, model }),

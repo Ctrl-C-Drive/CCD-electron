@@ -93,6 +93,12 @@ function startMonitoring() {
       );
 
       payload.id = newItem?.id;
+
+      // 🟡 중요: 렌더러에 "새 클립보드 항목이 추가됨"을 알림
+      notifyRenderer("clipboard-updated", {
+        id: newItem?.id ?? payload.id,
+      });
+
     } catch (err) {
       const error = CCDError.create("E630", {
         module: "index",

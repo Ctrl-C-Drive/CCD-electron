@@ -7,11 +7,18 @@ const useClipboardRecords = () => {
   const refetch = useCallback(async () => {
     try {
       const response = await window.electronAPI.loadClipboardRecords(true);
+       console.log("📦 loadClipboardRecords 응답:", response); 
       if (response.success) {
         const formatted = response.data.map((item) => ({
           ...item,
           selected: false,
-           itemId: item.itemId ?? item.id ?? uuidv4(),
+          itemId: item.itemId ?? item.id ?? uuidv4(),
+          type: item.type === "txt" ? "text" : item.type === "img" ? "image" : item.type,
+          src: item.type === "img" ? item.content : undefined,
+          content: item.type === "txt" ? item.content : undefined,
+          timestamp: item.createdAt ?? Date.now(),
+          fileName: item.fileName ?? "unnamed",
+          ext: item.format?.split("/")?.[1] ?? "unknown",
         }));
         setItems(formatted);
       } else {
@@ -25,9 +32,24 @@ const useClipboardRecords = () => {
   useEffect(() => {
     refetch();
   }, [refetch]);
+
+//클립보드 실시간 업데이트 데이터
+useEffect(() => {
+  const handler = () => {
+    console.log("📥 클립보드 감지됨 → 자동 refetch()");
+    refetch();  // 여기는 훅 내부이므로 안전하게 호출 가능
+  };
+
+  window.electronAPI?.onClipboardUpdated?.(handler);
+  return () => {
+    window.electronAPI?.offClipboardUpdated?.(handler);
+  };
+}, [refetch]);
+
   useEffect(() => {
     console.log("🧾 현재 items 상태:", items);
   }, [items]);
+
   const toggleSelect = (itemId) => {
     setItems((prev) =>
       prev.map((item) =>
@@ -35,6 +57,9 @@ const useClipboardRecords = () => {
       )
     );
   };
+
+    
+
  //  드래그앤드랍으로 받은 아이템 추가
 const addItem = (newItem) => {
    const itemId = newItem.itemId ?? uuidv4();
