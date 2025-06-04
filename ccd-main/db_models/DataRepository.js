@@ -50,13 +50,20 @@ class DataRepositoryModule extends EventEmitter {
     setInterval(() => this.cleanup(), 86400000);
   }
 
-  cleanup() {
+  async cleanup() {
     try {
-      // 항목 수 제한 적용
-      this.localDB.enforceMaxClipboardItems(this.config.maxItems);
+      const maxDeletedIds = this.localDB.enforceMaxClipboardItems(
+        this.config.maxItems
+      );
+      const oldDeletedIds = this.localDB.deleteOldClipboardItems(
+        this.config.retentionDays
+      );
 
-      // 오래된 데이터 삭제
-      this.localDB.deleteOldClipboardItems(this.config.retentionDays);
+      const allDeletedIds = [...maxDeletedIds, ...oldDeletedIds];
+
+      for (const id of allDeletedIds) {
+        await this.changeCloudShared(id);
+      }
     } catch (error) {
       console.error("자동 정리 실패:", error);
     }
@@ -124,7 +131,7 @@ class DataRepositoryModule extends EventEmitter {
       if (target === "local" || target === "both") {
         const localItem = {
           ...newItem,
-          shared: target === "both" ? "cloud" : "local",
+          shared: target === "both" ? "both" : "local",
         };
 
         this.localDB.insertClipboardItem(localItem);
@@ -279,18 +286,27 @@ class DataRepositoryModule extends EventEmitter {
     item.imageMeta = imageMeta;
   }
 
+  async changeCloudShared(itemId) {
+    let sharedStatus = this.localDB.getSharedStatus(itemId);
+    if (sharedStatus === "both") {
+      await this.cloudDB.localDelete(itemId);
+    }
+  }
   // 클립보드 항목 삭제
   async deleteItem(itemId, target = "both") {
     try {
       if (target === "local" || target === "both") {
         this.localDB.deleteClipboardItem(itemId);
-        if (this.localDB.getSharedStatus(itemId) === "cloud") {
-          this.cloudDB.localDelete(itemId);
+        if (target === "local") {
+          await changeCloudShared(itemId);
         }
       }
 
       if (target === "cloud" || target === "both") {
         await this.cloudDB.deleteItem(itemId);
+        if (target === "cloud") {
+          this.localDB.updateSharedStatus(itemId, "local");
+        }
       }
 
       if (target === "local" || target === "both") {
@@ -409,12 +425,19 @@ class DataRepositoryModule extends EventEmitter {
   // 미리보기 데이터 가져오기 (분리된 캐시)
   async getPreviewData() {
     try {
-      const [localData, cloudData] = await Promise.all([
+      console.log("preview data called");
+      const [localResult, cloudResult] = await Promise.allSettled([
         this.getLocalPreview(),
         this.getCloudPreview(),
       ]);
 
-      return this.mergeItems(localData, cloudData);
+      const localData =
+        localResult.status === "fulfilled" ? localResult.value : [];
+      const cloudData =
+        cloudResult.status === "fulfilled" ? cloudResult.value : [];
+
+      const temp = this.mergeItems(localData, cloudData);
+      return temp;
     } catch (error) {
       console.error("미리보기 데이터 조회 실패:", error);
       return [];
@@ -442,7 +465,7 @@ class DataRepositoryModule extends EventEmitter {
   }
 
   async getCloudPreview() {
-    if (!this.tokenStorage.accessToken) return [];
+    if (!this.cloudDB?.tokenStorage?.accessToken) return [];
     if (this.cache.cloud.valid) {
       return this.cache.cloud.data;
     }
@@ -498,7 +521,7 @@ class DataRepositoryModule extends EventEmitter {
       mergedMap.set(item.id, {
         ...item,
         source: "cloud",
-        thumbnailUrl: item.imageMeta?.thumbnailUrl,
+        thumbnailUrl: item.imageMeta?.thumbnail_path,
       });
     });
 
@@ -508,7 +531,7 @@ class DataRepositoryModule extends EventEmitter {
         mergedMap.set(item.id, {
           ...item,
           source: "local",
-          thumbnailUrl: item.imageMeta?.thumbnailUrl,
+          thumbnailUrl: item.imageMeta?.thumbnail_path,
         });
       }
     });
@@ -525,7 +548,7 @@ class DataRepositoryModule extends EventEmitter {
       content: item.content,
       format: item.format,
       createdAt: item.created_at,
-      thumbnailUrl: item.imageMeta?.thumbnailUrl,
+      thumbnail_path: item.imageMeta?.thumbnail_path || null,
       tags: item.tags || [],
       source: item.source || "local",
       score: item.score || 0,
@@ -558,7 +581,7 @@ class DataRepositoryModule extends EventEmitter {
               format: cloudItem.format,
               content: cloudItem.content,
               created_at: cloudItem.created_at,
-              shared: "cloud",
+              shared: "both",
             };
 
             this.localDB.insertClipboardItem(localItem);
@@ -671,7 +694,7 @@ class DataRepositoryModule extends EventEmitter {
               item.createdAt
             );
           }
-          this.localDB.updateSharedStatus(item.id, "cloud");
+          this.localDB.updateSharedStatus(item.id, "both");
         } catch (err) {
           console.error("업로드 실패:", item.id, err);
           uploadResult = false;
@@ -704,7 +727,7 @@ class DataRepositoryModule extends EventEmitter {
             format: item.format,
             content: item.content,
             created_at: item.created_at,
-            shared: "cloud",
+            shared: "both",
           };
 
           this.localDB.insertClipboardItem(localItem);
@@ -747,7 +770,7 @@ class DataRepositoryModule extends EventEmitter {
 
     // 썸네일 다운로드
     if (imageMeta.thumbnailUrl) {
-      const thumbRes = await fetch(imageMeta.thumbnailUrl);
+      const thumbRes = await fetch(imageMeta.thumbnail_path);
       await pipeline(thumbRes.body, fs.createWriteStream(thumbnailPath));
     }
 
