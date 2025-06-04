@@ -3,6 +3,14 @@ const { v4: uuidv4 } = require("uuid");
 const axios = require("axios");
 const fs = require("fs");
 const FormData = require("form-data");
+const CCDError = require("../CCDError");
+require("dotenv").config();
+
+const config = {
+  apiBaseURL: process.env.API_BASE_URL,
+  authToken: null,
+  refreshToken: null,
+};
 
 class CloudDataModule {
   constructor(config) {
@@ -64,10 +72,11 @@ class CloudDataModule {
           } catch (refreshError) {
             console.error("Token refresh failed:", refreshError);
             this.logout();
-            throw {
-              code: "E401",
+            throw CCDError.create("E610", {
+              module: "CloudData",
+              context: "토큰 갱신 실패",
               message: "세션이 만료되었습니다. 다시 로그인 해주세요.",
-            };
+            });
           } finally {
             this.isRefreshing = false;
           }
@@ -84,14 +93,14 @@ class CloudDataModule {
       refreshToken: tokens.refresh_token,
     };
   }
-
-  // 로그인 메서드 추가
+  // 로그인 메서드
   async login(credentials) {
     try {
       const response = await axios.post(
         `${this.apiBaseURL}/login`,
         credentials
       );
+      console.log("sent");
       this.updateTokenStorage({
         access_token: response.data.access_token,
         refresh_token: response.data.refresh_token,
@@ -99,7 +108,11 @@ class CloudDataModule {
       return response.data;
     } catch (error) {
       console.error("Login failed:", error.response?.data || error);
-      throw { code: "E401", message: "로그인 실패" };
+      throw CCDError.create("E610", {
+        module: "CloudData",
+        context: "로그인 요청 실패",
+        message: error.response?.data?.detail || "로그인 실패",
+      });
     }
   }
 
@@ -117,18 +130,24 @@ class CloudDataModule {
       return response.data;
     } catch (error) {
       console.error("Token refresh failed:", error.response?.data || error);
-      throw error;
+      throw CCDError.create("E610", {
+        module: "CloudData",
+        context: "토큰 갱신",
+        message: "토큰 갱신 실패",
+        details: error.response?.data,
+      });
     }
   }
-  async signup(userId, password) {
+  async signup(userData) {
     try {
-      const response = await this.axiosInstance.post("/signup", {
-        user_id: userId,
-        password: password,
-      });
+      const response = await this.axiosInstance.post("/signup", userData);
       return response.data;
     } catch (error) {
-      throw this.handleError(error, "회원가입 실패");
+      throw CCDError.create("E610", {
+        module: "CloudData",
+        context: "회원가입",
+        message: error.response?.data?.detail || "회원가입 실패",
+      });
     }
   }
 
@@ -138,7 +157,12 @@ class CloudDataModule {
       const response = await this.axiosInstance.get("/clipboard-data");
       return response.data.map((item) => this.transformItem(item));
     } catch (error) {
-      throw this.handleError(error, "데이터 조회 실패");
+      throw CCDError.create("E655", {
+        module: "CloudData",
+        context: "클립보드 데이터 조회",
+        message: "데이터 조회 실패",
+        details: error.response?.data,
+      });
     }
   }
   // 클립보드 텍스트 생성
@@ -146,11 +170,15 @@ class CloudDataModule {
     try {
       const response = await this.axiosInstance.post("/items", {
         ...itemData,
-        id: uuidv4(),
       });
       return this.transformItem(response.data);
     } catch (error) {
-      throw this.handleError(error, "아이템 생성 실패");
+      throw CCDError.create("E654", {
+        module: "CloudData",
+        context: "텍스트 아이템 생성",
+        message: "아이템 생성 실패",
+        details: error.response?.data,
+      });
     }
   }
 
@@ -162,7 +190,12 @@ class CloudDataModule {
       });
       return response.data;
     } catch (error) {
-      throw this.handleError(error, "삭제 처리 실패");
+      throw CCDError.create("E650", {
+        module: "CloudData",
+        context: "로컬 삭제",
+        message: "삭제 처리 실패",
+        details: error.response?.data,
+      });
     }
   }
 
@@ -172,7 +205,12 @@ class CloudDataModule {
       await this.axiosInstance.delete(`/items/${itemId}`);
       return true;
     } catch (error) {
-      throw this.handleError(error, "아이템 삭제 실패");
+      throw CCDError.create("E650", {
+        module: "CloudData",
+        context: "아이템 삭제",
+        message: "아이템 삭제 실패",
+        details: error.response?.data,
+      });
     }
   }
   // 태그 생성
@@ -184,7 +222,12 @@ class CloudDataModule {
       });
       return response.data;
     } catch (error) {
-      throw this.handleError(error, "태그 생성 실패");
+      throw CCDError.create("E661", {
+        module: "CloudData",
+        context: "태그 생성",
+        message: "태그 생성 실패",
+        details: error.response?.data,
+      });
     }
   }
 
@@ -197,7 +240,12 @@ class CloudDataModule {
       });
       return response.data;
     } catch (error) {
-      throw this.handleError(error, "태그 연결 실패");
+      throw CCDError.create("E662", {
+        module: "CloudData",
+        context: "데이터-태그 연결",
+        message: "태그 연결 실패",
+        details: error.response?.data,
+      });
     }
   }
 
@@ -209,21 +257,13 @@ class CloudDataModule {
       );
       return this.transformItem(response.data);
     } catch (error) {
-      throw this.handleError(error, "아이템 조회 실패");
+      throw CCDError.create("E655", {
+        module: "CloudData",
+        context: "단일 아이템 조회",
+        message: "아이템 조회 실패",
+        details: error.response?.data,
+      });
     }
-  }
-
-  // 공통 에러 처리
-  handleError(error, defaultMessage) {
-    console.error(error);
-    const statusCode = error.response?.status;
-    const serverMessage = error.response?.data?.detail;
-
-    return {
-      code: `E${statusCode || "500"}`,
-      message: serverMessage || defaultMessage,
-      details: error.response?.data,
-    };
   }
 
   // 아이템 데이터 변환
@@ -242,17 +282,17 @@ class CloudDataModule {
   }
 
   // 이미지 업로드
-  async uploadImage(filePath, format, created_at) {
+  async uploadImage(id, filePath, format, created_at) {
     if (!fs.existsSync(filePath)) {
-      throw {
-        code: "E400",
+      throw CCDError.create("E643", {
+        module: "CloudData",
+        context: "이미지 파일 존재 확인",
         message: "이미지 파일이 존재하지 않습니다.",
-      };
+      });
     }
     try {
       const formData = new FormData();
       const fileStream = fs.createReadStream(filePath);
-      const id = uuidv4();
 
       formData.append("file", fileStream);
       formData.append("id", id);
@@ -269,9 +309,53 @@ class CloudDataModule {
         thumbnailUrl: `${this.apiBaseURL}/images/thumbnail/${id}_thumb.${format}`,
       };
     } catch (error) {
-      throw this.handleError(error, "이미지 업로드 실패");
+      throw CCDError.create("E632", {
+        module: "CloudData",
+        context: "이미지 업로드",
+        message: "이미지 업로드 실패",
+        details: error.response?.data,
+      });
+    }
+  }
+
+  // Clip 검색 함수
+  async searchByCLIP(keyword) {
+    try {
+      const response = await this.axiosInstance.post("/search-text", {
+        text: keyword,
+      });
+
+      return response.data.map((item) => this.transformItem(item));
+    } catch (error) {
+      throw CCDError.create("E621", {
+        module: "CloudData",
+        context: "CLIP 검색",
+        message: "CLIP 검색 실패",
+        details: error.response?.data,
+      });
+    }
+  }
+  async updateMaxCountCloud(maxCount) {
+    try {
+      const response = await this.axiosInstance.put("/user/max_count_cloud", {
+        max_count_cloud: maxCount,
+      });
+      return response.data;
+    } catch (error) {
+      const errorData = error.response?.data || {};
+      const errorMsg =
+        errorData.detail || "Failed to update cloud storage limit";
+
+      throw CCDError.create("E610", {
+        module: "CloudData",
+        context: "updateMaxCountCloud",
+        message: errorMsg,
+        details: errorData,
+        statusCode: error.response?.status,
+      });
     }
   }
 }
 
-module.exports = CloudDataModule;
+const cloudDataInstance = new CloudDataModule(config);
+module.exports = cloudDataInstance;
