@@ -36,7 +36,7 @@ function setupIPC() {
         userId,
         password
       );
-      if (loginResult && access_token) isLoggedIn = true;
+      if (loginResult && access_token) isLogin = true;
 
       // 토큰 저장은 authService 내부 cloudDB 인스턴스에서 처리됨
       return {
@@ -54,7 +54,7 @@ function setupIPC() {
     }
   });
 
-  ipcMain.handle("get-login-state", () => isLoggedIn);
+  ipcMain.handle("get-login-state", () => isLogin);
 
   // 드래그앤드랍으로 들어온 파일 처리
   ipcMain.handle("add-dropped-file", async (_, { filePath }) => {
@@ -145,9 +145,7 @@ function setupIPC() {
   // 기록 보기
   ipcMain.handle("load-clipboard-records", async (_, isLogin) => {
     try {
-      const localData = await dataRepo.getLocalPreview();
-      const cloudData = isLogin ? await dataRepo.getCloudPreview() : [];
-      const merged = dataRepo.mergeItems(localData, cloudData);
+      const merged = await dataRepo.getPreviewData();
       return { success: true, data: merged };
     } catch (err) {
       const error = CCDError.create("E655", {

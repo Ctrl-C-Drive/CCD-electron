@@ -130,7 +130,7 @@ class LocalDataModule {
         format TEXT NOT NULL,
         content TEXT NOT NULL,
         created_at INTEGER NOT NULL,
-        shared TEXT NOT NULL CHECK (shared IN ('cloud', 'local')) DEFAULT ('local'),
+        shared TEXT NOT NULL CHECK (shared IN ('cloud', 'local', 'both')) DEFAULT ('local'),
         CONSTRAINT clipboard_pk PRIMARY KEY (id),
         check(type IN ('img', 'txt'))
       );
@@ -745,19 +745,30 @@ class LocalDataModule {
 
       if (countRow.count > maxItems) {
         const deleteCount = countRow.count - maxItems;
-        this.db
+
+        const idsToDelete = this.db
           .prepare(
             `
-          DELETE FROM clipboard 
-          WHERE id IN (
-            SELECT id FROM clipboard 
-            ORDER BY created_at ASC 
+            SELECT id FROM clipboard
+            ORDER BY created_at ASC
             LIMIT ?
+          `
           )
-        `
+          .all(deleteCount)
+          .map((row) => row.id);
+
+        this.db
+          .prepare(
+            `DELETE FROM clipboard WHERE id IN (${idsToDelete
+              .map(() => "?")
+              .join(",")})`
           )
-          .run(deleteCount);
+          .run(...idsToDelete);
+
+        return idsToDelete;
       }
+
+      return [];
     } catch (error) {
       throw CCDError.create("E610", {
         module: "LocalData",
@@ -770,16 +781,27 @@ class LocalDataModule {
   // 지정 일수 이상된 데이터 삭제
   deleteOldClipboardItems(retentionDays) {
     try {
-      console.log("data deleted");
       const cutoff = Math.floor(Date.now() / 1000) - retentionDays * 86400;
-      this.db
+
+      const idsToDelete = this.db
         .prepare(
           `
-        DELETE FROM clipboard 
-        WHERE created_at < ?
-      `
+          SELECT id FROM clipboard
+          WHERE created_at < ?
+        `
         )
-        .run(cutoff);
+        .all(cutoff)
+        .map((row) => row.id);
+
+      this.db
+        .prepare(
+          `DELETE FROM clipboard WHERE id IN (${idsToDelete
+            .map(() => "?")
+            .join(",")})`
+        )
+        .run(...idsToDelete);
+
+      return idsToDelete;
     } catch (error) {
       throw CCDError.create("E610", {
         module: "LocalData",
