@@ -62,7 +62,10 @@ class DataRepositoryModule extends EventEmitter {
       const allDeletedIds = [...maxDeletedIds, ...oldDeletedIds];
 
       for (const id of allDeletedIds) {
-        await this.changeCloudShared(id);
+        let sharedStatus = this.localDB.getSharedStatus(itemId);
+        if (sharedStatus === "both") {
+          await this.cloudDB.localDelete(itemId);
+        }
       }
     } catch (error) {
       console.error("자동 정리 실패:", error);
@@ -286,25 +289,24 @@ class DataRepositoryModule extends EventEmitter {
     item.imageMeta = imageMeta;
   }
 
-  async changeCloudShared(itemId) {
-    let sharedStatus = this.localDB.getSharedStatus(itemId);
-    if (sharedStatus === "both") {
-      await this.cloudDB.localDelete(itemId);
-    }
-  }
   // 클립보드 항목 삭제
   async deleteItem(itemId, target = "both") {
     try {
+      let sharedStatus = null;
+      if (target === "local" || target === "both") {
+        sharedStatus = this.localDB.getSharedStatus(itemId);
+      }
       if (target === "local" || target === "both") {
         this.localDB.deleteClipboardItem(itemId);
-        if (target === "local") {
-          await changeCloudShared(itemId);
+
+        if (target === "local" && sharedStatus === "both") {
+          await this.cloudDB.localDelete(itemId);
         }
       }
 
       if (target === "cloud" || target === "both") {
         await this.cloudDB.deleteItem(itemId);
-        if (target === "cloud") {
+        if (target === "cloud" && sharedStatus === "both") {
           this.localDB.updateSharedStatus(itemId, "local");
         }
       }
