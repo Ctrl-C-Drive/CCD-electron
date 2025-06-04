@@ -93,10 +93,10 @@ function setupIPC() {
         err instanceof CCDError
           ? err
           : CCDError.create("E631", {
-              module: "ipcHandler",
-              context: "드래그 파일 처리",
-              details: err.message,
-            });
+            module: "ipcHandler",
+            context: "드래그 파일 처리",
+            details: err.message,
+          });
       console.error(error);
       return error.toJSON();
     }
@@ -128,10 +128,10 @@ function setupIPC() {
         err instanceof CCDError
           ? err
           : CCDError.create("E630", {
-              module: "ipcHandler",
-              context: "붙여넣기",
-              details: err.message,
-            });
+            module: "ipcHandler",
+            context: "붙여넣기",
+            details: err.message,
+          });
       console.error(error);
       return error.toJSON();
     }
@@ -158,32 +158,35 @@ function setupIPC() {
     }
   });
 
-  // 환경설정 저장
-  ipcMain.handle(
-    "update-settings",
-    async (_, { localLimit, cloudLimit, retentionDays }) => {
-      try {
-        // 1. 로컬 설정 업데이트
-        await dataRepo.updateConfig({
-          local_limit: localLimit,
-          day_limit: retentionDays,
-        });
 
-        // 2. 클라우드 설정 업데이트
-        await dataRepo.updateMaxCountCloud(cloudLimit);
 
-        return { success: true, message: "설정이 성공적으로 반영되었습니다." };
-      } catch (err) {
-        const error = CCDError.create("E652", {
-          module: "ipcHandler",
-          context: "환경설정 업데이트",
-          details: err.message,
-        });
-        console.error(error);
-        return error.toJSON();
-      }
+  ipcMain.handle("update-settings", async (_, { localLimit, cloudLimit, retentionDays }) => {
+    const toInt = (v) => {
+      const n = parseInt(v, 10);
+      return Number.isFinite(n) ? n : null;   // '' · undefined · NaN → null
+    };
+
+    const parsedLocal = toInt(localLimit);
+    const parsedCloud = toInt(cloudLimit);
+    const parsedDays = toInt(retentionDays);
+
+    // 필수값(로컬 제한·보관기간) 둘 다 빠졌으면 오류
+    if (parsedLocal === null && parsedDays === null) {
+      throw CCDError.create("E611", {
+        module: "ipcHandler",
+        context: "update-settings",
+        message: "숫자값이 필요합니다."
+      });
     }
-  );
+
+    await dataRepo.updateConfig({
+      local_limit: parsedLocal,
+      day_limit: parsedDays,
+    });
+    await dataRepo.updateMaxCountCloud(parsedCloud);
+    return { success: true };
+  });
+
 
   // 삭제
   ipcMain.handle("delete-item", async (_, { dataId, deleteOption }) => {
