@@ -227,7 +227,7 @@ const [pwError, setPwError] = useState("");
                 <div className="flex flex-row">
                   <input
                     type="text"
-                    maxLength={8}
+                    maxLength={20}
                     placeholder="ID"
                     value={userId}
                     onChange={(e) => handleIDChange(e.target.value)}
@@ -250,7 +250,7 @@ const [pwError, setPwError] = useState("");
                       type="password"
                       placeholder="PW"
                       value={pw}
-                      maxLength={8}
+                      maxLength={20}
                       onChange={(e) => handlePwChange(e.target.value)}
                       className="!w-[8.3rem] px-2 py-1 ml-[0.2rem] rounded-md bg-gray-100 text-gray-800"
                     />
@@ -368,7 +368,7 @@ const [pwError, setPwError] = useState("");
                   ID
                   <input
                     type="text"
-                    maxLength={8}
+                    maxLength={20}
                     placeholder="ID"
                     onChange={(e) => setUserId(e.target.value)}
                     className="!w-[8.3rem]  px-2 py-1 ml-[0.917rem] rounded-md bg-gray-100 text-gray-800 flex-1"
@@ -387,7 +387,7 @@ const [pwError, setPwError] = useState("");
                   <input
                     type="password"
                     placeholder="PW"  
-                    maxLength={8}    
+                    maxLength={20}
                     onChange={(e) => setPw(e.target.value)}             
                     className="!w-[8.3rem] ml-2 px-2 py-1 ml-[0.2rem] rounded-md bg-gray-100 text-gray-800 flex-1"
                   />
