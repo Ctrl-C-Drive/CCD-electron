@@ -1,48 +1,44 @@
+const dataRepo = require("./db_models/DataRepository");
+const { app } = require("electron");
 
-const { registerUser, authenticate } = require("./auth/authService"); // 경로 수정 필수
-const crypto = require("crypto");
+app.whenReady().then(async () => {
+  const dataRepo = require("./db_models/DataRepository");
 
-const { AES_KEY, AES_IV } = process.env;
+  console.log("Running cache test...");
+  await testCacheBehavior();
+});
 
-if (!AES_KEY || !AES_IV) {
-  throw new Error("AES_KEY, AES_IV 환경 변수가 필요합니다.");
-}
+async function testCacheBehavior() {
+  console.log("1. 캐시 초기화 상태 확인");
+  dataRepo.invalidateCache("local"); // 캐시 무효화
+  console.assert(!dataRepo.cache.local.valid, "✅ 캐시가 무효화되어야 함");
 
-// AES-256-CBC 암호화 함수 (테스트용)
-function encryptAES(text) {
-  const cipher = crypto.createCipheriv(
-    "aes-256-cbc",
-    Buffer.from(AES_KEY, "hex"),
-    Buffer.from(AES_IV, "hex")
+  console.log("2. 첫 번째 getLocalPreview() 호출");
+  const firstResult = await dataRepo.getLocalPreview();
+  console.assert(
+    dataRepo.cache.local.valid,
+    "✅ 캐시가 유효화되어야 함 (valid: true)"
   );
-  let encrypted = cipher.update(text, "utf8", "base64");
-  encrypted += cipher.final("base64");
-  return encrypted;
+  console.assert(Array.isArray(firstResult), "✅ 결과는 배열이어야 함");
+  console.assert(firstResult.length > 0, "❌ DB에서 데이터를 가져오지 못했음");
+  console.log("📦 첫 번째 조회 결과 개수:", firstResult.length);
+  console.log("🔍 예시 아이템:", firstResult[0]);
+
+  console.log("3. 두 번째 getLocalPreview() 호출 (캐시에서 가져와야 함)");
+  const secondResult = await dataRepo.getLocalPreview();
+  console.assert(
+    secondResult === firstResult,
+    "✅ 동일한 캐시 객체가 반환되어야 함"
+  );
+
+  console.log("4. 캐시 무효화 후 다시 조회");
+  dataRepo.invalidateCache("local");
+  const thirdResult = await dataRepo.getLocalPreview();
+  console.assert(thirdResult !== secondResult, "✅ 새로 쿼리된 객체여야 함");
+
+  console.log("✅ 테스트 완료");
 }
 
-// 테스트 유저
-const testUserId = "testuser1234";
-const testPassword = "testpass123";
-
-async function test() {
-  try {
-    const encryptedId = encryptAES(testUserId);
-    const encryptedPwd = encryptAES(testPassword);
-
-    console.log("▶ 회원가입 테스트 중...");
-    const regRes = await registerUser(encryptedId, encryptedPwd);
-    console.log("✅ 회원가입 결과:", regRes);
-
-    console.log("▶ 로그인 테스트 중...");
-    const loginRes = await authenticate(encryptedId, encryptedPwd);
-    console.log("✅ 로그인 결과:", loginRes);
-  } catch (err) {
-    console.error("❌ 테스트 실패:", err.message, err.code);
-    if (err.response?.data) {
-      console.error("응답 데이터:", err.response.data);
-    }
-  }
-}
-
-test();
-
+testCacheBehavior().catch((err) => {
+  console.error("❌ 테스트 실패:", err);
+});
