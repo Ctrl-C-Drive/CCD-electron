@@ -90,29 +90,70 @@ class DataRepositoryModule extends EventEmitter {
   }
 
   //단일 클립보드 아이템 추가
-  async getClipboardItem(dataId, source = "local") {
-    try {
-      let item;
+  // async getClipboardItem(dataId, source = "local") {
+  //   try {
+  //     let item;
 
-      if (source === "local") {
-        item = this.localDB.getClipboardItem(dataId);
-      } else if (source === "cloud") {
-        item = await this.cloudDB.getClipboardItem(dataId);
-      } else {
-        throw CCDError.create("E601", {
-          module: "DataRepository",
-          context: "getClipboardItem",
-          message: `지원되지 않는 소스: ${source}`,
-        });
+  //     if (source === "local") {
+  //       item = this.localDB.getClipboardItem(dataId);
+  //     } else if (source === "cloud") {
+  //       item = await this.cloudDB.getClipboardItem(dataId);
+  //     } else {
+  //       throw CCDError.create("E601", {
+  //         module: "DataRepository",
+  //         context: "getClipboardItem",
+  //         message: `지원되지 않는 소스: ${source}`,
+  //       });
+  //     }
+
+  //     if (!item) return null;
+  //     return item;
+  //   } catch (error) {
+  //     throw CCDError.create("E602", {
+  //       module: "DataRepository",
+  //       context: "getClipboardItem",
+  //       message: `아이템 조회 실패 (source: ${source})`,
+  //       details: error.message || error,
+  //     });
+  //   }
+  // }
+  async getClipboardItem(dataId) {
+    try {
+      // 1. 로컬 캐시에서 찾기
+      const localCached = this.cache.local?.data?.find(
+        (item) => item.id === dataId
+      );
+      if (localCached) {
+        return { ...localCached, source: "local" };
       }
 
-      if (!item) return null;
-      return item;
+      // 2. 클라우드 캐시에서 찾기
+      const cloudCached = this.cache.cloud?.data?.find(
+        (item) => item.id === dataId
+      );
+      if (cloudCached) {
+        return { ...cloudCached, source: "cloud" };
+      }
+
+      // 3. 로컬 DB에서 조회
+      const localItem = this.localDB.getClipboardItem(dataId);
+      if (localItem) {
+        return { ...localItem, source: "local" };
+      }
+
+      // 4. 클라우드 DB에서 조회
+      const cloudItem = await this.cloudDB.getClipboardItem(dataId);
+      if (cloudItem) {
+        return { ...cloudItem, source: "cloud" };
+      }
+
+      // 5. 모두 실패
+      return null;
     } catch (error) {
       throw CCDError.create("E602", {
         module: "DataRepository",
         context: "getClipboardItem",
-        message: `아이템 조회 실패 (source: ${source})`,
+        message: `아이템 조회 실패`,
         details: error.message || error,
       });
     }
