@@ -1,0 +1,18 @@
+:root{
+  /* white */
+  --white: #FFFFFF;
+
+  /* gray */
+  --gray-100: #DEE4EA;
+  --gray-200: #BEC9D7;
+  --gray-300: #798CA2;
+
+
+  /* red */
+  --red: #811012;
+
+  /* blue */
+  --blue-100: #6E96C4;
+  --blue-200: #185EAF;
+  --blue-300: #0C2F57;
+}
