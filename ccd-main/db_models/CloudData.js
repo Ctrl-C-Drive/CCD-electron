@@ -3,6 +3,14 @@ const { v4: uuidv4 } = require("uuid");
 const axios = require("axios");
 const fs = require("fs");
 const FormData = require("form-data");
+const CCDError = require("../CCDError");
+require("dotenv").config();
+
+const config = {
+  apiBaseURL: process.env.CLOUD_SERVER_URL,
+  authToken: null,
+  refreshToken: null,
+};
 
 class CloudDataModule {
   constructor(config) {
@@ -96,6 +104,7 @@ class CloudDataModule {
         access_token: response.data.access_token,
         refresh_token: response.data.refresh_token,
       });
+      console.log("login finished", response.data);
       return response.data;
     } catch (error) {
       console.error("Login failed:", error.response?.data || error);

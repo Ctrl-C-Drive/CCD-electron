@@ -268,6 +268,7 @@ class DataRepositoryModule extends EventEmitter {
   }
 
   async getCloudPreview() {
+    if (!this.tokenStorage.accessToken) return [];
     if (this.cache.cloud.valid) {
       return this.cache.cloud.data;
     }
