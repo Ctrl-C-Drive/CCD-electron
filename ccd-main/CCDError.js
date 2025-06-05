@@ -56,6 +56,7 @@ class CCDError extends Error {
       E666: "이미지 임베딩 불러오기 실패",
       E667: "유사도 계산 로직 오류",
       E668: "이미지 임베딩 실패",
+      E669: "MobileNetV3 모델 로드 실패"
     };
 
     const message = errorMap[code] || "알 수 없는 오류가 발생했습니다";

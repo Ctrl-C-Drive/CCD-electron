@@ -1,2 +1,14 @@
-node_modules/
-**/node_modules/
+# Node.js
+.env
+dist/
+build/
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Virtual Environment
+venv/
