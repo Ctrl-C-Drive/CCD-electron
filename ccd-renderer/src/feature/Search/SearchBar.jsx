@@ -16,7 +16,8 @@ const SearchBar =() => {
   const dropdownRef = useRef(null);
 const [keyword, setKeyword] = useState("");
 const { items, setItems, refetch } = useClipboardRecords();
-
+const [loginInfo, setLoginInfo] = useState({ isLoggedIn: false, userId: "" });
+const [modalState, setModalState] = useState(null); 
 
 const handleSearch = async () => {
   const model = currentSelection === "일반 검색" ? "mobilenet" : "clip";
@@ -135,7 +136,11 @@ const handleSearch = async () => {
             </div>
           </div>
 
-          <LoginModal />
+          <LoginModal  
+            modalState={modalState}
+            setModalState={setModalState}
+            loginInfo={loginInfo}
+            setLoginInfo={setLoginInfo}/>
         </div>
 
   );
