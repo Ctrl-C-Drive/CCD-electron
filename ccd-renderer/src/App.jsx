@@ -31,6 +31,7 @@ const App= () => {
     //   console.log("🧪 electronAPI:", window.electronAPI);
     // }, []);
 
+
   return (
     <>
       <div 
@@ -63,11 +64,19 @@ const App= () => {
               </div>
               {/* grid-view 데이터 존 */}
               <div className="">
-                  <MainView isTagChecked={isTagChecked} items={items} toggleSelect={toggleSelect}   addItem={addItem} />
+                  <MainView 
+                      isTagChecked={isTagChecked}
+                      items={items} 
+                      addItem={addItem}  
+                       toggleSelect={toggleSelect} 
+                  />
               </div>
               {/* 하단 bar */}
               <div className="">
-                <BottomBar getSelectedItemIds={getSelectedItemIds} />
+                <BottomBar 
+                  // selectedIds={selectedIds} 
+                  getSelectedItemIds={getSelectedItemIds}
+                />
               </div>
             </div>
       </div>

@@ -19,6 +19,7 @@ const useClipboardRecords = () => {
           timestamp: item.createdAt ?? Date.now(),
           fileName: item.fileName ?? "unnamed",
           ext: item.format?.split("/")?.[1] ?? "unknown",
+          source: item.source ?? "local",
         }));
         setItems(formatted);
       } else {
@@ -58,6 +59,7 @@ useEffect(() => {
     );
   };
 
+
     
 
  //  드래그앤드랍으로 받은 아이템 추가
@@ -96,6 +98,7 @@ const setItemsFromSearchResult = (newItems) => {
   const getSelectedItemIds = useCallback(() => {
     return items.filter(item => item.selected).map(item => item.itemId);
   }, [items]);
+
 
 
   return { items, refetch, toggleSelect, addItem, setItemsFromSearchResult, getSelectedItemIds   };
