@@ -4,7 +4,9 @@ import { twMerge } from 'tailwind-merge';
 import "../../styles/color.css";
 import CryptoJS from "crypto-js";
 
-const LoginModal = () => {
+const LoginModal = ({loginInfo, setLoginInfo}) => {
+  const [success, setSuccess] = useState("");
+
 const [modalState, setModalState] = useState(null);
   const [userId, setUserId] = useState(""); // 로그인 성공 시 저장될 유저 ID
   const ref = useRef(null);
@@ -15,6 +17,16 @@ const [idError, setIdError] = useState("");
 const [pwError, setPwError] = useState("");
 
 // console.log("electronAPI:", window.electronAPI);
+useEffect(() => {
+  if (loginInfo.isLoggedIn && modalState !== "loggedIn") {
+    console.log("🟢 loginInfo 갱신됨, modalState 변경 중...");
+    setModalState("loggedIn");
+  }
+}, [loginInfo.isLoggedIn, loginInfo.userId]);
+
+useEffect(() => {
+  console.log("🧪 loginInfo changed", loginInfo);
+}, [loginInfo]);
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -73,16 +85,20 @@ const [pwError, setPwError] = useState("");
 
     if (!tokenMsg) {
       setError("로그인 실패: 계정 정보를 확인하세요.");
-    } else if (!accessToken) {
-      setError("Access Token이 존재하지 않습니다.");
+      setSuccess("");
+    // } else if (!accessToken) {
+    //   setError("Access Token이 존재하지 않습니다.");
+    //   setSuccess("");
     } else {
-      setUserId(userId); // 실제 userId 저장 (암호화된 값 아님)
+      // setUserId(userId); // 실제 userId 저장 (암호화된 값 아님)
       setError("");
-      setModalState("loggedIn");
+        setSuccess("로그인 성공"); 
+        setLoginInfo({ isLoggedIn: true, userId }); ;
     }
   } catch (error) {
     console.error("로그인 중 오류 발생:", error);
     setError("로그인 중 오류가 발생했습니다.");
+    setSuccess("");
   } finally {
     setIsSubmitted(false);
   }
@@ -103,14 +119,18 @@ const [pwError, setPwError] = useState("");
     if (joinResultMsg === "success") {
       setModalState("menu");
       setError("");
+      setSuccess("회원가입 성공"); 
     } else if (joinResultMsg === "duplication") {
       setError("이미 존재하는 ID입니다.");
+      setSuccess("");
     } else {
       setError("회원가입에 실패했습니다. 다시 시도해주세요.");
+      setSuccess("");
     }
   } catch (err) {
     console.error("회원가입 중 에러:", err);
     setError("알 수 없는 오류가 발생했습니다.");
+    setSuccess("");
   }
   
     setUserId(userId); // ID 반영
@@ -131,9 +151,22 @@ const [pwError, setPwError] = useState("");
       {/* 아바타 */}
       <div
         className="ml-3 w-[4.0rem] h-[4.0rem] border-2 border-[var(--blue-200)] rounded-full cursor-pointer"
-        onClick={() =>
-          setModalState((prev) => (prev === null ? "menu" : null))
-        }
+        onClick={() => {
+          // 모달이 꺼진 상태일 때만 동작
+          setModalState((prev) => {
+            if (prev !== null) return null; // toggle off
+
+            // 로그인 상태면 사용자 ID 화면
+            if (loginInfo.isLoggedIn && loginInfo.userId) {
+              return "loggedIn";
+            }
+
+            // 아니면 로그인/회원가입 메뉴
+            return "menu";
+          });
+        }}
+
+
       />
 
       {/* 모달 영역 */}
@@ -269,7 +302,16 @@ const [pwError, setPwError] = useState("");
                    text-[var(--red)]
                    mt-[1rem]
                   ">
-                    {error}
+                      {(error || success) && (
+                        <div
+                          className={twMerge(
+                            "text-center text-[0.9rem] mt-[1rem] !font-inter font-[var(--font-rg)] leading-normal",
+                            error ? "text-[var(--red)]" : "!text-blue-200"
+                          )}
+                        >
+                          {error || success}
+                        </div>
+                      )}
                   </div>
                 )}
               <button
@@ -335,7 +377,11 @@ const [pwError, setPwError] = useState("");
                       not-italic
                       font-[var(--font-rg)]
                       leading-normal
-                ">{userId}</div>
+                "
+                onClick={()=>console.log("loginInfo.userId: ",loginInfo.userId)}
+                >    
+                    {loginInfo.userId}
+                </div>
               </div>
             </>
           )}
@@ -404,7 +450,17 @@ const [pwError, setPwError] = useState("");
                    text-[var(--red)]
                    mt-[1rem]
                   ">
-                    {error}
+                    <div
+                      className={twMerge(
+                        "text-center text-[0.9rem] mt-[1rem] font-inter font-[var(--font-rg)] leading-normal",
+                        error && "text-[var(--red)]",
+                        success && "text-blue-200"
+                      )}
+                    >
+                      {error || success}
+                    </div>
+
+
                   </div>
                 )}
               <button
