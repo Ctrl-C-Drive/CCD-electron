@@ -43,8 +43,8 @@ import useClipboardRecords from "../../utils/useClipboardRecords";
     const handleApplySetting = async () => {
     const settings = {
       retentionDays : extractNumber(retention),             // ex) "7"
-      localLimitNum : extractNumber(localLimit),        // ex) "30"
-      cloudLimitNum : extractNumber(cloudLimit),        // ex) "10"
+      localLimit : extractNumber(localLimit),        // ex) "30"
+      cloudLimit : extractNumber(cloudLimit),        // ex) "10"
       // cloudUploadEnabled: isAutoCloudSave === true,
     };
     // ✅ 디버깅용 콘솔 출력

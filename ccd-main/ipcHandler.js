@@ -161,6 +161,7 @@ function setupIPC() {
 
 
   ipcMain.handle("update-settings", async (_, { localLimit, cloudLimit, retentionDays }) => {
+    console.log(" 받은 원본 값:", { localLimit, cloudLimit, retentionDays });
     const toInt = (v) => {
       const n = parseInt(v, 10);
       return Number.isFinite(n) ? n : null;   // '' · undefined · NaN → null
@@ -170,6 +171,11 @@ function setupIPC() {
     const parsedCloud = toInt(cloudLimit);
     const parsedDays = toInt(retentionDays);
 
+    console.log(" 파싱된 값:", {
+      parsedLocal,
+      parsedCloud,
+      parsedDays
+    });
     // 필수값(로컬 제한·보관기간) 둘 다 빠졌으면 오류
     if (parsedLocal === null && parsedDays === null) {
       throw CCDError.create("E611", {
