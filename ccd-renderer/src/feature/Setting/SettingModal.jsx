@@ -42,12 +42,16 @@ import useClipboardRecords from "../../utils/useClipboardRecords";
     const limitOptions = ['30개','10개', '50개' ]; 
     const handleApplySetting = async () => {
     const settings = {
-      retentionDays : Number(retention),             // ex) "7"
-      localLimitNum : Number(localLimit),        // ex) "30"
-      cloudLimitNum : Number(cloudLimit),        // ex) "10"
+      retentionDays : extractNumber(retention),             // ex) "7"
+      localLimitNum : extractNumber(localLimit),        // ex) "30"
+      cloudLimitNum : extractNumber(cloudLimit),        // ex) "10"
       // cloudUploadEnabled: isAutoCloudSave === true,
     };
-
+    // ✅ 디버깅용 콘솔 출력
+    console.log("🛠 전송될 settings 객체:", settings);
+    console.log("🧾 원본 문자열 상태들:", {
+     settings
+    });
   try {
     const response = await window.electronAPI.updateSettings(settings);
     if (response.success) {
@@ -60,7 +64,11 @@ import useClipboardRecords from "../../utils/useClipboardRecords";
     console.error("❌ IPC 오류:", err);
   }
 };
- 
+ // 숫자만 추출하는 헬퍼 함수
+const extractNumber = (text) => {
+  const match = text.match(/\d+/);  // 정규표현식: 숫자 하나 이상
+  return match ? Number(match[0]) : null;  // 숫자가 없으면 null
+};
   
 return (
   <div className="relative">
