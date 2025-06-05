@@ -7,7 +7,7 @@ const {
   getCloudUploadEnabled,
   setCloudUploadEnabled,
 } = require("./cloudUploadState");
-
+const { pasteById } = require("./paste");
 const CCDError = require("./CCDError");
 
 const dataRepo = require("./db_models/DataRepository");
@@ -103,39 +103,57 @@ function setupIPC() {
   });
 
   // 붙여넣기
+  // ipcMain.handle("paste-item", async (_, { itemId }) => {
+  //   try {
+  //     const item = await dataRepo.localDB.getClipboardItem(itemId);
+  //     if (!item) {
+  //       throw CCDError.create("E655", {
+  //         module: "ipcHandler",
+  //         context: "붙여넣기",
+  //         message: "해당 item을 찾을 수 없습니다.",
+  //       });
+  //     }
+
+  //     if (item.type === "txt") {
+  //       clipboard.writeText(item.content);
+  //     } else if (item.type === "img") {
+  //       const { nativeImage } = require("electron");
+  //       const image = nativeImage.createFromPath(item.content);
+  //       clipboard.writeImage(image);
+  //     }
+
+  //     return { paste: true };
+  //   } catch (err) {
+  //     const error =
+  //       err instanceof CCDError
+  //         ? err
+  //         : CCDError.create("E630", {
+  //           module: "ipcHandler",
+  //           context: "붙여넣기",
+  //           details: err.message,
+  //         });
+  //     console.error(error);
+  //     return error.toJSON();
+  //   }
+  // });
   ipcMain.handle("paste-item", async (_, { itemId }) => {
-    try {
-      const item = await dataRepo.localDB.getClipboardItem(itemId);
-      if (!item) {
-        throw CCDError.create("E655", {
-          module: "ipcHandler",
-          context: "붙여넣기",
-          message: "해당 item을 찾을 수 없습니다.",
-        });
-      }
-
-      if (item.type === "txt") {
-        clipboard.writeText(item.content);
-      } else if (item.type === "img") {
-        const { nativeImage } = require("electron");
-        const image = nativeImage.createFromPath(item.content);
-        clipboard.writeImage(image);
-      }
-
-      return { paste: true };
-    } catch (err) {
-      const error =
-        err instanceof CCDError
-          ? err
-          : CCDError.create("E630", {
+  try {
+    await pasteById(itemId);  // ← 핵심 연결
+    return { paste: true };
+  } catch (err) {
+    const error =
+      err instanceof CCDError
+        ? err
+        : CCDError.create("E630", {
             module: "ipcHandler",
             context: "붙여넣기",
             details: err.message,
           });
-      console.error(error);
-      return error.toJSON();
-    }
-  });
+    console.error(error);
+    return error.toJSON();
+  }
+});
+
 
   // 검색어 전송
   ipcMain.handle("search-keyword", async (_, { keyword, model }) => {
