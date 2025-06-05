@@ -70,3 +70,11 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   toggleCloudUpload: () => ipcRenderer.send("toggle-cloud-upload"),
 });
+
+window.addEventListener("dragover", (e) => {
+  e.preventDefault();
+});
+window.addEventListener("drop", (e) => {
+  e.preventDefault();
+});
+
