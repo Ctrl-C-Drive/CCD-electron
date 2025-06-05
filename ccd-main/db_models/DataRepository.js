@@ -12,6 +12,7 @@ const { app } = require("electron");
 const LocalDataModule = require("./LocalData");
 const { error } = require("console");
 const CCDError = require("../CCDError");
+const { processImage } = require("../imageTagger");
 
 class DataRepositoryModule extends EventEmitter {
   constructor() {
@@ -198,6 +199,30 @@ class DataRepositoryModule extends EventEmitter {
       // 이미지 처리
       if (newItem.type === "img") {
         await this.processImageFiles(newItem);
+        let temp = await processImage(newItem.content);
+        for (const tagName of temp) {
+          try {
+            // 1. 기존 태그 존재 여부 확인
+            let tag = this.localDB.getTagByNameAndSource(tagName, "auto");
+
+            // 2. 존재하지 않으면 새 태그 생성
+            if (!tag) {
+              tag = await this.addTag(
+                {
+                  name: tagName,
+                  source: "auto",
+                  sync_status: "pending",
+                },
+                target
+              );
+            }
+
+            // 3. 태그와 데이터 연결
+            await this.addDataTag(newItem.id, tag.tag_id, target);
+          } catch (error) {
+            console.error(`[${tagName}] 이미지 태그 처리 실패:`, error);
+          }
+        }
       }
 
       if (newItem.type === "txt") {

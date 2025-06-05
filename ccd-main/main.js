@@ -1,9 +1,9 @@
 // main.js
 const { app, BrowserWindow, ipcMain } = require("electron");
 const { initClipboardModule } = require("./clipboard");
-const { registerUser } = require('./auth/authService');
+const { registerUser } = require("./auth/authService");
 const { setupIPC } = require("./ipcHandler");
-
+const { loadModel } = require("./imageTagger");
 
 const path = require("path");
 
@@ -25,14 +25,23 @@ const createWindow = () => {
     win.loadURL("http://localhost:5173");
     win.webContents.openDevTools();
   } else {
-    const rendererPath = path.join(__dirname, "../ccd-renderer/dist/index.html");
+    const rendererPath = path.join(
+      __dirname,
+      "../ccd-renderer/dist/index.html"
+    );
     win.loadFile(rendererPath);
   }
 };
 
 setupIPC();
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  try {
+    await loadModel();
+  } catch (err) {
+    console.error("모델 로딩 실패:", err);
+  }
+
   initClipboardModule();
   createWindow();
 
