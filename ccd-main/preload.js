@@ -49,12 +49,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("delete-item", { dataId, deleteOption }),
 
   // 환경설정 저장
-  updateSettings: (localLimit, cloudLimit, retentionDays) =>
-    ipcRenderer.invoke("update-settings", {
-      localLimit,
-      cloudLimit,
-      retentionDays,
-    }),
+  updateSettings: (settings) =>
+    ipcRenderer.invoke("update-settings", settings),
 
   // 클라우드 업로드
   uploadSelectedItems: (itemIds) =>
