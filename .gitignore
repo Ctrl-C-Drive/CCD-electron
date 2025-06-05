@@ -1,3 +1,6 @@
+node_modules/
+**/node_modules/
+
 # Node.js
 .env
 dist/
