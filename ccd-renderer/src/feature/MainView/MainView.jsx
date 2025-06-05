@@ -145,11 +145,14 @@ const MainView = ({isTagChecked}) => {
       {items.map((item) => (
         <div
           key={item.itemId}
+            onClick={() => handlePaste(item.itemId)}
           className="w-[17rm] !h-auto relative  border border-blue-700 rounded-md overflow-hidden cursor-pointer"
           onContextMenu={(e) => {
+            e.preventDefault(); // ✅ 기본 우클릭 메뉴 차단
+            e.stopPropagation(); // 이벤트 전파 차단
             toggleModal(item.itemId);
             e.stopPropagation();
-            handlePaste(item.itemId);
+            // handlePaste(item.itemId);
           }}
         >
           <div className="relative  h-[9.2rem] bg-blue-100">
