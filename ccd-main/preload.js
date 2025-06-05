@@ -1,5 +1,5 @@
-window.addEventListener('DOMContentLoaded', () => {
-  console.log('Preload loaded.');
+window.addEventListener("DOMContentLoaded", () => {
+  console.log("Preload loaded.");
 });
 
 window.addEventListener("dragover", (e) => {
@@ -8,9 +8,6 @@ window.addEventListener("dragover", (e) => {
 window.addEventListener("drop", (e) => {
   e.preventDefault();
 });
-
-
-
 
 const { contextBridge, ipcRenderer } = require("electron");
 
@@ -24,14 +21,21 @@ contextBridge.exposeInMainWorld("electronAPI", {
   loginUser: (userId, password) =>
     ipcRenderer.invoke("user-login", { userId, password }),
 
+  //로그인 상태 불러오기
+  getLoginState: () => ipcRenderer.invoke("get-login-state"),
+
   // 드래그앤 드랍 복사
   addDroppedFile: (filePath) =>
-  ipcRenderer.invoke("add-dropped-file", { filePath }),
+    ipcRenderer.invoke("add-dropped-file", { filePath }),
 
   // 붙여넣기
-  pasteItem: (itemId) =>
-    ipcRenderer.invoke("paste-item", { itemId }),
+  pasteItem: (itemId) => ipcRenderer.invoke("paste-item", { itemId }),
+  //클립보드의 실시간 업데이트되는 데이터
+  onClipboardUpdated: (callback) =>
+    ipcRenderer.on("clipboard-updated", (_, args) => callback(args)),
 
+  offClipboardUpdated: (callback) =>
+    ipcRenderer.removeListener("clipboard-updated", callback),
   // 검색
   searchKeyword: (keyword, model) =>
     ipcRenderer.invoke("search-keyword", { keyword, model }),
@@ -65,5 +69,4 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.on("clipboard-upload-status", (_, status) => callback(status)),
 
   toggleCloudUpload: () => ipcRenderer.send("toggle-cloud-upload"),
-
 });

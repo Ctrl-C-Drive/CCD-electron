@@ -2,12 +2,16 @@ const { ipcMain } = require("electron");
 const { searchData } = require("./DataSearch");
 const { authenticate } = require("./auth/authService");
 const { registerUser } = require("./auth/authService");
-const notifyRenderer = require("./notifyRenderer")
-const { getCloudUploadEnabled, setCloudUploadEnabled } = require("./cloudUploadState");
+const notifyRenderer = require("./notifyRenderer");
+const {
+  getCloudUploadEnabled,
+  setCloudUploadEnabled,
+} = require("./cloudUploadState");
 
 const CCDError = require("./CCDError");
 
 const dataRepo = require("./db_models/DataRepository");
+let isLogin = false;
 function setupIPC() {
   // 회원가입
   ipcMain.handle("user-register", async (_, { userId, password }) => {
@@ -32,6 +36,7 @@ function setupIPC() {
         userId,
         password
       );
+      if (loginResult && access_token) isLogin = true;
 
       // 토큰 저장은 authService 내부 cloudDB 인스턴스에서 처리됨
       return {
@@ -48,6 +53,8 @@ function setupIPC() {
       return error.toJSON();
     }
   });
+
+  ipcMain.handle("get-login-state", () => isLogin);
 
   // 드래그앤드랍으로 들어온 파일 처리
   ipcMain.handle("add-dropped-file", async (_, { filePath }) => {
@@ -82,18 +89,18 @@ function setupIPC() {
       await dataRepo.addItem(item, "local");
       return { success: true, message: "파일이 추가되었습니다." };
     } catch (err) {
-      const error = err instanceof CCDError
-        ? err
-        : CCDError.create("E631", {
-          module: "ipcHandler",
-          context: "드래그 파일 처리",
-          details: err.message,
-        });
+      const error =
+        err instanceof CCDError
+          ? err
+          : CCDError.create("E631", {
+              module: "ipcHandler",
+              context: "드래그 파일 처리",
+              details: err.message,
+            });
       console.error(error);
       return error.toJSON();
     }
   });
-
 
   // 붙여넣기
   ipcMain.handle("paste-item", async (_, { itemId }) => {
@@ -117,11 +124,14 @@ function setupIPC() {
 
       return { paste: true };
     } catch (err) {
-      const error = err instanceof CCDError ? err : CCDError.create("E630", {
-        module: "ipcHandler",
-        context: "붙여넣기",
-        details: err.message,
-      });
+      const error =
+        err instanceof CCDError
+          ? err
+          : CCDError.create("E630", {
+              module: "ipcHandler",
+              context: "붙여넣기",
+              details: err.message,
+            });
       console.error(error);
       return error.toJSON();
     }
@@ -135,9 +145,7 @@ function setupIPC() {
   // 기록 보기
   ipcMain.handle("load-clipboard-records", async (_, isLogin) => {
     try {
-      const localData = await dataRepo.getLocalPreview();
-      const cloudData = isLogin ? await dataRepo.getCloudPreview() : [];
-      const merged = dataRepo.mergeItems(localData, cloudData);
+      const merged = await dataRepo.getPreviewData();
       return { success: true, data: merged };
     } catch (err) {
       const error = CCDError.create("E655", {
@@ -151,29 +159,31 @@ function setupIPC() {
   });
 
   // 환경설정 저장
-  ipcMain.handle("update-settings", async (_, { localLimit, cloudLimit, retentionDays }) => {
-    try {
-      // 1. 로컬 설정 업데이트
-      await dataRepo.updateConfig({
-        local_limit: localLimit,
-        day_limit: retentionDays,
-      });
+  ipcMain.handle(
+    "update-settings",
+    async (_, { localLimit, cloudLimit, retentionDays }) => {
+      try {
+        // 1. 로컬 설정 업데이트
+        await dataRepo.updateConfig({
+          local_limit: localLimit,
+          day_limit: retentionDays,
+        });
 
-      // 2. 클라우드 설정 업데이트
-      await dataRepo.updateMaxCountCloud(cloudLimit);
+        // 2. 클라우드 설정 업데이트
+        await dataRepo.updateMaxCountCloud(cloudLimit);
 
-      return { success: true, message: "설정이 성공적으로 반영되었습니다." };
-    } catch (err) {
-      const error = CCDError.create("E652", {
-        module: "ipcHandler",
-        context: "환경설정 업데이트",
-        details: err.message,
-      });
-      console.error(error);
-      return error.toJSON();
+        return { success: true, message: "설정이 성공적으로 반영되었습니다." };
+      } catch (err) {
+        const error = CCDError.create("E652", {
+          module: "ipcHandler",
+          context: "환경설정 업데이트",
+          details: err.message,
+        });
+        console.error(error);
+        return error.toJSON();
+      }
     }
-  });
-
+  );
 
   // 삭제
   ipcMain.handle("delete-item", async (_, { dataId, deleteOption }) => {
@@ -191,7 +201,7 @@ function setupIPC() {
     }
   });
 
-  // 
+  //
 
   // 클라우드 업로드
   ipcMain.handle("upload-selected-items", async (_, itemIds) => {
@@ -231,7 +241,6 @@ function setupIPC() {
     console.log(`Cloud upload ${newState ? "enabled" : "disabled"}`);
     notifyRenderer("clipboard-upload-status", newState);
   });
-
 }
 
 module.exports = { setupIPC };
