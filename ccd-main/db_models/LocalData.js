@@ -319,16 +319,19 @@ class LocalDataModule {
           bm25(clipboard_fts) as score,
           c.*,
           im.*,
-          GROUP_CONCAT(t.tag_id) as tag_ids
+          (
+            SELECT GROUP_CONCAT(t.tag_id)
+            FROM data_tag dt
+            JOIN tag t ON dt.tag_id = t.tag_id
+            WHERE dt.data_id = c.id
+          ) as tag_ids
         FROM clipboard_fts fts
         JOIN clipboard c ON fts.data_id = c.id
         LEFT JOIN image_meta im ON c.id = im.data_id
-        LEFT JOIN data_tag dt ON c.id = dt.data_id
-        LEFT JOIN tag t ON dt.tag_id = t.tag_id
         WHERE clipboard_fts MATCH ?
-        GROUP BY c.id
-        ORDER BY score ${options.sortByScore ? "DESC" : "ASC"}
+        ORDER BY score DESC
         LIMIT ? OFFSET ?
+
       `;
 
       const stmt = this.db.prepare(ftsQuery);
