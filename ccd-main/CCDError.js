@@ -15,10 +15,11 @@ class CCDError extends Error {
   }
 
   static create(code, details = {}) {
+    console.warn("CCDError.create called with:", code, details);
     const errorMap = {
       // 🔐 인증/회원 관련
       E610: "데이터베이스 오류",
-      E611: "입력값 오류",
+      // E611: "입력값 오류",
 
       // 🔍 검색/요청 처리
       E620: "서버 미응답",
@@ -55,6 +56,7 @@ class CCDError extends Error {
       E666: "이미지 임베딩 불러오기 실패",
       E667: "유사도 계산 로직 오류",
       E668: "이미지 임베딩 실패",
+      E669: "MobileNetV3 모델 로드 실패"
     };
 
     const message = errorMap[code] || "알 수 없는 오류가 발생했습니다";

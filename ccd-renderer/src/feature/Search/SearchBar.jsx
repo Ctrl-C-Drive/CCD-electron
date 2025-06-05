@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import clsx from 'clsx'; 
 import { twMerge } from 'tailwind-merge';
 import "../../styles/color.css";
-
+import useClipboardRecords from "../../utils/useClipboardRecords"
 
 import LoginModal from '../Login/LoginModal';
 
@@ -14,7 +14,20 @@ const SearchBar =() => {
   const [currentSelection, setCurrentSelection] = useState('일반 검색');
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
+const [keyword, setKeyword] = useState("");
+const { items, setItems, refetch } = useClipboardRecords();
 
+
+const handleSearch = async () => {
+  const model = currentSelection === "일반 검색" ? "mobilenet" : "clip";
+  const result = await window.electronAPI.searchKeyword(keyword, model);
+  console.log("this is Search model: ", model);
+  if (result.sendResult) {
+     setItems(result.sendData); //기록보기 창 리렌더링링
+  } else {
+    console.error("검색 실패", result);
+  }
+};
 
     useEffect(() => {
       const handleClickOutside = (event) => {
@@ -50,6 +63,11 @@ const SearchBar =() => {
                   text-[1.5rem] w-full
                   placeholder-[var(--blue-100)]
                 "
+              value={keyword}
+              onChange={(e) => setKeyword(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleSearch();
+              }}
               />
             </div>
 

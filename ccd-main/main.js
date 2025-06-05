@@ -1,13 +1,17 @@
 // main.js
 const { app, BrowserWindow, ipcMain } = require("electron");
 const { initClipboardModule } = require("./clipboard");
+const { registerUser } = require('./auth/authService');
+const { setupIPC } = require("./ipcHandler");
+
+
 const path = require("path");
 
 const isDev = !app.isPackaged;
 
 const createWindow = () => {
   const win = new BrowserWindow({
-    width: 417,
+    width: 617,
     height: 646,
     resizable: false,
     webPreferences: {
@@ -25,6 +29,8 @@ const createWindow = () => {
     win.loadFile(rendererPath);
   }
 };
+
+setupIPC();
 
 app.whenReady().then(() => {
   initClipboardModule();

@@ -2,10 +2,13 @@ import React, { useState, useRef, useEffect } from 'react';
 import clsx from 'clsx'; 
 import { twMerge } from 'tailwind-merge';
 import "../../styles/color.css";
+import useClipboardRecords from "../../utils/useClipboardRecords";
 
 
 
- const SettingModal = () => {
+ const SettingModal = ({onClose }) => {
+  const { refetch } = useClipboardRecords();
+
     const [isVisible, setIsVisible] = useState(false);
     const [retentionOpen, setRetentionOpen] = useState(false);
     const [localLimitOpen, setLocalLimitOpen] = useState(false);
@@ -29,10 +32,44 @@ import "../../styles/color.css";
       document.addEventListener('mousedown', handleClickOutside);
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
+    useEffect(() => {
+      window.electronAPI.onCloudUploadStatusChange((status) => {
+        setIsAutoCloudSave(status);
+      });
+    }, []);
 
     const retentionOptions = ['1일', '7일', '10일', '30일', '∞'];
-    const limitOptions = ['30개','10개', '50개' ];
-
+    const limitOptions = ['30개','10개', '50개' ]; 
+    const handleApplySetting = async () => {
+    const settings = {
+      retentionDays : extractNumber(retention),             // ex) "7"
+      localLimitNum : extractNumber(localLimit),        // ex) "30"
+      cloudLimitNum : extractNumber(cloudLimit),        // ex) "10"
+      // cloudUploadEnabled: isAutoCloudSave === true,
+    };
+    // ✅ 디버깅용 콘솔 출력
+    console.log("🛠 전송될 settings 객체:", settings);
+    console.log("🧾 원본 문자열 상태들:", {
+     settings
+    });
+  try {
+    const response = await window.electronAPI.updateSettings(settings);
+    if (response.success) {
+      await refetch();   // 기록 다시 불러오기
+      onClose();         // 모달 닫기
+    } else {
+      console.error("❌ 설정 전송 실패", response.error);
+    }
+  } catch (err) {
+    console.error("❌ IPC 오류:", err);
+  }
+};
+ // 숫자만 추출하는 헬퍼 함수
+const extractNumber = (text) => {
+  const match = text.match(/\d+/);  // 정규표현식: 숫자 하나 이상
+  return match ? Number(match[0]) : null;  // 숫자가 없으면 null
+};
+  
 return (
   <div className="relative">
     <div className="cursor-pointer" onClick={() => setIsVisible(true)}>
@@ -46,7 +83,7 @@ return (
           shadow-[0_0.1rem_2.5rem_0_rgba(0,0,0,0.10)]
           rounded-[0.7rem]
           gap-2 text-blue-700 
-          h-[18.6rem] w-[26rem]
+          h-[22.6rem] w-[26rem]
           flex justify-between flex-row
           absolute
           z-50
@@ -263,7 +300,11 @@ return (
 
           {/* 토글 스위치 */}
           <div
-            onClick={() => setIsAutoCloudSave((prev) => !prev)}
+            // onClick={() => setIsAutoCloudSave((prev) => !prev)}
+            onClick={() => {
+              window.electronAPI.toggleCloudUpload(); // 메인 프로세스로 토글 신호 보내기
+              console.log("클라우드 업로드 여부 토글 신호 갔슴다~(렌->메)");
+            }}           
             className={`
               w-[3.4rem] h-[1.9rem] rounded-full p-[0.2rem]
               cursor-pointer transition-all duration-200
@@ -278,12 +319,24 @@ return (
               `}
             />
           </div>
+          
         </div>
-       
+           <div className="flex justify-center mt-6">
+              <button
+                className="text-[var(--blue-200)] text-[1.4rem] font-[600] underline !font-pretendard"
+                onClick={handleApplySetting}
+              >
+                확인
+              </button>
+            </div>
         </div>
+
+
       </div>
+      
     )}
   </div>
 );
  }
+
 export default SettingModal;
