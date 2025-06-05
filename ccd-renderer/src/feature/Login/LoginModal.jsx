@@ -91,8 +91,9 @@ useEffect(() => {
     //   setSuccess("");
     } else {
       // setUserId(userId); // 실제 userId 저장 (암호화된 값 아님)
-      setError("");
         setSuccess("로그인 성공"); 
+        setError("");
+
         setLoginInfo({ isLoggedIn: true, userId }); ;
     }
   } catch (error) {
@@ -117,9 +118,9 @@ useEffect(() => {
     const { joinResultMsg } = await window.electronAPI.registerUser(encryptedId, encryptedPw);
 
     if (joinResultMsg === "success") {
-      setModalState("menu");
-      setError("");
       setSuccess("회원가입 성공"); 
+      setModalState(null);
+      setError("");
     } else if (joinResultMsg === "duplication") {
       setError("이미 존재하는 ID입니다.");
       setSuccess("");
@@ -134,7 +135,8 @@ useEffect(() => {
   }
   
     setUserId(userId); // ID 반영
-    setModalState(pw);  //PW 반영
+    setPw(pw);
+    setModalState(null);  //PW 반영
   }
   
 
@@ -450,15 +452,16 @@ useEffect(() => {
                    text-[var(--red)]
                    mt-[1rem]
                   ">
-                    <div
-                      className={twMerge(
-                        "text-center text-[0.9rem] mt-[1rem] font-inter font-[var(--font-rg)] leading-normal",
-                        error && "text-[var(--red)]",
-                        success && "text-blue-200"
+                    {(error || success) && (
+                        <div
+                          className={twMerge(
+                            "text-center text-[0.9rem] mt-[1rem] !font-inter font-[var(--font-rg)] leading-normal",
+                            error ? "text-[var(--red)]" : "!text-blue-200"
+                          )}
+                        >
+                          {error || success}
+                        </div>
                       )}
-                    >
-                      {error || success}
-                    </div>
 
 
                   </div>

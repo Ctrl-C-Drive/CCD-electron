@@ -2,14 +2,15 @@ import React, { useState, useRef, useEffect } from 'react';
 import clsx from 'clsx'; 
 import { twMerge } from 'tailwind-merge';
 import "../../styles/color.css";
-import useClipboardRecords from '../../utils/useClipboardRecords';
+// import useClipboardRecords from '../../utils/useClipboardRecords';
 
 
-const MainView = ({isTagChecked}) => {
+const MainView = ({isTagChecked, items,toggleSelect,addItem,refetch }) => {
   // const [items, setItems] = useState([]);
   const [activeItemId, setActiveItemId] = useState(null);
   const containerRefs = useRef({});
-  const { items, refetch, toggleSelect, addItem } = useClipboardRecords();
+  // const { items, refetch, addItem } = useClipboardRecords();
+  // const { items, refetch, toggleSelect, addItem } = useClipboardRecords();
 
   // 모달 외부 클릭 시 닫기
   useEffect(() => {
@@ -145,7 +146,7 @@ const MainView = ({isTagChecked}) => {
       {items.map((item) => (
         <div
           key={item.itemId}
-            onClick={() => handlePaste(item.itemId)}
+            // onClick={() => handlePaste(item.itemId)} //클릭 이벤트 버블링 막고자, 보다 덜 포괄적인 위치로 리스너 이동동
           className="w-[17rm] !h-auto relative  border border-blue-700 rounded-md overflow-hidden cursor-pointer"
           onContextMenu={(e) => {
             e.preventDefault(); // ✅ 기본 우클릭 메뉴 차단
@@ -161,10 +162,17 @@ const MainView = ({isTagChecked}) => {
                 src={item.src}
                 alt="dropped-img"
                 className="w-full h-[9.2rem] object-cover"
+                onClick={() => handlePaste(item.itemId)}
+
               />
             )}
             {item.type === "text" && item.content && (
-              <p className="pt-[1rem]  px-[2rem] text-xl text-gray-700   line-clamp-3 h-auto">
+              <p 
+              className="pt-[1rem]  px-[2rem] text-xl text-gray-700   
+              line-clamp-3 h-auto"
+                onClick={() => handlePaste(item.itemId)}
+
+              >
                 {item.content}
                 </p>
             )}
@@ -173,16 +181,25 @@ const MainView = ({isTagChecked}) => {
             <div className="absolute top-1 left-1">
               <input
                 type="checkbox"
-                checked={item.selected}
-                onClick={() => toggleSelect(item.itemId)}
-                onChange={() => {}}
+                // checked={item.selected}
+                checked={item.selected}              
+                onChange={(e) => {
+                  e.stopPropagation();       // ✅ 이벤트 버블링 차단
+                  toggleSelect(item.itemId); // ✅ 정상 호출
+                }}
+                // onChange={() => {}}
                 className="accent-blue-700 w-[1.3rem] h-[1.3rem]"
               />
             </div>
-
-            <div className="absolute bottom-1 right-1">
-              <img src="folder.svg" alt="folder" className="w-[1.7rem] h-[1.5rem]" />
+            <div className="absolute bottom-1 right-1 flex gap-1 items-end">
+              {(item.source === "all" || item.source === "cloud") && (
+                <img src="cloud.svg" alt="cloud" className="w-[1.5rem] h-[1.5rem]" />
+              )}
+              {(item.source === "all" || item.source === "local") && (
+                <img src="folder.svg" alt="folder" className="w-[1.5rem] h-[1.5rem]" />
+              )}
             </div>
+
           </div>
           {isTagChecked && (
             <div className="

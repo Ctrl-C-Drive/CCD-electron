@@ -19,6 +19,7 @@ const useClipboardRecords = () => {
           timestamp: item.createdAt ?? Date.now(),
           fileName: item.fileName ?? "unnamed",
           ext: item.format?.split("/")?.[1] ?? "unknown",
+          source: item.source ?? "local",
         }));
         setItems(formatted);
       } else {
@@ -37,7 +38,7 @@ const useClipboardRecords = () => {
 useEffect(() => {
   const handler = () => {
     console.log("📥 클립보드 감지됨 → 자동 refetch()");
-    refetch();  // 여기는 훅 내부이므로 안전하게 호출 가능
+    refetch();  
   };
 
   window.electronAPI?.onClipboardUpdated?.(handler);
@@ -51,12 +52,14 @@ useEffect(() => {
   }, [items]);
 
   const toggleSelect = (itemId) => {
+   console.log("현재 선택된 item!!: ",itemId);
     setItems((prev) =>
       prev.map((item) =>
         item.itemId === itemId ? { ...item, selected: !item.selected } : item
       )
     );
   };
+
 
     
 
@@ -96,6 +99,7 @@ const setItemsFromSearchResult = (newItems) => {
   const getSelectedItemIds = useCallback(() => {
     return items.filter(item => item.selected).map(item => item.itemId);
   }, [items]);
+
 
 
   return { items, refetch, toggleSelect, addItem, setItemsFromSearchResult, getSelectedItemIds   };
