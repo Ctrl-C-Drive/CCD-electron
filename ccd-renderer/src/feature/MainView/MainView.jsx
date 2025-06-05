@@ -2,15 +2,15 @@ import React, { useState, useRef, useEffect } from 'react';
 import clsx from 'clsx'; 
 import { twMerge } from 'tailwind-merge';
 import "../../styles/color.css";
-import useClipboardRecords from '../../utils/useClipboardRecords';
+// import useClipboardRecords from '../../utils/useClipboardRecords';
 
 
-const MainView = ({isTagChecked }) => {
+const MainView = ({isTagChecked, items,toggleSelect,addItem,refetch }) => {
   // const [items, setItems] = useState([]);
   const [activeItemId, setActiveItemId] = useState(null);
   const containerRefs = useRef({});
   // const { items, refetch, addItem } = useClipboardRecords();
-  const { items, refetch, toggleSelect, addItem } = useClipboardRecords();
+  // const { items, refetch, toggleSelect, addItem } = useClipboardRecords();
 
   // 모달 외부 클릭 시 닫기
   useEffect(() => {

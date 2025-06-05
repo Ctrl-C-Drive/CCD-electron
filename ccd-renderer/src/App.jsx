@@ -68,7 +68,7 @@ const App= () => {
                       isTagChecked={isTagChecked}
                       items={items} 
                       addItem={addItem}  
-                       toggleSelect={toggleSelect} 
+                       toggleSelect={toggleSelect}  
                   />
               </div>
               {/* 하단 bar */}
