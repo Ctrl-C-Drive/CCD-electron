@@ -522,31 +522,97 @@ class DataRepositoryModule extends EventEmitter {
       return [];
     }
   }
+
+  async logoutAndCleanupCloudData() {
+    try {
+      // shared = 'cloud' 인 항목만 삭제
+      const stmt = this.localDB.db.prepare(`
+        DELETE FROM clipboard
+        WHERE shared IN ('cloud')
+      `);
+      stmt.run();
+
+      // 클라우드 캐시도 무효화
+      this.invalidateCache("cloud");
+
+      console.log("클라우드 데이터 로컬 DB에서 정리 완료");
+    } catch (error) {
+      throw CCDError.create("E610", {
+        module: "DataRepository",
+        context: "로그아웃 정리 실패",
+        message: error.message || error,
+      });
+    }
+  }
+
   async searchItems(query, options = {}) {
     try {
-      if (options.includeCloud) {
+      const results = [];
+
+      // 1. 클라우드 토큰이 있는 경우, 클라우드 캐시에서 검색
+      if (this.cloudDB?.tokenStorage?.accessToken) {
         try {
-          const fetchedCloudItems = await this.cloudDB.searchItems(query);
-          await this.syncCloudItems(fetchedCloudItems);
-        } catch (err) {
-          throw CCDError.create("E610", {
-            module: "DataRepository",
-            context: "클라우드검색 실패",
-            message: error.details,
+          const cloudItems = await this.getCloudPreview();
+          const lowerQuery = query.toLowerCase();
+
+          const matchedCloud = cloudItems.filter((item) => {
+            const text = item.content?.toLowerCase() || "";
+            const tags = (item.tags || [])
+              .map((t) => t.name?.toLowerCase() || "")
+              .join(" ");
+            return text.includes(lowerQuery) || tags.includes(lowerQuery);
           });
+
+          results.push(...matchedCloud.map((item) => this.transformItem(item)));
+        } catch (err) {
+          console.warn("클라우드 캐시 검색 실패:", err.message || err);
         }
       }
 
-      const results = await this.localDB.searchItems(query, options);
-      return results.map((item) => this.transformItem(item));
+      // 2. 로컬 FTS5 검색
+      const localResults = await this.localDB.searchItems(query, options);
+      results.push(...localResults.map((item) => this.transformItem(item)));
+      console.log(results);
+      return results;
     } catch (error) {
       throw CCDError.create("E610", {
         module: "DataRepository",
         context: "검색 오류",
-        message: error.details,
+        message: error.message || error,
       });
     }
   }
+
+  // async searchItems(query, options = {}) {
+  //   try {
+  //     if (options.includeCloud) {
+  //       try {
+  //         const cloudItems = await this.cloudDB.getClipboardData();
+  //         await this.syncCloudItems(cloudItems);
+  //       } catch (err) {
+  //         console.warn(
+  //           "클라우드 검색 실패, 로컬 검색만 수행:",
+  //           err.message || err
+  //         );
+  //         // throw CCDError.create("E610", {
+  //         //   module: "DataRepository",
+  //         //   context: "클라우드검색 실패",
+  //         //   message: error.details,
+  //         // });
+  //       }
+  //     }
+
+  //     const results = await this.localDB.searchItems(query, options);
+  //     let temp = results.map((item) => this.transformItem(item));
+  //     return temp;
+  //   } catch (error) {
+  //     throw CCDError.create("E610", {
+  //       module: "DataRepository",
+  //       context: "검색 오류",
+  //       message: error.details,
+  //     });
+  //   }
+  // }
 
   async syncCloudItems(cloudItems) {
     const BATCH_SIZE = 50;
