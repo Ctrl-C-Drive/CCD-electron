@@ -42,7 +42,7 @@ async function searchData(keyword, model) {
     const sendData = resultItems.map((item) => ({
       fileType: item.format,
       source: item.source,
-      date: item.createdAt,
+      date: item.created_at,
       imgURL: item.content,
       thumbnailURL: item.thumbnail_path || null,
     }));

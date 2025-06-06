@@ -13,6 +13,7 @@ const LocalDataModule = require("./LocalData");
 const { error } = require("console");
 const CCDError = require("../CCDError");
 const { processImage } = require("../imageTagger");
+const notifyRenderer = require("../notifyRenderer");
 
 class DataRepositoryModule extends EventEmitter {
   constructor() {
@@ -62,7 +63,7 @@ class DataRepositoryModule extends EventEmitter {
 
       const allDeletedIds = [...maxDeletedIds, ...oldDeletedIds];
 
-      for (const id of allDeletedIds) {
+      for (const itemId of allDeletedIds) {
         let sharedStatus = this.localDB.getSharedStatus(itemId);
         if (sharedStatus === "both") {
           await this.cloudDB.localDelete(itemId);
@@ -295,6 +296,7 @@ class DataRepositoryModule extends EventEmitter {
       }
 
       this.invalidateCache(target === "both" ? "all" : target);
+      notifyRenderer("clipboard-updated");
       return this.transformItem(newItem);
     } catch (error) {
       throw CCDError.create("E610", {
@@ -383,6 +385,7 @@ class DataRepositoryModule extends EventEmitter {
       if (target === "cloud" || target === "both") {
         this.invalidateCache("cloud");
       }
+      notifyRenderer("clipboard-updated");
 
       return true;
     } catch (error) {
@@ -453,6 +456,7 @@ class DataRepositoryModule extends EventEmitter {
       // 3. 변경 사항이 있으면 캐시 무효화
       if (needLocalUpdate) {
         this.invalidateCache("local");
+        notifyRenderer("clipboard-updated");
       }
 
       return {
@@ -559,6 +563,7 @@ class DataRepositoryModule extends EventEmitter {
 
       // 클라우드 캐시도 무효화
       this.invalidateCache("cloud");
+      notifyRenderer("clipboard-updated");
 
       console.log("클라우드 데이터 로컬 DB에서 정리 완료");
     } catch (error) {
@@ -654,20 +659,18 @@ class DataRepositoryModule extends EventEmitter {
     cloudItems.forEach((item) => {
       mergedMap.set(item.id, {
         ...item,
-        source: "cloud",
+        source: item.shared,
         thumbnailUrl: item.imageMeta?.thumbnail_path,
       });
     });
 
     // 로컬 데이터 병합 (클라우드에 없는 경우만)
     localItems.forEach((item) => {
-      if (!mergedMap.has(item.id)) {
-        mergedMap.set(item.id, {
-          ...item,
-          source: "local",
-          thumbnailUrl: item.imageMeta?.thumbnail_path,
-        });
-      }
+      mergedMap.set(item.id, {
+        ...item,
+        source: item.shared, // shared 값을 그대로 source로 사용
+        thumbnailUrl: item.imageMeta?.thumbnail_path,
+      });
     });
 
     return Array.from(mergedMap.values()).sort(
@@ -681,10 +684,10 @@ class DataRepositoryModule extends EventEmitter {
       type: item.type,
       content: item.content,
       format: item.format,
-      createdAt: item.created_at,
+      created_at: item.created_at,
       thumbnail_path: item.imageMeta?.thumbnail_path || null,
       tags: item.tags || [],
-      source: item.source || "local",
+      shared: item.shared || "local",
       score: item.score || 0,
     };
   }
@@ -737,6 +740,7 @@ class DataRepositoryModule extends EventEmitter {
       );
 
       this.invalidateCache("local");
+      notifyRenderer("clipboard-updated");
       return { successCount, errorCount };
     } catch (error) {
       throw CCDError.create("E610", {
@@ -790,6 +794,7 @@ class DataRepositoryModule extends EventEmitter {
       );
 
       this.invalidateCache("cloud");
+      notifyRenderer("clipboard-updated");
       return { successCount, errorCount };
     } catch (error) {
       throw CCDError.create("E610", {
@@ -802,43 +807,102 @@ class DataRepositoryModule extends EventEmitter {
 
   //선택 업로드
   async uploadSelectedItems(itemIds) {
+    console.log("uploadSelectedItems 호출됨");
+    console.log(itemIds);
+
     const localItems = await this.getLocalPreview();
-    const cloudItems = await this.getCloudPreview();
-    const cloudIds = new Set(cloudItems.map((item) => item.id));
-
-    const targets = localItems.filter(
-      (item) =>
-        item.shared === "local" &&
-        itemIds.includes(item.id) &&
-        !cloudIds.has(item.id)
+    console.log(
+      "🧾 localItems:",
+      localItems.map((i) => ({ id: i.id, shared: i.shared }))
     );
-
-    let uploadResult = true;
+    const targets = localItems.filter(
+      (item) => item.shared === "local" && itemIds.includes(item.id)
+    );
+    console.log(targets);
+    const result = {
+      successCount: 0,
+      failCount: 0,
+      errors: [],
+    };
 
     await Promise.all(
       targets.map(async (item) => {
+        console.log(`업로드 시작: ${item.id}, type: ${item.type}`);
         try {
           if (item.type === "txt") {
+            console.log(`텍스트 업로드 시도: ${item.id}`);
             await this.cloudDB.createTextItem(item);
           } else if (item.type === "img") {
+            console.log(`이미지 업로드 시도: ${item.id}`);
             await this.cloudDB.uploadImage(
               item.id,
               item.content,
               item.format,
-              item.createdAt
+              item.created_at
             );
           }
+
           this.localDB.updateSharedStatus(item.id, "both");
+          result.successCount++;
         } catch (err) {
-          console.error("업로드 실패:", item.id, err);
-          uploadResult = false;
+          result.errors.push({
+            id: item.id,
+            type: item.type,
+            error: err.message || err.toString(),
+          });
+          return CCDError.create("E610", {
+            module: "DataRepository",
+            context: "일괄 업로드 실패",
+            message: err,
+          });
         }
       })
     );
 
     this.invalidateCache("cloud");
-    return { uploadResult };
+    notifyRenderer("clipboard-updated");
+    return result;
   }
+
+  // async uploadSelectedItems(itemIds) {
+  //   console.log("upload selected item called");
+  //   const localItems = await this.getLocalPreview();
+  //   const cloudItems = await this.getCloudPreview();
+  //   const cloudIds = new Set(cloudItems.map((item) => item.id));
+
+  //   const targets = localItems.filter(
+  //     (item) =>
+  //       item.shared === "local" &&
+  //       itemIds.includes(item.id) &&
+  //       !cloudIds.has(item.id)
+  //   );
+
+  //   let uploadResult = true;
+
+  //   await Promise.all(
+  //     targets.map(async (item) => {
+  //       try {
+  //         if (item.type === "txt") {
+  //           await this.cloudDB.createTextItem(item);
+  //         } else if (item.type === "img") {
+  //           await this.cloudDB.uploadImage(
+  //             item.id,
+  //             item.content,
+  //             item.format,
+  //             item.createdAt
+  //           );
+  //         }
+  //         this.localDB.updateSharedStatus(item.id, "both");
+  //       } catch (err) {
+  //         console.error("업로드 실패:", item.id, err);
+  //         uploadResult = false;
+  //       }
+  //     })
+  //   );
+
+  //   this.invalidateCache("cloud");
+  //   return { uploadResult };
+  // }
 
   //선택 다운로드
   async downloadSelectedItems(itemIds) {
@@ -879,6 +943,7 @@ class DataRepositoryModule extends EventEmitter {
     );
 
     this.invalidateCache("local");
+    notifyRenderer("clipboard-updated");
     return { downloadResult };
   }
 

@@ -169,15 +169,16 @@ class CloudDataModule {
   // 클립보드 텍스트 생성
   async createTextItem(itemData) {
     try {
-      const response = await this.axiosInstance.post("/items", {
+      const payload = {
         ...itemData,
-      });
+      };
+      const response = await this.axiosInstance.post("/items", payload);
       return this.transformItem(response.data);
     } catch (error) {
       throw CCDError.create("E654", {
         module: "CloudData",
         context: "텍스트 아이템 생성",
-        message: "아이템 생성 실패",
+        message: error.detail,
         details: error.response?.data,
       });
     }
@@ -323,7 +324,7 @@ class CloudDataModule {
   async searchByCLIP(keyword) {
     try {
       const response = await this.axiosInstance.post("/search-text", {
-        text: keyword,
+        query: keyword,
       });
 
       return response.data.map((item) => this.transformItem(item));

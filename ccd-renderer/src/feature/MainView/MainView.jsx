@@ -1,11 +1,10 @@
-import React, { useState, useRef, useEffect } from 'react';
-import clsx from 'clsx'; 
-import { twMerge } from 'tailwind-merge';
+import React, { useState, useRef, useEffect } from "react";
+import clsx from "clsx";
+import { twMerge } from "tailwind-merge";
 import "../../styles/color.css";
 // import useClipboardRecords from '../../utils/useClipboardRecords';
 
-
-const MainView = ({isTagChecked, items,toggleSelect,addItem,refetch }) => {
+const MainView = ({ isTagChecked, items, toggleSelect, addItem, refetch }) => {
   // const [items, setItems] = useState([]);
   const [activeItemId, setActiveItemId] = useState(null);
   const containerRefs = useRef({});
@@ -23,8 +22,8 @@ const MainView = ({isTagChecked, items,toggleSelect,addItem,refetch }) => {
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   const toggleModal = (id) => {
@@ -136,7 +135,8 @@ const MainView = ({isTagChecked, items,toggleSelect,addItem,refetch }) => {
   };
 
   return (
-    <div className="grid grid-cols-2 gap-3 px-6 py-4  !w-screen  "
+    <div
+      className="grid grid-cols-2 gap-3 px-6 py-4  !w-screen  "
       onDragOver={(e) => e.preventDefault()}
       onDrop={(e) => {
         e.preventDefault();
@@ -146,7 +146,7 @@ const MainView = ({isTagChecked, items,toggleSelect,addItem,refetch }) => {
       {items.map((item) => (
         <div
           key={item.itemId}
-            // onClick={() => handlePaste(item.itemId)} //클릭 이벤트 버블링 막고자, 보다 덜 포괄적인 위치로 리스너 이동동
+          // onClick={() => handlePaste(item.itemId)} //클릭 이벤트 버블링 막고자, 보다 덜 포괄적인 위치로 리스너 이동동
           className="w-[17rm] !h-auto relative  border border-blue-700 rounded-md overflow-hidden cursor-pointer"
           onContextMenu={(e) => {
             e.preventDefault(); // ✅ 기본 우클릭 메뉴 차단
@@ -163,28 +163,25 @@ const MainView = ({isTagChecked, items,toggleSelect,addItem,refetch }) => {
                 alt="dropped-img"
                 className="w-full h-[9.2rem] object-cover"
                 onClick={() => handlePaste(item.itemId)}
-
               />
             )}
             {item.type === "text" && item.content && (
-              <p 
-              className="pt-[1rem]  px-[2rem] text-xl text-gray-700   
+              <p
+                className="pt-[1rem]  px-[2rem] text-xl text-gray-700   
               line-clamp-3 h-auto"
                 onClick={() => handlePaste(item.itemId)}
-
               >
                 {item.content}
-                </p>
+              </p>
             )}
- 
 
             <div className="absolute top-1 left-1">
               <input
                 type="checkbox"
                 // checked={item.selected}
-                checked={item.selected}              
+                checked={item.selected}
                 onChange={(e) => {
-                  e.stopPropagation();       // ✅ 이벤트 버블링 차단
+                  e.stopPropagation(); // ✅ 이벤트 버블링 차단
                   toggleSelect(item.itemId); // ✅ 정상 호출
                 }}
                 // onChange={() => {}}
@@ -192,17 +189,25 @@ const MainView = ({isTagChecked, items,toggleSelect,addItem,refetch }) => {
               />
             </div>
             <div className="absolute bottom-1 right-1 flex gap-1 items-end">
-              {(item.source === "all" || item.source === "cloud") && (
-                <img src="cloud.svg" alt="cloud" className="w-[1.5rem] h-[1.5rem]" />
+              {(item.source === "both" || item.source === "cloud") && (
+                <img
+                  src="cloud.svg"
+                  alt="cloud"
+                  className="w-[1.5rem] h-[1.5rem]"
+                />
               )}
-              {(item.source === "all" || item.source === "local") && (
-                <img src="folder.svg" alt="folder" className="w-[1.5rem] h-[1.5rem]" />
+              {(item.source === "both" || item.source === "local") && (
+                <img
+                  src="folder.svg"
+                  alt="folder"
+                  className="w-[1.5rem] h-[1.5rem]"
+                />
               )}
             </div>
-
           </div>
           {isTagChecked && (
-            <div className="
+            <div
+              className="
               text-[var(--blue-200)]
               !font-pretendard
               text-[1.3rem]
@@ -211,9 +216,7 @@ const MainView = ({isTagChecked, items,toggleSelect,addItem,refetch }) => {
               border-t h-[2.6rem] border-[var(--blue-200)] pl-[1.6rem] "
             >
               {item.tags && item.tags.length > 0 ? (
-                item.tags.map((t, idx) => (
-                  <span key={idx}># {t.tag}</span>
-                ))
+                item.tags.map((t, idx) => <span key={idx}># {t.tag}</span>)
               ) : (
                 <span># 태그 없음</span>
               )}
@@ -232,20 +235,24 @@ const MainView = ({isTagChecked, items,toggleSelect,addItem,refetch }) => {
               not-italic
               font-[var(--font-md)]
               leading-normal
-              ">
-              <div className="py-2 hover:bg-blue-50 cursor-pointer"
+              "
+            >
+              <div
+                className="py-2 hover:bg-blue-50 cursor-pointer"
                 onClick={() => handleDelete(item.itemId, "all")}
               >
                 모두 삭제
               </div>
               <hr />
-              <div className="py-2 hover:bg-blue-50 cursor-pointer"
+              <div
+                className="py-2 hover:bg-blue-50 cursor-pointer"
                 onClick={() => handleDelete(item.itemId, "local")}
               >
                 Local에서 삭제
               </div>
               <hr />
-              <div className="py-2 hover:bg-blue-50 cursor-pointer"
+              <div
+                className="py-2 hover:bg-blue-50 cursor-pointer"
                 onClick={() => handleDelete(item.itemId, "cloud")}
               >
                 Cloud에서 삭제
@@ -255,7 +262,7 @@ const MainView = ({isTagChecked, items,toggleSelect,addItem,refetch }) => {
         </div>
       ))}
     </div>
-  )
+  );
 };
 
 export default MainView;

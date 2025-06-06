@@ -1,22 +1,26 @@
-import { useState, useEffect, useCallback } from 'react';
-import { v4 as uuidv4 } from 'uuid';
+import { useState, useEffect, useCallback } from "react";
+import { v4 as uuidv4 } from "uuid";
 const useClipboardRecords = () => {
   const [items, setItems] = useState([]);
-
 
   const refetch = useCallback(async () => {
     try {
       const response = await window.electronAPI.loadClipboardRecords(true);
-       console.log("📦 loadClipboardRecords 응답:", response); 
+      console.log("📦 loadClipboardRecords 응답:", response);
       if (response.success) {
         const formatted = response.data.map((item) => ({
           ...item,
           selected: false,
           itemId: item.itemId ?? item.id ?? uuidv4(),
-          type: item.type === "txt" ? "text" : item.type === "img" ? "image" : item.type,
+          type:
+            item.type === "txt"
+              ? "text"
+              : item.type === "img"
+              ? "image"
+              : item.type,
           src: item.type === "img" ? item.content : undefined,
           content: item.type === "txt" ? item.content : undefined,
-          timestamp: item.createdAt ?? Date.now(),
+          timestamp: item.created_at ?? Date.now(),
           fileName: item.fileName ?? "unnamed",
           ext: item.format?.split("/")?.[1] ?? "unknown",
           source: item.source ?? "local",
@@ -34,25 +38,25 @@ const useClipboardRecords = () => {
     refetch();
   }, [refetch]);
 
-//클립보드 실시간 업데이트 데이터
-useEffect(() => {
-  const handler = () => {
-    console.log("📥 클립보드 감지됨 → 자동 refetch()");
-    refetch();  
-  };
+  //클립보드 실시간 업데이트 데이터
+  useEffect(() => {
+    const handler = () => {
+      console.log("📥 클립보드 감지됨 → 자동 refetch()");
+      refetch();
+    };
 
-  window.electronAPI?.onClipboardUpdated?.(handler);
-  return () => {
-    window.electronAPI?.offClipboardUpdated?.(handler);
-  };
-}, [refetch]);
+    window.electronAPI?.onClipboardUpdated?.(handler);
+    return () => {
+      window.electronAPI?.offClipboardUpdated?.(handler);
+    };
+  }, [refetch]);
 
   useEffect(() => {
     console.log("🧾 현재 items 상태:", items);
   }, [items]);
 
   const toggleSelect = (itemId) => {
-   console.log("현재 선택된 item!!: ",itemId);
+    console.log("현재 선택된 item!!: ", itemId);
     setItems((prev) =>
       prev.map((item) =>
         item.itemId === itemId ? { ...item, selected: !item.selected } : item
@@ -60,49 +64,51 @@ useEffect(() => {
     );
   };
 
+  //  드래그앤드랍으로 받은 아이템 추가
+  const addItem = (newItem) => {
+    const itemId = newItem.itemId ?? uuidv4();
 
-    
+    setItems((prev) => {
+      const isDuplicate = prev.some(
+        (item) =>
+          item.fileName === newItem.fileName &&
+          item.timestamp === newItem.timestamp
+      );
+      if (isDuplicate) return prev;
 
- //  드래그앤드랍으로 받은 아이템 추가
-const addItem = (newItem) => {
-   const itemId = newItem.itemId ?? uuidv4();
-
-  setItems((prev) => {
-    const isDuplicate = prev.some(
-      (item) =>
-        item.fileName === newItem.fileName &&
-        item.timestamp === newItem.timestamp
-    );
-    if (isDuplicate) return prev;
-
-    return [
-      {
-        ...newItem,
-        selected: false,
-        itemId,
-        timestamp: newItem.timestamp ?? Date.now(),
-        fileName: newItem.fileName ?? "unnamed",
-        ext: newItem.ext ?? "unknown",
-      },
-      ...prev,
-    ];
-  });
-};
-const setItemsFromSearchResult = (newItems) => {
-  const formatted = newItems.map((item) => ({
-    ...item,
-    selected: false,
-    itemId: item.itemId ?? uuidv4(),
-  }));
-  setItems(formatted);
-};
+      return [
+        {
+          ...newItem,
+          selected: false,
+          itemId,
+          timestamp: newItem.timestamp ?? Date.now(),
+          fileName: newItem.fileName ?? "unnamed",
+          ext: newItem.ext ?? "unknown",
+        },
+        ...prev,
+      ];
+    });
+  };
+  const setItemsFromSearchResult = (newItems) => {
+    const formatted = newItems.map((item) => ({
+      ...item,
+      selected: false,
+      itemId: item.itemId ?? uuidv4(),
+    }));
+    setItems(formatted);
+  };
   const getSelectedItemIds = useCallback(() => {
-    return items.filter(item => item.selected).map(item => item.itemId);
+    return items.filter((item) => item.selected).map((item) => item.itemId);
   }, [items]);
 
-
-
-  return { items, refetch, toggleSelect, addItem, setItemsFromSearchResult, getSelectedItemIds   };
+  return {
+    items,
+    refetch,
+    toggleSelect,
+    addItem,
+    setItemsFromSearchResult,
+    getSelectedItemIds,
+  };
 };
 
 export default useClipboardRecords;
