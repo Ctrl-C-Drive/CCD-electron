@@ -1,35 +1,89 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
 import './App.css'
+import './index.css';
+import React, { useState, useEffect } from 'react';
+import clsx from 'clsx'; 
+import { twMerge } from 'tailwind-merge';
+import { colors, colorVariants } from './styles/color.ts';
+import { typographyVariants } from './styles/typography.ts';
 
-function App() {
-  const [count, setCount] = useState(0)
+import BottomBar from './feature/Bottom/BottomBar';
+import SearchBar from './feature/Search/SearchBar';
+import FilterBar from './feature/Filter/FilterBar';
+import MainView from './feature/MainView/MainView';
+import './App.css'
+import './index.css'
+import './styles/color.css'
+import './styles/typography.css'
+import useClipboardRecords from './utils/useClipboardRecords.js'
+
+//typo, color util 예시 (복붙해서 쓰기)
+// {`${colorVariants({ bg: 'gray-50' })}`}
+//  {`${typographyVariants({ variant: 'h1-sb' })} `}
+
+
+
+//전체 
+const App= () => {
+    const [isTagChecked, setIsTagChecked] = useState(true);
+    const { items, refetch, toggleSelect, addItem, setItemsFromSearchResult, getSelectedItemIds   } = useClipboardRecords();
+
+    // useEffect(() => {
+    //   console.log("🧪 electronAPI:", window.electronAPI);
+    // }, []);
+
 
   return (
     <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
+      <div 
+        className="w-full h-full bg-white opacity-87  p-0 "
+        style={{ WebkitAppRegion: 'drag' }}
+      >
+        {/* 최상단 손잡이, 닫기 버튼 */}
+          <div className="pt-[1.6rem] pb-[2.1rem] flex justify-center relative">
+              {/*  손잡이 */}
+              <div className="w-[5.6rem]  h-[0.2rem] bg-[var(--blue-200)] [border-[var(--blue-200)]">
+
+              </div>
+              {/* 닫기 버튼  */}
+              <div className="absolute z-50 right-8 top-5">
+                <img src="X.svg"alt="닫기 버튼 "   
+                  style={{ WebkitAppRegion: 'no-drag' }}
+                onClick={() => window.electronAPI.closeWindow()}
+             />
+             
+              </div>
+          </div>
+           <div className=" !bg-white/70 px-[3rem]  ">
+              {/* search-bar-zone */}
+              <div className="">
+                    <SearchBar/>
+              </div>
+              {/* Tag, 필터 2개 zone */}
+              <div className="">
+                  <FilterBar isTagChecked={isTagChecked} setIsTagChecked={setIsTagChecked}/>
+              </div>
+              {/* grid-view 데이터 존 */}
+              <div className="">
+                  <MainView 
+                      isTagChecked={isTagChecked}
+                      items={items} 
+                      addItem={addItem}  
+                       toggleSelect={toggleSelect}  
+                  />
+              </div>
+              {/* 하단 bar */}
+              <div className="">
+                <BottomBar 
+                  // selectedIds={selectedIds} 
+                  getSelectedItemIds={getSelectedItemIds}
+                />
+              </div>
+            </div>
       </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
+      
     </>
-  )
+  );
 }
 
 export default App
+
