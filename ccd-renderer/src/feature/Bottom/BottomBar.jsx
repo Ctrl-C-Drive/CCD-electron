@@ -62,7 +62,7 @@ const Toast = ({ message, type }) => {
             className="flex flex-col items-center text-blue-700 cursor-pointer"
             onClick={async () => {
               const selectedIds = getSelectedItemIds(); 
-              console.log("selectedIds:",selectedIds);
+              console.log("선택된 id 목록: ::",selectedIds);
               if (selectedIds.length === 0) {
                 showToast('선택된 항목이 없습니다.', 'error');
                 return;
@@ -71,11 +71,14 @@ const Toast = ({ message, type }) => {
               showToast('업로드 중...', 'info');
               try {
                 const result = await window.electronAPI.uploadSelectedItems(selectedIds);
-                console.log("this is result: ",result);
+                console.log("자자자 ~~~ ",result);
                 if (result.uploadResult) {
                   showToast('업로드 성공!', 'info');
+                  console.log("성공!")
                 } else {
                   showToast('업로드 실패', 'error');
+                  console.log("실패~!")
+             
                 }
               } catch (err) {
                 console.error("업로드 중 오류:", err);
