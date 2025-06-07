@@ -7,7 +7,7 @@ const useClipboardRecords = () => {
   const refetch = useCallback(async () => {
     try {
       const response = await window.electronAPI.loadClipboardRecords(true);
-      console.log("📦 loadClipboardRecords 응답:", response);
+      // console.log("📦 loadClipboardRecords 응답:", response);
       if (response.success) {
         const formatted = response.data.map((item) => ({
           ...item,
@@ -25,6 +25,7 @@ const useClipboardRecords = () => {
           fileName: item.fileName ?? "unnamed",
           ext: item.format?.split("/")?.[1] ?? "unknown",
           source: item.source ?? "local",
+          tags: item.tags ?? [],
         }));
         setItems(formatted);
       } else {

@@ -168,7 +168,7 @@ const MainView = ({ isTagChecked, items, toggleSelect, addItem, refetch }) => {
                 src={item.src}
                 alt="dropped-img"
                 className="w-full h-[9.2rem] object-cover"
-                onClick={() => handlePaste(item.itemId)}
+                onClick={() => handlePaste(item.itemId) }
               />
             )}
             {item.type === "text" && item.content && (
@@ -187,8 +187,8 @@ const MainView = ({ isTagChecked, items, toggleSelect, addItem, refetch }) => {
                 // checked={item.selected}
                 checked={item.selected}
                 onChange={(e) => {
-                  e.stopPropagation(); // ✅ 이벤트 버블링 차단
-                  toggleSelect(item.itemId); // ✅ 정상 호출
+                  e.stopPropagation(); //  이벤트 버블링 차단
+                  toggleSelect(item.itemId); //  정상 호출
                 }}
                 // onChange={() => {}}
                 className="accent-blue-700 w-[1.3rem] h-[1.3rem]"
@@ -214,20 +214,28 @@ const MainView = ({ isTagChecked, items, toggleSelect, addItem, refetch }) => {
           {isTagChecked && (
             <div
               className="
-              text-[var(--blue-200)]
-              !font-pretendard
-              text-[1.3rem]
-              font-[var(--font-rg)]
-              leading-[2.8rem]
-              border-t h-[2.6rem] border-[var(--blue-200)] pl-[1.6rem] "
+                text-[var(--blue-200)]
+                !font-pretendard
+                text-[1.3rem]
+                font-[var(--font-rg)]
+                leading-[2.8rem]
+                border-t h-[2.6rem] border-[var(--blue-200)] pl-[1.6rem] "
             >
               {item.tags && item.tags.length > 0 ? (
-                item.tags.map((t, idx) => <span key={idx}># {t.tag}</span>)
+                item.tags.map((t, idx) =>
+                  typeof t === "string" ? (
+                    <span key={idx}># {t}</span>
+                  ) : (
+                    <span key={idx}># {t.tag}</span>
+                  )
+                )
+
               ) : (
                 <span># 태그 없음</span>
               )}
             </div>
           )}
+
           {activeItemId === item.itemId && (
             <div
               ref={(el) => (containerRefs.current[item.itemId] = el)}
