@@ -164,6 +164,14 @@ class LocalDataModule {
         day_limit INTEGER DEFAULT 30,
         last_modified INTEGER DEFAULT 0
       );
+      CREATE TABLE IF NOT EXISTS pending_sync (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        op TEXT NOT NULL,      
+        data_id TEXT,
+        op_args TEXT, 
+        created_at INTEGER NOT NULL
+      );
+
     `);
     this._initializeDefaultConfig();
   }
@@ -304,10 +312,11 @@ class LocalDataModule {
   searchItems(query, options = {}) {
     try {
       // 검색 쿼리 정제
-      const cleanQuery = query
-        .replace(/[^\w\s가-힣]/gi, " ") // 특수문자 제거
-        .trim()
-        .replace(/\s+/g, " "); // 중복 공백 제거
+      // const cleanQuery = query
+      //   .replace(/[^\w\s가-힣]/gi, " ") // 특수문자 제거
+      //   .trim()
+      //   .replace(/\s+/g, " "); // 중복 공백 제거
+      const cleanQuery = query.trim().replace(/\s+/g, " ");
 
       if (!cleanQuery) return [];
 
@@ -359,7 +368,7 @@ class LocalDataModule {
 
   getAllClipboardWithMetaAndTags() {
     const stmt = this.db.prepare(`
-      SELECT c.*, im.*, GROUP_CONCAT(t.tag_id) as tag_ids 
+      SELECT c.*, im.*, GROUP_CONCAT(t.name) as tag_names
       FROM clipboard c
       LEFT JOIN image_meta im ON c.id = im.data_id
       LEFT JOIN data_tag dt ON c.id = dt.data_id
@@ -367,6 +376,26 @@ class LocalDataModule {
       GROUP BY c.id
     `);
     return stmt.all();
+  }
+  enqueuePendingSync({ op, data_id = null, op_args = {} }) {
+    this.db
+      .prepare(
+        `
+      INSERT INTO pending_sync (op, data_id, op_args, created_at)
+      VALUES (?, ?, ?, ?)
+    `
+      )
+      .run(op, data_id, JSON.stringify(op_args), Math.floor(Date.now() / 1000));
+  }
+
+  getPendingSyncItems() {
+    return this.db
+      .prepare("SELECT * FROM pending_sync ORDER BY created_at ASC")
+      .all();
+  }
+
+  clearPendingItem(id) {
+    this.db.prepare("DELETE FROM pending_sync WHERE id = ?").run(id);
   }
 
   // 설정 조회
@@ -458,11 +487,22 @@ class LocalDataModule {
   }
   //클립보드 항목 삭제
   deleteClipboardItem(id) {
-    const deleteChain = this.db.transaction((id) => {
-      this.db.prepare("DELETE FROM clipboard WHERE id = ?").run(id);
-    });
-    deleteChain(id);
-    console.log(`삭제 완료: ${id}`);
+    try {
+      const deleteChain = this.db.transaction((id) => {
+        this.db.prepare("DELETE FROM clipboard WHERE id = ?").run(id);
+      });
+
+      deleteChain(id);
+      console.log(`삭제 완료: ${id}`);
+    } catch (error) {
+      console.error(`삭제 실패: ${id}`, error);
+      throw CCDError.create("E630", {
+        module: "LocalDataModule",
+        context: "deleteClipboardItem",
+        message: `클립보드 항목 삭제 중 오류 발생 (id=${id})`,
+        cause: error,
+      });
+    }
   }
   // 이미지 메타데이터 조회
   getImageMeta(dataId) {

@@ -5,6 +5,7 @@ const fs = require("fs");
 const FormData = require("form-data");
 const CCDError = require("../CCDError");
 require("dotenv").config();
+const notifyRenderer = require("../notifyRenderer");
 
 const config = {
   apiBaseURL: process.env.CLOUD_SERVER_URL,
@@ -21,6 +22,7 @@ class CloudDataModule {
     };
     this.isRefreshing = false;
     this.refreshSubscribers = [];
+    this.localDB = require("./LocalData");
 
     // Axios 인스턴스 생성
     this.axiosInstance = axios.create({
@@ -105,6 +107,8 @@ class CloudDataModule {
         access_token: response.data.access_token,
         refresh_token: response.data.refresh_token,
       });
+      await this.processPendingSync();
+      notifyRenderer("clipboard-updated");
       console.log("login finished", response.data);
       return response.data;
     } catch (error) {
@@ -120,6 +124,32 @@ class CloudDataModule {
   // 로그아웃 메서드 추가
   logout() {
     this.tokenStorage = { accessToken: null, refreshToken: null };
+  }
+  async processPendingSync() {
+    const items = this.localDB.getPendingSyncItems();
+
+    for (const item of items) {
+      try {
+        const args = item.op_args ? JSON.parse(item.op_args) : {};
+
+        switch (item.op) {
+          case "localDelete":
+            await this.localDelete(item.data_id, "cloud");
+            break;
+          case "delete":
+            await this.deleteItem(item.data_id);
+            break;
+          case "updateMaxCount":
+            await this.updateMaxCountCloud(args.limit);
+            break;
+          // 여기에 다른 op도 확장 가능
+        }
+
+        this.localDB.clearPendingItem(item.id);
+      } catch (err) {
+        console.warn(`pendingSync 실패: id=${item.id}, op=${item.op}`, err);
+      }
+    }
   }
 
   // 토큰 갱신 메서드
@@ -185,10 +215,11 @@ class CloudDataModule {
   }
 
   // 공유 데이터 중 로컬 데이터 삭제 시 알려줘
-  async localDelete(itemId) {
+  async localDelete(itemId, shared) {
     try {
       const response = await this.axiosInstance.post("/items/localDelete", {
         item_id: itemId,
+        shared: shared,
       });
       return response.data;
     } catch (error) {
