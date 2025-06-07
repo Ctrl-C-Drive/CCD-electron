@@ -56,7 +56,10 @@ const App= () => {
            <div className=" !bg-white/70 px-[3rem]  ">
               {/* search-bar-zone */}
               <div className="">
-                    <SearchBar/>
+                  <SearchBar 
+                    setItemsFromSearchResult={setItemsFromSearchResult}
+                    refetch={refetch}  
+                  />
               </div>
               {/* Tag, 필터 2개 zone */}
               <div className="">

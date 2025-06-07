@@ -34,6 +34,9 @@ const MainView = ({ isTagChecked, items, toggleSelect, addItem, refetch }) => {
     const handleDrop = async (e) => {
       e.preventDefault();
 
+      const path = e.dataTransfer.files[0]?.path; // ✅ Electron 환경이라면 존재
+      console.log("✅ file.path:", path);
+
       const file = e.dataTransfer.files[0];
       if (!file) return;
 
@@ -68,9 +71,10 @@ const MainView = ({ isTagChecked, items, toggleSelect, addItem, refetch }) => {
           ext,
           timestamp,
           tags: [],
+          path
         });
 
-        const result = await window.electronAPI.addDroppedFile(file.path);
+        const result = await window.electronAPI.addDroppedFile(path);
         if (!result.success) {
           console.warn("파일 저장 실패:", result.message || result.error);
         }
@@ -84,9 +88,11 @@ const MainView = ({ isTagChecked, items, toggleSelect, addItem, refetch }) => {
           ext,
           timestamp,
           tags: [],
+          path
         });
 
-        const result = await window.electronAPI.addDroppedFile(file.path);
+        //일단 현재 메인프로세스 코드 기준으로 path만 보냈냈
+        const result = await window.electronAPI.addDroppedFile(path);
         if (!result.success) {
           console.warn("파일 저장 실패:", result.message || result.error);
         }

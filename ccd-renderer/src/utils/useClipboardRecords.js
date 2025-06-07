@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from "uuid";
 const useClipboardRecords = () => {
   const [items, setItems] = useState([]);
 
+  //메인프로세스에서 전체 클립보드 기록 가져오기기
   const refetch = useCallback(async () => {
     try {
       const response = await window.electronAPI.loadClipboardRecords(true);
@@ -66,6 +67,7 @@ const useClipboardRecords = () => {
 
   //  드래그앤드랍으로 받은 아이템 추가
   const addItem = (newItem) => {
+    console.log("neneenwitem: ",newItem);
     const itemId = newItem.itemId ?? uuidv4();
 
     setItems((prev) => {
@@ -84,6 +86,7 @@ const useClipboardRecords = () => {
           timestamp: newItem.timestamp ?? Date.now(),
           fileName: newItem.fileName ?? "unnamed",
           ext: newItem.ext ?? "unknown",
+          path: newItem.path ?? "",
         },
         ...prev,
       ];
