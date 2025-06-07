@@ -7,7 +7,7 @@ import useClipboardRecords from "../../utils/useClipboardRecords"
 import LoginModal from '../Login/LoginModal';
 
 
-const SearchBar =() => {
+const SearchBar =({setItemsFromSearchResult, refetch}) => {
  const options = ['일반 검색', '고급 검색'];
 
  const [isMobileNetv3] = useState(['일반 검색', '고급 검색']);
@@ -15,7 +15,7 @@ const SearchBar =() => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
 const [keyword, setKeyword] = useState("");
-const { items, setItems, refetch } = useClipboardRecords();
+// const { items, setItems, refetch } = useClipboardRecords();
 const [loginInfo, setLoginInfo] = useState({ isLoggedIn: false, userId: "" });
 const [modalState, setModalState] = useState(null); 
 
@@ -24,10 +24,16 @@ const handleSearch = async () => {
   const result = await window.electronAPI.searchKeyword(keyword, model);
   console.log("this is Search model: ", model);
   if (result.sendResult) {
-     setItems(result.sendData); //기록보기 창 리렌더링링
+    console.log("이건 senddata 원본~", result);
+    console.log("이건 send받은 result~: ", result.sendData);
+    setItemsFromSearchResult(result.sendData); //기록보기 창 리렌더링링
+     
   } else {
     console.error("검색 실패", result);
   }
+  if (keyword === "") {
+    refetch(); // 전체 기록 다시 로드
+}
 };
 
     useEffect(() => {
@@ -67,7 +73,7 @@ const handleSearch = async () => {
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === "Enter") handleSearch();
+                if (e.key === "Enter"){ handleSearch(); console.log("엔터감지~성공~")};
               }}
               />
             </div>
