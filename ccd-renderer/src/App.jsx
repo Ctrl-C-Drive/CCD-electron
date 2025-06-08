@@ -26,6 +26,39 @@ import useClipboardRecords from './utils/useClipboardRecords.js'
 const App= () => {
     const [isTagChecked, setIsTagChecked] = useState(true);
     const { items, refetch, toggleSelect, addItem, setItemsFromSearchResult, getSelectedItemIds   } = useClipboardRecords();
+    const [sinceRaw, setSinceRaw] = useState("");
+    const [untilRaw, setUntilRaw] = useState("");
+
+    // 입력 상태 (FilterBar에서 입력하는 값)
+    const [sinceInput, setSinceInput] = useState("");
+    const [untilInput, setUntilInput] = useState("");
+    const [locationInput, setLocationInput] = useState("All");
+
+    // 실제 필터링에 사용할 적용 상태
+    const [sinceFilter, setSinceFilter] = useState("");
+    const [untilFilter, setUntilFilter] = useState("");
+    const [filteredItems, setFilteredItems] = useState([]);
+
+      const [locationFilter, setLocationFilter] = useState("All");
+   useEffect(() => {
+  const filtered = items.filter((item) => {
+    // Location 필터
+    if (locationFilter === "Local" && item.source !== "local") return false;
+    if (locationFilter === "Cloud" && item.source !== "cloud") return false;
+
+    // 날짜 필터
+    const ts = item.timestamp;
+    const date = new Date(ts * 1000);
+    const yyyymmdd = `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, "0")}${String(date.getDate()).padStart(2, "0")}`;
+
+    if (sinceFilter && yyyymmdd < sinceFilter) return false;
+    if (untilFilter && yyyymmdd > untilFilter) return false;
+
+    return true;
+  });
+
+  setFilteredItems(filtered);
+}, [items, sinceFilter, untilFilter, locationFilter]);
 
     // useEffect(() => {
     //   console.log("🧪 electronAPI:", window.electronAPI);
@@ -63,13 +96,31 @@ const App= () => {
               </div>
               {/* Tag, 필터 2개 zone */}
               <div className="">
-                  <FilterBar isTagChecked={isTagChecked} setIsTagChecked={setIsTagChecked}/>
+                  <FilterBar 
+                  isTagChecked={isTagChecked} 
+                  setIsTagChecked={setIsTagChecked}
+
+                  sinceInput={sinceInput}
+                  setSinceInput={setSinceInput}
+                  untilInput={untilInput}
+                  setUntilInput={setUntilInput}
+                  locationInput={locationInput}
+                  setLocationInput={setLocationInput}
+
+                  onApplyFilters={() => {
+                    setSinceFilter(sinceInput);
+                    setUntilFilter(untilInput);
+                    setLocationFilter(locationInput);
+                  }}
+               />
               </div>
               {/* grid-view 데이터 존 */}
               <div className="">
                   <MainView 
                       isTagChecked={isTagChecked}
-                      items={items} 
+                      // items={items} 
+                      items={filteredItems}
+
                       addItem={addItem}  
                        toggleSelect={toggleSelect}  
                   />
