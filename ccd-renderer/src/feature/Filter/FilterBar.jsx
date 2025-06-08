@@ -4,7 +4,20 @@ import { twMerge } from 'tailwind-merge';
 import "../../styles/color.css";
 
 
-const FilterBar = ({isTagChecked, setIsTagChecked}) => {
+const FilterBar = ({isTagChecked, 
+                    setIsTagChecked, 
+                    locationFilter,
+                    setLocationFilter, 
+                    sinceRaw,
+                    setSinceRaw,
+                    untilRaw,
+                    setUntilRaw,
+                    locationInput,
+                    setLocationInput,
+                    onApplyFilters,
+                     sinceInput, setSinceInput,
+                    untilInput, setUntilInput,
+                  }) => {
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [location, setLocation] = useState('ALL');
     const [isLocal, setIsLocal] = useState(false);
@@ -16,11 +29,11 @@ const FilterBar = ({isTagChecked, setIsTagChecked}) => {
     const [month, setMonth] = useState('');
     const [day, setDay] = useState('');
 
-    const [sinceRaw, setSinceRaw] = useState("");
+    // const [sinceRaw, setSinceRaw] = useState("");
     const [sinceDisplay, setSinceDisplay] = useState("");
     const [sinceError, setSinceError] = useState("");
 
-    const [untilRaw, setUntilRaw] = useState("");
+    // const [untilRaw, setUntilRaw] = useState("");
     const [untilDisplay, setUntilDisplay] = useState("");
     const [untilError, setUntilError] = useState("");
 
@@ -46,36 +59,36 @@ const FilterBar = ({isTagChecked, setIsTagChecked}) => {
     }, []);
 
   const handleDateInput = (value, type) => {
-    const digits = value.replace(/\D/g, "").slice(0, 8);
-    let formatted = digits;
-    if (digits.length > 4) {
-      formatted = `${digits.slice(0, 4)}/${digits.slice(4, 6)}`;
-      if (digits.length > 6) {
-        formatted += `/${digits.slice(6, 8)}`;
-      }
+  const digits = value.replace(/\D/g, "").slice(0, 8);
+  let formatted = digits;
+  if (digits.length > 4) {
+    formatted = `${digits.slice(0, 4)}/${digits.slice(4, 6)}`;
+    if (digits.length > 6) {
+      formatted += `/${digits.slice(6, 8)}`;
     }
+  }
 
-    const year = parseInt(digits.slice(0, 4), 10);
-    const month = parseInt(digits.slice(4, 6), 10);
-    const day = parseInt(digits.slice(6, 8), 10);
+  const year = parseInt(digits.slice(0, 4), 10);
+  const month = parseInt(digits.slice(4, 6), 10);
+  const day = parseInt(digits.slice(6, 8), 10);
 
-    const isValidDate =
-      digits.length === 8 &&
-      month >= 1 && month <= 12 &&
-      day >= 1 && day <= 31 &&
-      new Date(`${year}-${month}-${day}`).getDate() === day &&
-      new Date(`${year}-${month}-${day}`).getMonth() + 1 === month;
+  const isValidDate =
+    digits.length === 8 &&
+    month >= 1 && month <= 12 &&
+    day >= 1 && day <= 31 &&
+    new Date(`${year}-${month}-${day}`).getDate() === day &&
+    new Date(`${year}-${month}-${day}`).getMonth() + 1 === month;
 
-    if (type === "since") {
-      setSinceRaw(digits);
-      setSinceDisplay(formatted);
-      setSinceError(isValidDate || digits.length < 8 ? "" : "유효한 날짜를 입력해주세요");
-    } else {
-      setUntilRaw(digits);
-      setUntilDisplay(formatted);
-      setUntilError(isValidDate || digits.length < 8 ? "" : "유효한 날짜를 입력해주세요");
-    }
-  };
+  if (type === "since") {
+    setSinceInput(digits); // ✅ 외부 상태 업데이트
+    setSinceDisplay(formatted);
+    setSinceError(isValidDate || digits.length < 8 ? "" : "유효한 날짜를 입력해주세요");
+  } else {
+    setUntilInput(digits); // ✅ 외부 상태 업데이트
+    setUntilDisplay(formatted);
+    setUntilError(isValidDate || digits.length < 8 ? "" : "유효한 날짜를 입력해주세요");
+  }
+};
 
 
     return (
@@ -142,6 +155,7 @@ const FilterBar = ({isTagChecked, setIsTagChecked}) => {
                     "
                     onClick={() => {
                       setLocation(opt);
+                      setLocationFilter(opt);
                       setIsLocal(opt === 'Local');
                       setIsCloud(opt === 'Cloud');
                       setDropdownOpen(false);
@@ -221,7 +235,8 @@ const FilterBar = ({isTagChecked, setIsTagChecked}) => {
       <button
         className="mt-3 text-center text-[var(--blue-200)] !font-pretendard font-[var(--font-md)] underline"
         onClick={() => {
-          console.log("📅 확인 클릭:", { fileType, since: sinceRaw, until: untilRaw });
+          console.log(" 확인 클릭:", { fileType, since: sinceRaw, until: untilRaw });
+            onApplyFilters(); //필터 적용 요청
           setIsOpenFilterModal(false);
         }}
       >

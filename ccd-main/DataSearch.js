@@ -38,13 +38,16 @@ async function searchData(keyword, model) {
     if (model === "clip") {
       resultItems = await dataRepo.cloudDB.searchByCLIP(keyword);
     }
+    console.log(resultItems);
 
     const sendData = resultItems.map((item) => ({
-      fileType: item.format,
-      source: item.source,
+      fileType: item.type,
+      content: item.content,
+      source: item.shared,
       date: item.created_at,
       imgURL: item.content,
       thumbnailURL: item.thumbnail_path || null,
+      tags: item.tags,
     }));
 
     return { sendResult: true, sendData };

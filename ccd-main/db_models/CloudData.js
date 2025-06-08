@@ -5,6 +5,7 @@ const fs = require("fs");
 const FormData = require("form-data");
 const CCDError = require("../CCDError");
 require("dotenv").config();
+const notifyRenderer = require("../notifyRenderer");
 
 const config = {
   apiBaseURL: process.env.CLOUD_SERVER_URL,
@@ -21,6 +22,7 @@ class CloudDataModule {
     };
     this.isRefreshing = false;
     this.refreshSubscribers = [];
+    this.localDB = require("./LocalData");
 
     // Axios 인스턴스 생성
     this.axiosInstance = axios.create({
@@ -105,6 +107,8 @@ class CloudDataModule {
         access_token: response.data.access_token,
         refresh_token: response.data.refresh_token,
       });
+      await this.processPendingSync();
+      notifyRenderer("clipboard-updated");
       console.log("login finished", response.data);
       return response.data;
     } catch (error) {
@@ -120,6 +124,32 @@ class CloudDataModule {
   // 로그아웃 메서드 추가
   logout() {
     this.tokenStorage = { accessToken: null, refreshToken: null };
+  }
+  async processPendingSync() {
+    const items = this.localDB.getPendingSyncItems();
+
+    for (const item of items) {
+      try {
+        const args = item.op_args ? JSON.parse(item.op_args) : {};
+
+        switch (item.op) {
+          case "localDelete":
+            await this.localDelete(item.data_id, "cloud");
+            break;
+          case "delete":
+            await this.deleteItem(item.data_id);
+            break;
+          case "updateMaxCount":
+            await this.updateMaxCountCloud(args.limit);
+            break;
+          // 여기에 다른 op도 확장 가능
+        }
+
+        this.localDB.clearPendingItem(item.id);
+      } catch (err) {
+        console.warn(`pendingSync 실패: id=${item.id}, op=${item.op}`, err);
+      }
+    }
   }
 
   // 토큰 갱신 메서드
@@ -155,7 +185,12 @@ class CloudDataModule {
   // 클립보드 데이터 조회
   async getClipboardData() {
     try {
-      const response = await this.axiosInstance.get("/clipboard-data");
+      const response = await this.axiosInstance.get("/clipboard-data", {
+        headers: { "Cache-Control": "no-cache" },
+      });
+
+      console.log("CLOUD RESPONSE");
+      console.log(response.data);
       return response.data.map((item) => this.transformItem(item));
     } catch (error) {
       throw CCDError.create("E655", {
@@ -185,10 +220,11 @@ class CloudDataModule {
   }
 
   // 공유 데이터 중 로컬 데이터 삭제 시 알려줘
-  async localDelete(itemId) {
+  async localDelete(itemId, shared) {
     try {
       const response = await this.axiosInstance.post("/items/localDelete", {
         item_id: itemId,
+        shared: shared,
       });
       return response.data;
     } catch (error) {
@@ -269,17 +305,43 @@ class CloudDataModule {
   }
 
   // 아이템 데이터 변환
+  // CloudData.js ── replace transformItem()
   transformItem(item) {
+    const base = this.apiBaseURL;
+
+    const tagNames =
+      item.tags && item.tags.length
+        ? item.tags.map((t) => t.name)
+        : item.tag_names
+        ? item.tag_names.split(",")
+        : [];
+
+    // ② 이미지 전용 절대 경로 생성
+    const makeUrl = (p) => (p && !p.startsWith("http") ? `${base}${p}` : p);
+
+    const imageMeta = item.image_meta
+      ? {
+          ...item.image_meta,
+          originalUrl: makeUrl(item.image_meta.file_path),
+          thumbnailUrl: makeUrl(item.image_meta.thumbnail_path),
+        }
+      : null;
+
+    // ③ content(이미지)도 절대 경로로 치환
+    const content =
+      item.type === "img"
+        ? makeUrl(item.file_path || item.content)
+        : item.content;
+
     return {
-      ...item,
-      imageMeta: item.image_meta
-        ? {
-            ...item.image_meta,
-            originalUrl: `${this.apiBaseURL}${item.image_meta.file_path}`,
-            thumbnailUrl: `${this.apiBaseURL}${item.image_meta.thumbnail_path}`,
-          }
-        : null,
-      tags: item.tags || [],
+      id: item.id,
+      type: item.type,
+      format: item.format,
+      content,
+      created_at: item.created_at,
+      shared: item.shared || "cloud",
+      tags: tagNames,
+      imageMeta,
     };
   }
 

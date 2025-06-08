@@ -24,7 +24,7 @@ const useClipboardRecords = () => {
           timestamp: item.created_at ?? Date.now(),
           fileName: item.fileName ?? "unnamed",
           ext: item.format?.split("/")?.[1] ?? "unknown",
-          source: item.source ?? "local",
+          shared: item.shared ?? "local",
           tags: item.tags ?? [],
         }));
         setItems(formatted);
@@ -68,7 +68,7 @@ const useClipboardRecords = () => {
 
   //  드래그앤드랍으로 받은 아이템 추가
   const addItem = (newItem) => {
-    console.log("neneenwitem: ",newItem);
+    console.log("neneenwitem: ", newItem);
     const itemId = newItem.itemId ?? uuidv4();
 
     setItems((prev) => {
