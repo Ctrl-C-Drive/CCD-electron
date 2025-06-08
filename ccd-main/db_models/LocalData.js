@@ -326,14 +326,15 @@ class LocalDataModule {
           fts.data_id,
           snippet(clipboard_fts, 0, '', '', '...', 16) as snippet,
           bm25(clipboard_fts) as score,
+          c.content,
           c.*,
           im.*,
           (
-            SELECT GROUP_CONCAT(t.tag_id)
+            SELECT GROUP_CONCAT(t.name)
             FROM data_tag dt
             JOIN tag t ON dt.tag_id = t.tag_id
             WHERE dt.data_id = c.id
-          ) as tag_ids
+          ) as tag_infos
         FROM clipboard_fts fts
         JOIN clipboard c ON fts.data_id = c.id
         LEFT JOIN image_meta im ON c.id = im.data_id
@@ -354,9 +355,11 @@ class LocalDataModule {
 
       return stmt.all(searchTerm, limit, offset).map((row) => ({
         ...row,
-        tags: row.tag_ids
-          ? row.tag_ids.split(",").map((tag_id) => ({ tag_id }))
+        content: row.content || row.snippet,
+        tags: row.tag_infos
+          ? row.tag_infos.split(",")
           : [],
+
         // 검색 스니펫 하이라이팅
         highlight: row.snippet,
       }));
@@ -743,12 +746,12 @@ class LocalDataModule {
       ...item,
       imageMeta: imageMeta
         ? {
-            ...imageMeta,
-            originalUrl: `file://${imageMeta.file_path}`,
-            thumbnailUrl: imageMeta.thumbnail_path
-              ? `file://${imageMeta.thumbnail_path}`
-              : null,
-          }
+          ...imageMeta,
+          originalUrl: `file://${imageMeta.file_path}`,
+          thumbnailUrl: imageMeta.thumbnail_path
+            ? `file://${imageMeta.thumbnail_path}`
+            : null,
+        }
         : null,
       tags: tags || [],
     };

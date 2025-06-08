@@ -696,10 +696,22 @@ class DataRepositoryModule extends EventEmitter {
   }
 
   transformItem(item) {
+    let src = undefined;
+
+    if (item.type === "img" && item.thumbnail_path && fs.existsSync(item.thumbnail_path)) {
+      try {
+        const buffer = fs.readFileSync(item.thumbnail_path);
+        src = `data:image/png;base64,${buffer.toString("base64")}`;
+      } catch (err) {
+        console.warn("썸네일 파일 읽기 실패:", err);
+      }
+    }
+
     return {
       id: item.id,
       type: item.type,
       content: item.content,
+      src,
       format: item.format,
       created_at: item.created_at,
       thumbnail_path: item.thumbnail_path || null,

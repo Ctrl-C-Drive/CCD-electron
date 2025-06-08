@@ -1,64 +1,59 @@
-// ccd-main/modules/DataSearchModule.js
 const CCDError = require("./CCDError");
 const dataRepo = require("./db_models/DataRepository");
-/**
- * 검색 요청 처리 함수
- * @param {string} keyword - 사용자 검색어
- * @param {"mobilenet" | "clip"} model - 사용할 AI 모델
- * @returns {Promise<{ sendResult: boolean, sendData: Array } | { success: false, error: object }>}
- */
+const fs = require("fs");
+
+
+function transformForRenderer(item) {
+  return {
+    itemId: item.id || item.itemId,
+    type: item.type === "img" ? "image" : "text",
+    content: item.content || item.snippet || "",
+    src:
+      item.type === "img" && item.thumbnail_path && fs.existsSync(item.thumbnail_path)
+        ? `data:image/png;base64,${fs.readFileSync(item.thumbnail_path).toString("base64")}`
+        : undefined,
+    tags: Array.isArray(item.tags)
+      ? item.tags.map((t) => (typeof t === "string" ? t : t.name))
+      : [],
+    selected: false,
+    source: item.shared || item.source || "local",
+    thumbnail_path: item.thumbnail_path || null,
+  };
+}
+
 async function searchData(keyword, model) {
   try {
     if (!keyword || !model) {
-      const error = CCDError.create("E611", {
+      const err = CCDError.create("E611", {
         module: "DataSearchModule",
         context: "검색 요청 유효성 검사",
         message: "검색어 또는 모델 정보가 없습니다.",
       });
-      console.error(error);
-      return error.toJSON();
+      console.error(err);
+      return err.toJSON();
     }
 
     let resultItems = [];
 
     if (model === "mobilenet") {
       resultItems = await dataRepo.searchItems(keyword, { includeCloud: true });
-      // const [localData, cloudData] = await Promise.all([
-      //   dataRepo.getLocalPreview(),
-      //   dataRepo.getCloudPreview(),
-      // ]);
-
-      // const allItems = dataRepo.mergeItems(localData, cloudData);
-
-      // resultItems = allItems.filter((item) =>
-      //   item.tags?.some((tag) => tag.name?.includes(keyword))
-      // );
     }
 
     if (model === "clip") {
       resultItems = await dataRepo.cloudDB.searchByCLIP(keyword);
     }
-    console.log(resultItems);
 
-    const sendData = resultItems.map((item) => ({
-      fileType: item.type,
-      content: item.content,
-      source: item.shared,
-      date: item.created_at,
-      imgURL: item.content,
-      thumbnailURL: item.thumbnail_path || null,
-      tags: item.tags,
-    }));
+    const transformed = resultItems.map(transformForRenderer);
+    return { success: true, data: transformed };
 
-    return { sendResult: true, sendData };
-  } catch (error) {
+  } catch (err) {
     const wrapped =
-      error instanceof CCDError
-        ? error
+      err instanceof CCDError
+        ? err
         : CCDError.create("E621", {
             module: "DataSearchModule",
             context: "검색 처리 중",
-            details: error,
+            details: err,
           });
 
     console.error("searchData 오류:", wrapped);
