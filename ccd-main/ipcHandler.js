@@ -93,10 +93,10 @@ function setupIPC() {
         err instanceof CCDError
           ? err
           : CCDError.create("E631", {
-            module: "ipcHandler",
-            context: "드래그 파일 처리",
-            details: err.message,
-          });
+              module: "ipcHandler",
+              context: "드래그 파일 처리",
+              details: err.message,
+            });
       console.error(error);
       return error.toJSON();
     }
@@ -137,27 +137,28 @@ function setupIPC() {
   //   }
   // });
   ipcMain.handle("paste-item", async (_, { itemId }) => {
-  try {
-    await pasteById(itemId);  // ← 핵심 연결
-    return { paste: true };
-  } catch (err) {
-    const error =
-      err instanceof CCDError
-        ? err
-        : CCDError.create("E630", {
-            module: "ipcHandler",
-            context: "붙여넣기",
-            details: err.message,
-          });
-    console.error(error);
-    return error.toJSON();
-  }
-});
-
+    try {
+      await pasteById(itemId); // ← 핵심 연결
+      return { paste: true };
+    } catch (err) {
+      const error =
+        err instanceof CCDError
+          ? err
+          : CCDError.create("E630", {
+              module: "ipcHandler",
+              context: "붙여넣기",
+              details: err.message,
+            });
+      console.error(error);
+      return error.toJSON();
+    }
+  });
 
   // 검색어 전송
   ipcMain.handle("search-keyword", async (_, { keyword, model }) => {
-    return await searchData(keyword, model); // 내부에서 CCDError 처리
+    let temp = await searchData(keyword, model); // 내부에서 CCDError 처리
+    console.log(temp);
+    return temp;
   });
 
   // 기록 보기
@@ -176,41 +177,41 @@ function setupIPC() {
     }
   });
 
+  ipcMain.handle(
+    "update-settings",
+    async (_, { localLimit, cloudLimit, retentionDays }) => {
+      console.log(" 받은 원본 값:", { localLimit, cloudLimit, retentionDays });
+      const toInt = (v) => {
+        const n = parseInt(v, 10);
+        return Number.isFinite(n) ? n : null; // '' · undefined · NaN → null
+      };
 
+      const parsedLocal = toInt(localLimit);
+      const parsedCloud = toInt(cloudLimit);
+      const parsedDays = toInt(retentionDays);
 
-  ipcMain.handle("update-settings", async (_, { localLimit, cloudLimit, retentionDays }) => {
-    console.log(" 받은 원본 값:", { localLimit, cloudLimit, retentionDays });
-    const toInt = (v) => {
-      const n = parseInt(v, 10);
-      return Number.isFinite(n) ? n : null;   // '' · undefined · NaN → null
-    };
-
-    const parsedLocal = toInt(localLimit);
-    const parsedCloud = toInt(cloudLimit);
-    const parsedDays = toInt(retentionDays);
-
-    console.log(" 파싱된 값:", {
-      parsedLocal,
-      parsedCloud,
-      parsedDays
-    });
-    // 필수값(로컬 제한·보관기간) 둘 다 빠졌으면 오류
-    if (parsedLocal === null && parsedDays === null) {
-      throw CCDError.create("E611", {
-        module: "ipcHandler",
-        context: "update-settings",
-        message: "숫자값이 필요합니다."
+      console.log(" 파싱된 값:", {
+        parsedLocal,
+        parsedCloud,
+        parsedDays,
       });
+      // 필수값(로컬 제한·보관기간) 둘 다 빠졌으면 오류
+      if (parsedLocal === null && parsedDays === null) {
+        throw CCDError.create("E611", {
+          module: "ipcHandler",
+          context: "update-settings",
+          message: "숫자값이 필요합니다.",
+        });
+      }
+
+      await dataRepo.updateConfig({
+        local_limit: parsedLocal,
+        day_limit: parsedDays,
+      });
+      await dataRepo.updateMaxCountCloud(parsedCloud);
+      return { success: true };
     }
-
-    await dataRepo.updateConfig({
-      local_limit: parsedLocal,
-      day_limit: parsedDays,
-    });
-    await dataRepo.updateMaxCountCloud(parsedCloud);
-    return { success: true };
-  });
-
+  );
 
   // 삭제
   ipcMain.handle("delete-item", async (_, { dataId, deleteOption }) => {

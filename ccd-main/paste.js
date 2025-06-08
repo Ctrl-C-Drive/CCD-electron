@@ -45,7 +45,7 @@ async function pasteById(dataId) {
     if (type === "text") {
       clipboard.writeText(item.content);
     } else if (type === "image") {
-      if (item.source === "cloud" && item.content.startsWith("http")) {
+      if (item.shared === "cloud" && item.content.startsWith("http")) {
         await copyImageFromUrl(item.content);
       } else {
         const image = nativeImage.createFromPath(item.content);

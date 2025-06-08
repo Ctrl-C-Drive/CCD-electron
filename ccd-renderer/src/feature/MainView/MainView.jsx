@@ -71,7 +71,7 @@ const MainView = ({ isTagChecked, items, toggleSelect, addItem, refetch }) => {
           ext,
           timestamp,
           tags: [],
-          path
+          path,
         });
 
         const result = await window.electronAPI.addDroppedFile(path);
@@ -88,7 +88,7 @@ const MainView = ({ isTagChecked, items, toggleSelect, addItem, refetch }) => {
           ext,
           timestamp,
           tags: [],
-          path
+          path,
         });
 
         //일단 현재 메인프로세스 코드 기준으로 path만 보냈냈
@@ -168,7 +168,7 @@ const MainView = ({ isTagChecked, items, toggleSelect, addItem, refetch }) => {
                 src={item.src}
                 alt="dropped-img"
                 className="w-full h-[9.2rem] object-cover"
-                onClick={() => handlePaste(item.itemId) }
+                onClick={() => handlePaste(item.itemId)}
               />
             )}
             {item.type === "text" && item.content && (
@@ -195,14 +195,14 @@ const MainView = ({ isTagChecked, items, toggleSelect, addItem, refetch }) => {
               />
             </div>
             <div className="absolute bottom-1 right-1 flex gap-1 items-end">
-              {(item.source === "both" || item.source === "cloud") && (
+              {(item.shared === "both" || item.shared === "cloud") && (
                 <img
                   src="cloud.svg"
                   alt="cloud"
                   className="w-[1.5rem] h-[1.5rem]"
                 />
               )}
-              {(item.source === "both" || item.source === "local") && (
+              {(item.shared === "both" || item.shared === "local") && (
                 <img
                   src="folder.svg"
                   alt="folder"
@@ -229,7 +229,6 @@ const MainView = ({ isTagChecked, items, toggleSelect, addItem, refetch }) => {
                     <span key={idx}># {t.tag}</span>
                   )
                 )
-
               ) : (
                 <span># 태그 없음</span>
               )}

@@ -5,9 +5,8 @@ const fs = require("fs-extra");
 const crypto = require("crypto");
 const CCDError = require("../CCDError");
 
-
 const documentsDir = app.getPath("documents");
-const imageDir = path.join(documentsDir, "CCD", "clipboard_images");
+const imageDir = path.join(documentsDir, "CCD", "original");
 fs.ensureDirSync(imageDir);
 
 let lastData = null;
@@ -22,7 +21,7 @@ function saveImageToDisk(nativeImage, id) {
     fs.writeFileSync(filePath, buffer);
     return filePath;
   } catch (err) {
-    const error =  CCDError.create("E670", {
+    const error = CCDError.create("E670", {
       module: "monitor",
       context: "이미지 저장",
       message: "클립보드 이미지를 디스크에 저장하지 못했습니다.",
