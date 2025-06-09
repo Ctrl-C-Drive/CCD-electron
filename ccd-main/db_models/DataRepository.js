@@ -695,13 +695,15 @@ class DataRepositoryModule extends EventEmitter {
   transformItem(item) {
     let src = undefined;
 
-    if (item.type === "img" && item.thumbnail_path && fs.existsSync(item.thumbnail_path)) {
+    if (
+      item.type === "img" &&
+      item.thumbnail_path &&
+      fs.existsSync(item.thumbnail_path)
+    ) {
       try {
         const buffer = fs.readFileSync(item.thumbnail_path);
         thumbnail_path = `data:image/png;base64,${buffer.toString("base64")}`;
-      } catch (err) {
-        console.warn("썸네일 파일 읽기 실패:", err);
-      }
+      } catch (err) {}
     }
 
     return {
@@ -712,28 +714,32 @@ class DataRepositoryModule extends EventEmitter {
       format: item.format,
       created_at: item.created_at,
       thumbnail_path:
-      item.type === "img" && item.thumbnail_path && fs.existsSync(item.thumbnail_path)
-        ? `data:image/png;base64,${fs.readFileSync(item.thumbnail_path).toString("base64")}`
-        : undefined,
+        item.type === "img" &&
+        item.thumbnail_path &&
+        fs.existsSync(item.thumbnail_path)
+          ? `data:image/png;base64,${fs
+              .readFileSync(item.thumbnail_path)
+              .toString("base64")}`
+          : undefined,
       tags: item.tags || [],
       shared: item.shared || "local",
       score: item.score || 0,
     };
 
-  //     return {
-  //   itemId: item.id || item.itemId,
-  //   type: item.type === "img" ? "image" : "text",
-  //   content: item.content || item.snippet || "",
-  //   thumbnail_path:
-  //     item.type === "img" && item.thumbnail_path && fs.existsSync(item.thumbnail_path)
-  //       ? `data:image/png;base64,${fs.readFileSync(item.thumbnail_path).toString("base64")}`
-  //       : undefined,
-  //   tags: Array.isArray(item.tags)
-  //     ? item.tags.map((t) => (typeof t === "string" ? t : t.name))
-  //     : [],
-  //   selected: false,
-  //   source: item.shared || item.source || "local",
-  // };
+    //     return {
+    //   itemId: item.id || item.itemId,
+    //   type: item.type === "img" ? "image" : "text",
+    //   content: item.content || item.snippet || "",
+    //   thumbnail_path:
+    //     item.type === "img" && item.thumbnail_path && fs.existsSync(item.thumbnail_path)
+    //       ? `data:image/png;base64,${fs.readFileSync(item.thumbnail_path).toString("base64")}`
+    //       : undefined,
+    //   tags: Array.isArray(item.tags)
+    //     ? item.tags.map((t) => (typeof t === "string" ? t : t.name))
+    //     : [],
+    //   selected: false,
+    //   source: item.shared || item.source || "local",
+    // };
   }
 
   // 클라우드 → 로컬 다운로드
@@ -852,17 +858,12 @@ class DataRepositoryModule extends EventEmitter {
   //선택 업로드
   async uploadSelectedItems(itemIds) {
     console.log("uploadSelectedItems 호출됨");
-    console.log(itemIds);
 
     const localItems = await this.getLocalPreview();
-    console.log(
-      "localItems:",
-      localItems.map((i) => ({ id: i.id, shared: i.shared }))
-    );
+
     const targets = localItems.filter(
       (item) => item.shared === "local" && itemIds.includes(item.id)
     );
-    console.log(targets);
     const result = {
       successCount: 0,
       failCount: 0,
@@ -951,7 +952,6 @@ class DataRepositoryModule extends EventEmitter {
   //선택 다운로드
   async downloadSelectedItems(itemIds) {
     try {
-      console.log(itemIds);
       const cloudItems = await this.getCloudPreview();
       const localItems = await this.getLocalPreview();
       const localIds = new Set(localItems.map((item) => item.id));

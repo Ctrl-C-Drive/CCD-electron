@@ -189,8 +189,6 @@ class CloudDataModule {
         headers: { "Cache-Control": "no-cache" },
       });
 
-      console.log("CLOUD RESPONSE");
-      console.log(response.data);
       return response.data.map((item) => this.transformItem(item));
     } catch (error) {
       throw CCDError.create("E655", {
