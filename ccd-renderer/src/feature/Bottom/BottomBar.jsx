@@ -72,7 +72,7 @@ const Toast = ({ message, type }) => {
               try {
                 const result = await window.electronAPI.uploadSelectedItems(selectedIds);
                 console.log("자자자 ~~~ ",result);
-                if (result.uploadResult) {
+               if (result.successCount > 0) {
                   showToast('업로드 성공!', 'info');
                   console.log("성공!")
                 } else {
