@@ -161,6 +161,24 @@ function setupIPC() {
     return temp;
   });
 
+// 로그아웃
+ipcMain.handle("user-logout", async () => {
+  try {
+    isLogin = false;
+    await dataRepo.logout();
+    return { success: true, message: "로그아웃 완료" };
+  } catch (err) {
+    const error = CCDError.create("E610", {
+      module: "ipcHandler",
+      context: "로그아웃 처리",
+      details: err.message,
+    });
+    console.error(error);
+    return error.toJSON();
+  }
+});
+
+
   // 기록 보기
   ipcMain.handle("load-clipboard-records", async (_, isLogin) => {
     try {
