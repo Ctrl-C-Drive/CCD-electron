@@ -14,6 +14,10 @@ let intervalId = null;
 let isProcessingImage = false;
 let lastImageHash = null;
 
+let skipCopyContent = new Set();
+let skipContentType = null;
+let skipTimestamp = 0;
+
 function saveImageToDisk(nativeImage, id) {
   try {
     const filePath = path.join(imageDir, `${id}.png`);
@@ -46,9 +50,19 @@ function start(onData) {
 
   intervalId = setInterval(() => {
     try {
+      const now = Date.now();
       const text = clipboard.readText();
       let contentType, content;
       if (text && text !== lastData) {
+        if (
+          skipContentType === "text" &&
+          skipCopyContent.has(text) &&
+          now - skipTimestamp < 3000
+        ) {
+          // 복사 예외 처리: 기록에 반영하지 않음
+          lastData = text;
+          return;
+        }
         contentType = "text";
         content = text;
         lastData = content;
@@ -69,6 +83,15 @@ function start(onData) {
       if (!image.isEmpty() && !isProcessingImage) {
         const currentHash = getImageHash(image);
         if (currentHash === lastImageHash) return;
+        if (
+          skipContentType === "image" &&
+          skipCopyContent.has(currentHash) &&
+          now - skipTimestamp < 3000
+        ) {
+          // 복사 예외 처리: 기록에 반영하지 않음
+          lastImageHash = currentHash;
+          return;
+        }
 
         lastImageHash = currentHash;
         isProcessingImage = true;
@@ -108,4 +131,13 @@ function stop() {
   }
 }
 
-module.exports = { start, stop };
+function skipNextCopy(content, type) {
+  skipCopyContent.add(content);
+  skipContentType = type;
+  skipTimestamp = Date.now();
+  setTimeout(() => {
+    skipCopyContent.delete(content);
+  }, 3000); // 3초간만 예외 처리
+}
+
+module.exports = { start, stop, skipNextCopy };
