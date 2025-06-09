@@ -160,25 +160,24 @@ const handleLogout = async () => {
   return (
     <div className="relative inline-block">
       {/* 아바타 */}
-      <div
-        className="ml-3 w-[4.0rem] h-[4.0rem] border-2 border-[var(--blue-200)] rounded-full cursor-pointer"
+      <img
+        src="/avatar.svg" 
+        alt="User Avatar"
+        className="ml-3 w-[5.3rem] h-[5.3rem]  cursor-pointer object-cover"
         onClick={() => {
           // 모달이 꺼진 상태일 때만 동작
           setModalState((prev) => {
             if (prev !== null) return null; // toggle off
 
-            // 로그인 상태면 사용자 ID 화면
             if (loginInfo.isLoggedIn && loginInfo.userId) {
               return "loggedIn";
             }
 
-            // 아니면 로그인/회원가입 메뉴
             return "menu";
           });
         }}
+    />
 
-
-      />
 
       {/* 모달 영역 */}
       {modalState !== null && (
@@ -363,12 +362,14 @@ const handleLogout = async () => {
                   justify-center
                   px-auto     
                   w-auto   
-                  pb-[0.8rem]        
+                  w-[1.]
+                  pb-[0.8rem]    
+                  h-auto
                 ">
                   User
               </div>
               <hr className="mb-2" />
-              <div className="py-[1.9rem] pl-[3.1rem]">
+              <div className="py-[1.9rem] pl-[2rem]">
                 <div 
                   className="
                       text-[var(--blue-200)]
@@ -377,6 +378,7 @@ const handleLogout = async () => {
                       not-italic
                       font-[var(--font-md)]
                       leading-normal
+                      pb-[0.4rem]
                 ">
                   ID
                 </div>
@@ -393,13 +395,16 @@ const handleLogout = async () => {
                 >    
                     {loginInfo.userId}
                 </div>
-                    <div
-                      className="text-center text-[1.1rem] font-[var(--font-rg)] leading-normal text-[var(--red)] underline cursor-pointer"
-                      onClick={handleLogout}
-                    >
-                      Logout
-                    </div>
+
               </div>
+                <div
+                  className="flex justify-center text-center 
+                             text-[1.1rem] font-[var(--font-rg)] leading-normal 
+                             text-[var(--red)] underline cursor-pointer pb-[1.6rem]"
+                  onClick={handleLogout}
+                 >
+                   Logout
+                </div>
             </>
           )}
 

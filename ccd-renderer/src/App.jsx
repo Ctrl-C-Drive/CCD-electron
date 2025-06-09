@@ -43,8 +43,8 @@ const App= () => {
    useEffect(() => {
   const filtered = items.filter((item) => {
     // Location 필터
-    if (locationFilter === "Local" && item.source !== "local") return false;
-    if (locationFilter === "Cloud" && item.source !== "cloud") return false;
+    if (locationFilter === "Local" && item.shared !== "local") return false;
+    if (locationFilter === "Cloud" && item.shared !== "cloud") return false;
 
     // 날짜 필터
     const ts = item.timestamp;
@@ -106,7 +106,7 @@ const App= () => {
                   setUntilInput={setUntilInput}
                   locationInput={locationInput}
                   setLocationInput={setLocationInput}
-
+                  setLocationFilter={setLocationFilter}
                   onApplyFilters={() => {
                     setSinceFilter(sinceInput);
                     setUntilFilter(untilInput);

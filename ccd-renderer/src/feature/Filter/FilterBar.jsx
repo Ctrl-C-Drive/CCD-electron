@@ -84,7 +84,7 @@ const FilterBar = ({isTagChecked,
     setSinceDisplay(formatted);
     setSinceError(isValidDate || digits.length < 8 ? "" : "유효한 날짜를 입력해주세요");
   } else {
-    setUntilInput(digits); // ✅ 외부 상태 업데이트
+    setUntilInput(digits); 
     setUntilDisplay(formatted);
     setUntilError(isValidDate || digits.length < 8 ? "" : "유효한 날짜를 입력해주세요");
   }
