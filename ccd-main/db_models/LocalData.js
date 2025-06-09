@@ -527,6 +527,20 @@ class LocalDataModule {
       });
     }
   }
+  updateClipboardContent(id, newContent) {
+    try {
+      const stmt = this.db.prepare(`
+        UPDATE clipboard SET content = ? WHERE id = ?
+      `);
+      stmt.run(newContent, id);
+    } catch (err) {
+      throw CCDError.create("E610", {
+        module: "LocalData",
+        context: "클립보드 content 업데이트 실패",
+        message: err.message || err,
+      });
+    }
+  }
 
   // 이미지 메타 삽입
   insertImageMeta(meta) {
@@ -541,7 +555,7 @@ class LocalDataModule {
       throw CCDError.create("E610", {
         module: "LocalData",
         context: "이미지 메타 삽입 실패",
-        message: "insertimagemeta",
+        message: error,
       });
     }
   }
