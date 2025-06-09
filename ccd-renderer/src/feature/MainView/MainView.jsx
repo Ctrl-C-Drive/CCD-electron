@@ -163,9 +163,9 @@ const MainView = ({ isTagChecked, items, toggleSelect, addItem, refetch }) => {
           }}
         >
           <div className="relative  h-[9.2rem] bg-blue-100">
-            {item.type === "image" && item.src && (
+            {item.type === "image" && item.thumbnail_path && (
               <img
-                src={item.src}
+                src={item.thumbnail_path}
                 alt="dropped-img"
                 className="w-full h-[9.2rem] object-cover"
                 onClick={() => handlePaste(item.itemId)}
