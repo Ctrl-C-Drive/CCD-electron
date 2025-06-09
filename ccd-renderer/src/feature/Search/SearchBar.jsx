@@ -23,10 +23,10 @@ const handleSearch = async () => {
   const model = currentSelection === "일반 검색" ? "mobilenet" : "clip";
   const result = await window.electronAPI.searchKeyword(keyword, model);
   console.log("this is Search model: ", model);
-  if (result.sendResult) {
+  if (result.success) {
     console.log("이건 senddata 원본~", result);
-    console.log("이건 send받은 result~: ", result.sendData);
-    setItemsFromSearchResult(result.sendData); //기록보기 창 리렌더링링
+    console.log("이건 send받은 result~: ", result.data);
+    setItemsFromSearchResult(result.data); //기록보기 창 리렌더링
      
   } else {
     console.error("검색 실패", result);
