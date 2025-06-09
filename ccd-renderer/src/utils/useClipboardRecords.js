@@ -93,14 +93,31 @@ const useClipboardRecords = () => {
       ];
     });
   };
-  const setItemsFromSearchResult = (newItems) => {
-    const formatted = newItems.map((item) => ({
-      ...item,
-      selected: false,
-      itemId: item.id ?? uuidv4(),
-    }));
-    setItems(formatted);
-  };
+const setItemsFromSearchResult = (newItems) => {
+  const formatted = newItems.map((item) => ({
+    ...item,
+    selected: false,
+    itemId: item.itemId ?? item.id ?? uuidv4(),
+    type:
+      item.type === "txt"
+        ? "text"
+        : item.type === "img"
+        ? "image"
+        : item.type,
+    src: item.type === "img" ? item.content : undefined,
+    content: item.type === "txt" ? item.content : undefined,
+    timestamp: item.created_at ?? Date.now(),
+    fileName: item.fileName ?? "unnamed",
+    ext: item.format?.split("/")?.[1] ?? "unknown",
+    shared: item.shared ?? "local",
+    tags: item.tags ?? [],
+  }));
+  setItems(formatted);
+};
+
+
+
+
   const getSelectedItemIds = useCallback(() => {
     return items.filter((item) => item.selected).map((item) => item.itemId);
   }, [items]);
