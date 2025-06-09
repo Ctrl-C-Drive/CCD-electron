@@ -372,12 +372,13 @@ class DataRepositoryModule extends EventEmitter {
     try {
       let sharedStatus = null;
       sharedStatus = this.localDB.getSharedStatus(itemId);
+      console.log("sharedStatus", sharedStatus);
       if (target === "local" || target === "both") {
         this.localDB.deleteClipboardItem(itemId);
 
-        if (this.isCloudLoggedIn()) {
+        if (this.isCloudLoggedIn() && sharedStatus === "both") {
           await this.cloudDB.localDelete(itemId, "cloud");
-        } else {
+        } else if (!this.isCloudLoggedIn() && sharedStatus === "both") {
           this.localDB.enqueuePendingSync({
             op: "localDelete",
             data_id: itemId,

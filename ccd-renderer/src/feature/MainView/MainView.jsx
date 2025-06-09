@@ -252,7 +252,7 @@ const MainView = ({ isTagChecked, items, toggleSelect, addItem, refetch }) => {
             >
               <div
                 className="py-2 hover:bg-blue-50 cursor-pointer"
-                onClick={() => handleDelete(item.itemId, "all")}
+                onClick={() => handleDelete(item.itemId, "both")}
               >
                 모두 삭제
               </div>
