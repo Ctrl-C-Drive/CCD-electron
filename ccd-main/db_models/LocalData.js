@@ -205,7 +205,7 @@ class LocalDataModule {
           content,
           tags,
           format,
-          tokenize = 'unicode61'
+          tokenize = 'trigram'
         );
       `);
 
@@ -338,8 +338,28 @@ class LocalDataModule {
         ? `"${cleanQuery}"`
         : `${cleanQuery}*`;
 
-      const rows = stmt.all(searchTerm, limit, offset);
-      return rows.map((row) => row.data_id);
+      const ftsRows = stmt.all(searchTerm, limit, offset);
+      const ftsIds = ftsRows.map((r) => r.data_id);
+
+      const likePattern = `%${cleanQuery}%`;
+      const fallbackStmt = this.db.prepare(`
+          SELECT DISTINCT c.id
+          FROM clipboard c
+          LEFT JOIN data_tag dt ON c.id = dt.data_id
+          LEFT JOIN tag t ON dt.tag_id = t.tag_id
+          WHERE c.content LIKE ? OR t.name LIKE ?
+          LIMIT ? OFFSET ?;
+        `);
+      const likeRows = fallbackStmt.all(
+        likePattern,
+        likePattern,
+        limit,
+        offset
+      );
+      const likeIds = likeRows.map((r) => r.id);
+
+      const allIds = Array.from(new Set([...ftsIds, ...likeIds]));
+      return allIds;
     } catch (err) {
       console.error("로컬 검색 실패:", err);
       return [];
