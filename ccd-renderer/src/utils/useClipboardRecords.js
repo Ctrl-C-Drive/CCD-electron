@@ -97,7 +97,7 @@ const useClipboardRecords = () => {
     const formatted = newItems.map((item) => ({
       ...item,
       selected: false,
-      itemId: item.itemId ?? uuidv4(),
+      itemId: item.id ?? uuidv4(),
     }));
     setItems(formatted);
   };

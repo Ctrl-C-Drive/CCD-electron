@@ -3,23 +3,22 @@ const dataRepo = require("./db_models/DataRepository");
 const fs = require("fs");
 
 
-function transformForRenderer(item) {
-  return {
-    itemId: item.id || item.itemId,
-    type: item.type === "img" ? "image" : "text",
-    content: item.content || item.snippet || "",
-    src:
-      item.type === "img" && item.thumbnail_path && fs.existsSync(item.thumbnail_path)
-        ? `data:image/png;base64,${fs.readFileSync(item.thumbnail_path).toString("base64")}`
-        : undefined,
-    tags: Array.isArray(item.tags)
-      ? item.tags.map((t) => (typeof t === "string" ? t : t.name))
-      : [],
-    selected: false,
-    source: item.shared || item.source || "local",
-    thumbnail_path: item.thumbnail_path || null,
-  };
-}
+// function transformForRenderer(item) {
+//   return {
+//     itemId: item.id || item.itemId,
+//     type: item.type === "img" ? "image" : "text",
+//     content: item.content || item.snippet || "",
+//     thumbnail_path:
+//       item.type === "img" && item.thumbnail_path && fs.existsSync(item.thumbnail_path)
+//         ? `data:image/png;base64,${fs.readFileSync(item.thumbnail_path).toString("base64")}`
+//         : undefined,
+//     tags: Array.isArray(item.tags)
+//       ? item.tags.map((t) => (typeof t === "string" ? t : t.name))
+//       : [],
+//     selected: false,
+//     source: item.shared || item.source || "local",
+//   };
+// }
 
 async function searchData(keyword, model) {
   try {
@@ -43,8 +42,8 @@ async function searchData(keyword, model) {
       resultItems = await dataRepo.cloudDB.searchByCLIP(keyword);
     }
 
-    const transformed = resultItems.map(transformForRenderer);
-    return { success: true, data: transformed };
+ //   const transformed = resultItems.map(transformForRenderer);
+    return { success: true, data: resultItems };
 
   } catch (err) {
     const wrapped =

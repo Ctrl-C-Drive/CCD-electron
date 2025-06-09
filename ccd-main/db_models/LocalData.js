@@ -380,6 +380,7 @@ class LocalDataModule {
     `);
     return stmt.all();
   }
+
   enqueuePendingSync({ op, data_id = null, op_args = {} }) {
     this.db
       .prepare(
@@ -488,6 +489,7 @@ class LocalDataModule {
     const stmt = this.db.prepare(`DELETE FROM ${table} WHERE ${conditions}`);
     stmt.run(...keys.map((k) => whereClause[k]));
   }
+  
   //클립보드 항목 삭제
   deleteClipboardItem(id) {
     try {

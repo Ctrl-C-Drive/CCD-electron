@@ -701,7 +701,7 @@ class DataRepositoryModule extends EventEmitter {
     if (item.type === "img" && item.thumbnail_path && fs.existsSync(item.thumbnail_path)) {
       try {
         const buffer = fs.readFileSync(item.thumbnail_path);
-        src = `data:image/png;base64,${buffer.toString("base64")}`;
+        thumbnail_path = `data:image/png;base64,${buffer.toString("base64")}`;
       } catch (err) {
         console.warn("썸네일 파일 읽기 실패:", err);
       }
@@ -714,11 +714,29 @@ class DataRepositoryModule extends EventEmitter {
       src,
       format: item.format,
       created_at: item.created_at,
-      thumbnail_path: item.thumbnail_path || null,
+      thumbnail_path:
+      item.type === "img" && item.thumbnail_path && fs.existsSync(item.thumbnail_path)
+        ? `data:image/png;base64,${fs.readFileSync(item.thumbnail_path).toString("base64")}`
+        : undefined,
       tags: item.tags || [],
       shared: item.shared || "local",
       score: item.score || 0,
     };
+
+  //     return {
+  //   itemId: item.id || item.itemId,
+  //   type: item.type === "img" ? "image" : "text",
+  //   content: item.content || item.snippet || "",
+  //   thumbnail_path:
+  //     item.type === "img" && item.thumbnail_path && fs.existsSync(item.thumbnail_path)
+  //       ? `data:image/png;base64,${fs.readFileSync(item.thumbnail_path).toString("base64")}`
+  //       : undefined,
+  //   tags: Array.isArray(item.tags)
+  //     ? item.tags.map((t) => (typeof t === "string" ? t : t.name))
+  //     : [],
+  //   selected: false,
+  //   source: item.shared || item.source || "local",
+  // };
   }
 
   // 클라우드 → 로컬 다운로드
