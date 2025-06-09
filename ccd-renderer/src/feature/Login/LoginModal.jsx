@@ -104,6 +104,15 @@ useEffect(() => {
     setIsSubmitted(false);
   }
 };
+const handleLogout = async () => {
+  try {
+    await window.electronAPI.logoutUser(); // payload.js에서 user-logout 호출
+    setLoginInfo({ isLoggedIn: false, userId: null }); // 상태 초기화
+    setModalState(null); // 모달 닫기
+  } catch (err) {
+    console.error("로그아웃 중 오류 발생:", err);
+  }
+};
 
 
   const handleJoin = async() => {
@@ -384,6 +393,12 @@ useEffect(() => {
                 >    
                     {loginInfo.userId}
                 </div>
+                    <div
+                      className="text-center text-[1.1rem] font-[var(--font-rg)] leading-normal text-[var(--red)] underline cursor-pointer"
+                      onClick={handleLogout}
+                    >
+                      Logout
+                    </div>
               </div>
             </>
           )}
