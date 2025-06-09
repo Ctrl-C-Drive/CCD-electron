@@ -4,16 +4,19 @@ const { initClipboardModule } = require("./clipboard");
 const { registerUser } = require("./auth/authService");
 const { setupIPC } = require("./ipcHandler");
 const { loadModel } = require("./imageTagger");
+const { globalShortcut, Tray, Menu } = require("electron");
 
 const path = require("path");
 
 const isDev = !app.isPackaged;
+let win;
 
 const createWindow = () => {
-  const win = new BrowserWindow({
+  win = new BrowserWindow({
     width: 617,
     height: 646,
     resizable: false,
+    show: false,
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
@@ -31,6 +34,13 @@ const createWindow = () => {
     );
     win.loadFile(rendererPath);
   }
+
+  win.on("close", (e) => {
+    e.preventDefault();
+    win.hide();
+  });
+
+  return win;
 };
 
 setupIPC();
@@ -44,6 +54,15 @@ app.whenReady().then(async () => {
 
   initClipboardModule();
   createWindow();
+
+  globalShortcut.register("CommandOrControl+Shift+C", () => {
+    if (win.isVisible()) {
+      win.hide();
+    } else {
+      win.show();
+      win.focus();
+    }
+  });
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {
