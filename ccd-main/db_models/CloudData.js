@@ -23,7 +23,7 @@ class CloudDataModule {
     this.isRefreshing = false;
     this.refreshSubscribers = [];
     this.localDB = require("./LocalData");
-
+    this.dataRepo = require("./DataRepository");
     // Axios 인스턴스 생성
     this.axiosInstance = axios.create({
       baseURL: this.apiBaseURL,
@@ -133,9 +133,6 @@ class CloudDataModule {
         const args = item.op_args ? JSON.parse(item.op_args) : {};
 
         switch (item.op) {
-          case "localDelete":
-            await this.localDelete(item.data_id, "cloud");
-            break;
           case "delete":
             await this.deleteItem(item.data_id);
             break;
@@ -189,8 +186,6 @@ class CloudDataModule {
         headers: { "Cache-Control": "no-cache" },
       });
 
-      console.log("CLOUD RESPONSE");
-      console.log(response.data);
       return response.data.map((item) => this.transformItem(item));
     } catch (error) {
       throw CCDError.create("E655", {
@@ -203,6 +198,7 @@ class CloudDataModule {
   }
   // 클립보드 텍스트 생성
   async createTextItem(itemData) {
+    console.log(itemData);
     try {
       const payload = {
         ...itemData,
@@ -214,24 +210,6 @@ class CloudDataModule {
         module: "CloudData",
         context: "텍스트 아이템 생성",
         message: error.detail,
-        details: error.response?.data,
-      });
-    }
-  }
-
-  // 공유 데이터 중 로컬 데이터 삭제 시 알려줘
-  async localDelete(itemId, shared) {
-    try {
-      const response = await this.axiosInstance.post("/items/localDelete", {
-        item_id: itemId,
-        shared: shared,
-      });
-      return response.data;
-    } catch (error) {
-      throw CCDError.create("E650", {
-        module: "CloudData",
-        context: "로컬 삭제",
-        message: "삭제 처리 실패",
         details: error.response?.data,
       });
     }
@@ -332,16 +310,15 @@ class CloudDataModule {
       item.type === "img"
         ? makeUrl(item.file_path || item.content)
         : item.content;
-
     return {
       id: item.id,
       type: item.type,
       format: item.format,
       content,
       created_at: item.created_at,
-      shared: item.shared || "cloud",
       tags: tagNames,
       imageMeta,
+      thumbnail_path: imageMeta?.thumbnailUrl || null,
     };
   }
 
@@ -388,14 +365,16 @@ class CloudDataModule {
       const response = await this.axiosInstance.post("/search-text", {
         query: keyword,
       });
+      console.log(response.data);
 
-      return response.data.map((item) => this.transformItem(item));
+      const ids = response.data.ids || [];
+      return ids;
     } catch (error) {
       throw CCDError.create("E621", {
         module: "CloudData",
         context: "CLIP 검색",
         message: "CLIP 검색 실패",
-        details: error.response?.data,
+        details: error.response?.data || error.message || error.toString(),
       });
     }
   }

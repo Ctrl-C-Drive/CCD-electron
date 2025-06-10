@@ -130,7 +130,6 @@ class LocalDataModule {
         format TEXT NOT NULL,
         content TEXT NOT NULL,
         created_at INTEGER NOT NULL,
-        shared TEXT NOT NULL CHECK (shared IN ('cloud', 'local', 'both')) DEFAULT ('local'),
         CONSTRAINT clipboard_pk PRIMARY KEY (id),
         check(type IN ('img', 'txt'))
       );
@@ -322,27 +321,13 @@ class LocalDataModule {
 
       // FTS5 검색 쿼리 생성
       const ftsQuery = `
-        SELECT 
-          fts.data_id,
-          snippet(clipboard_fts, 0, '', '', '...', 16) as snippet,
-          bm25(clipboard_fts) as score,
-          c.content,
-          c.*,
-          im.*,
-          (
-            SELECT GROUP_CONCAT(t.name)
-            FROM data_tag dt
-            JOIN tag t ON dt.tag_id = t.tag_id
-            WHERE dt.data_id = c.id
-          ) as tag_infos
-        FROM clipboard_fts fts
-        JOIN clipboard c ON fts.data_id = c.id
-        LEFT JOIN image_meta im ON c.id = im.data_id
-        WHERE clipboard_fts MATCH ?
-        ORDER BY score DESC
-        LIMIT ? OFFSET ?
-
-      `;
+      SELECT fts.data_id
+      FROM clipboard_fts fts
+      JOIN clipboard c ON fts.data_id = c.id
+      WHERE clipboard_fts MATCH ?
+      ORDER BY bm25(clipboard_fts) DESC
+      LIMIT ? OFFSET ?
+    `;
 
       const stmt = this.db.prepare(ftsQuery);
       const limit = options.limit || 50;
@@ -353,16 +338,28 @@ class LocalDataModule {
         ? `"${cleanQuery}"`
         : `${cleanQuery}*`;
 
-      return stmt.all(searchTerm, limit, offset).map((row) => ({
-        ...row,
-        content: row.content || row.snippet,
-        tags: row.tag_infos
-          ? row.tag_infos.split(",")
-          : [],
+      const ftsRows = stmt.all(searchTerm, limit, offset);
+      const ftsIds = ftsRows.map((r) => r.data_id);
 
-        // 검색 스니펫 하이라이팅
-        highlight: row.snippet,
-      }));
+      const likePattern = `%${cleanQuery}%`;
+      const fallbackStmt = this.db.prepare(`
+          SELECT DISTINCT c.id
+          FROM clipboard c
+          LEFT JOIN data_tag dt ON c.id = dt.data_id
+          LEFT JOIN tag t ON dt.tag_id = t.tag_id
+          WHERE c.content LIKE ? OR t.name LIKE ?
+          LIMIT ? OFFSET ?;
+        `);
+      const likeRows = fallbackStmt.all(
+        likePattern,
+        likePattern,
+        limit,
+        offset
+      );
+      const likeIds = likeRows.map((r) => r.id);
+
+      const allIds = Array.from(new Set([...ftsIds, ...likeIds]));
+      return allIds;
     } catch (err) {
       console.error("로컬 검색 실패:", err);
       return [];
@@ -471,8 +468,8 @@ class LocalDataModule {
         : item.created_at;
     try {
       const stmt = this.db.prepare(`
-        INSERT INTO clipboard (id, type, format, content, created_at, shared)
-        VALUES (@id, @type, @format, @content, @created_at, @shared)
+        INSERT INTO clipboard (id, type, format, content, created_at)
+        VALUES (@id, @type, @format, @content, @created_at)
       `);
       stmt.run(item);
     } catch (error) {
@@ -489,7 +486,7 @@ class LocalDataModule {
     const stmt = this.db.prepare(`DELETE FROM ${table} WHERE ${conditions}`);
     stmt.run(...keys.map((k) => whereClause[k]));
   }
-  
+
   //클립보드 항목 삭제
   deleteClipboardItem(id) {
     try {
@@ -544,7 +541,6 @@ class LocalDataModule {
 
   // 이미지 메타 삽입
   insertImageMeta(meta) {
-    console.log(meta.data_id);
     try {
       const stmt = this.db.prepare(`
         INSERT INTO image_meta (data_id, width, height, file_size, file_path, thumbnail_path)
@@ -664,15 +660,6 @@ class LocalDataModule {
       `
           )
           .run(newId, oldId);
-
-        // 연결된 data_tag도 ID 변경
-        this.db
-          .prepare(
-            `
-        UPDATE data_tag SET tag_id = ? WHERE tag_id = ?
-      `
-          )
-          .run(newId, oldId);
       });
 
       tx(oldId, newId);
@@ -762,30 +749,15 @@ class LocalDataModule {
       ...item,
       imageMeta: imageMeta
         ? {
-          ...imageMeta,
-          originalUrl: `file://${imageMeta.file_path}`,
-          thumbnailUrl: imageMeta.thumbnail_path
-            ? `file://${imageMeta.thumbnail_path}`
-            : null,
-        }
+            ...imageMeta,
+            originalUrl: `file://${imageMeta.file_path}`,
+            thumbnailUrl: imageMeta.thumbnail_path
+              ? `file://${imageMeta.thumbnail_path}`
+              : null,
+          }
         : null,
       tags: tags || [],
     };
-  }
-  // 공유 상태 업데이트
-  updateSharedStatus(id, shared) {
-    const stmt = this.db.prepare(`
-      UPDATE clipboard SET shared = ? WHERE id = ?
-    `);
-    stmt.run(shared, id);
-  }
-
-  getSharedStatus(id) {
-    const stmt = this.db.prepare(`
-      SELECT shared FROM clipboard WHERE id = ?
-    `);
-    const row = stmt.get(id);
-    return row ? row.shared : null;
   }
 
   // 이미지 메타데이터 조회

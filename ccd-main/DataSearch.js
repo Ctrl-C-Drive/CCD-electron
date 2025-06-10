@@ -1,7 +1,7 @@
 const CCDError = require("./CCDError");
 const dataRepo = require("./db_models/DataRepository");
 const fs = require("fs");
-
+const path = require("path");
 
 // function transformForRenderer(item) {
 //   return {
@@ -17,6 +17,32 @@ const fs = require("fs");
 //       : [],
 //     selected: false,
 //     source: item.shared || item.source || "local",
+//   };
+// }
+
+// function transformItem(item) {
+//   console.log(item);
+//   const isBase64 =
+//     typeof item.thumbnail_path === "string" &&
+//     item.thumbnail_path.startsWith("data:image/");
+
+//   const encodedThumbnail =
+//     item.thumbnail_path && !isBase64 && fs.existsSync(item.thumbnail_path)
+//       ? `data:image/png;base64,${fs
+//           .readFileSync(item.thumbnail_path)
+//           .toString("base64")}`
+//       : isBase64
+//       ? item.thumbnail_path
+//       : undefined;
+//   return {
+//     id: item.id,
+//     type: item.type,
+//     content: item.content,
+//     format: item.format,
+//     created_at: item.created_at,
+//     tags: item.tags || [],
+//     score: item.score || 0,
+//     thumbnail_path: encodedThumbnail,
 //   };
 // }
 
@@ -36,15 +62,17 @@ async function searchData(keyword, model) {
 
     if (model === "mobilenet") {
       resultItems = await dataRepo.searchItems(keyword, { includeCloud: true });
+      // const rawResults = await dataRepo.searchItems(keyword, {
+      //   includeCloud: true,
+      // });
+      // resultItems = rawResults.map(transformItem); // ✅ 이 경우에만 transform
     }
 
     if (model === "clip") {
-      resultItems = await dataRepo.cloudDB.searchByCLIP(keyword);
+      resultItems = await dataRepo.searchByCLIP(keyword); // 내부에서 transformItem 호출됨
     }
 
- //   const transformed = resultItems.map(transformForRenderer);
     return { success: true, data: resultItems };
-
   } catch (err) {
     const wrapped =
       err instanceof CCDError

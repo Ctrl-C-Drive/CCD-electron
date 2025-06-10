@@ -5,11 +5,13 @@ const { registerUser } = require("./auth/authService");
 const { setupIPC } = require("./ipcHandler");
 const { loadModel } = require("./imageTagger");
 const { globalShortcut, Tray, Menu } = require("electron");
-
+const fs = require("fs");
 const path = require("path");
 
 const isDev = !app.isPackaged;
 let win;
+let tray;
+let isAlwaysOnTop = false;
 
 const createWindow = () => {
   win = new BrowserWindow({
@@ -17,6 +19,7 @@ const createWindow = () => {
     height: 646,
     resizable: false,
     show: false,
+    icon: path.join(__dirname, "icon.png"),
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
@@ -63,6 +66,18 @@ app.whenReady().then(async () => {
       win.focus();
     }
   });
+  globalShortcut.register("CommandOrControl+Shift+T", () => {
+    isAlwaysOnTop = !isAlwaysOnTop;
+    win.setAlwaysOnTop(isAlwaysOnTop);
+    console.log(`창 고정 상태: ${isAlwaysOnTop ? "고정됨" : "해제됨"}`);
+
+    // 트레이 메뉴 상태 갱신
+    updateTrayMenu();
+  });
+
+  tray = new Tray(path.join(__dirname, "icon.png"));
+  tray.setToolTip("CCD");
+  updateTrayMenu();
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -74,3 +89,22 @@ app.whenReady().then(async () => {
 ipcMain.on("close-window", () => {
   BrowserWindow.getFocusedWindow()?.close();
 });
+function updateTrayMenu() {
+  const contextMenu = Menu.buildFromTemplate([
+    {
+      label: "항상 위에 고정",
+      type: "checkbox",
+      checked: isAlwaysOnTop,
+      click: (menuItem) => {
+        isAlwaysOnTop = menuItem.checked;
+        win.setAlwaysOnTop(isAlwaysOnTop);
+        console.log(`창 고정 상태 (트레이): ${isAlwaysOnTop}`);
+      },
+    },
+    { type: "separator" },
+    { label: "창 열기", click: () => win.show() },
+    { label: "종료", click: () => app.quit() },
+  ]);
+
+  tray.setContextMenu(contextMenu);
+}
