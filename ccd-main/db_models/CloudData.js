@@ -232,10 +232,7 @@ class CloudDataModule {
   // 태그 생성
   async createTag(tagData) {
     try {
-      const response = await this.axiosInstance.post("/tags", {
-        tag_id: uuidv4(),
-        ...tagData,
-      });
+      const response = await this.axiosInstance.post("/tags", tagData);
       return response.data;
     } catch (error) {
       throw CCDError.create("E661", {
@@ -248,22 +245,22 @@ class CloudDataModule {
   }
 
   // 데이터-태그 연결
-  async createDataTag(dataId, tagId) {
-    try {
-      const response = await this.axiosInstance.post("/data-tags", {
-        data_id: dataId,
-        tag_id: tagId,
-      });
-      return response.data;
-    } catch (error) {
-      throw CCDError.create("E662", {
-        module: "CloudData",
-        context: "데이터-태그 연결",
-        message: "태그 연결 실패",
-        details: error.response?.data,
-      });
-    }
-  }
+  // async createDataTag(dataId, tagId) {
+  //   try {
+  //     const response = await this.axiosInstance.post("/data-tags", {
+  //       data_id: dataId,
+  //       tag_id: tagId,
+  //     });
+  //     return response.data;
+  //   } catch (error) {
+  //     throw CCDError.create("E662", {
+  //       module: "CloudData",
+  //       context: "데이터-태그 연결",
+  //       message: "태그 연결 실패",
+  //       details: error.response?.data,
+  //     });
+  //   }
+  // }
 
   // 단일 아이템 조회
   async getClipboardItem(dataId) {

@@ -114,7 +114,7 @@ class DataRepositoryModule extends EventEmitter {
           ...newItem,
         };
 
-        this.localDB.insertClipboardItem(localItem);
+        await this.localDB.insertClipboardItem(localItem);
         this.cleanup();
       }
 
@@ -137,15 +137,16 @@ class DataRepositoryModule extends EventEmitter {
         let temp = await processImage(newItem.content);
         for (const tagName of temp) {
           try {
-            const tag = await this.addTag(
-              {
+            if (target === "local" || target === "both") {
+              const tag = await this.addTag({
                 name: tagName,
                 source: "auto",
-              },
-              target
-            );
+              });
 
-            await this.addDataTag(newItem.id, tag.tag_id, target);
+              await this.addDataTag(newItem.id, tag.tag_id);
+            } else if (target === "cloud" || target === "both") {
+              this.cloudDB.createTag(newItem.id, tagName, "auto");
+            }
           } catch (error) {
             console.error(`[${tagName}] 이미지 태그 처리 실패:`, error);
           }
@@ -197,15 +198,16 @@ class DataRepositoryModule extends EventEmitter {
         for (const { name, regex } of autoTagPatterns) {
           try {
             if (regex.test(newItem.content)) {
-              const tag = await this.addTag(
-                {
-                  name,
+              if (target === "local" || target === "both") {
+                const tag = await this.addTag({
+                  name: name,
                   source: "auto",
-                },
-                target
-              );
+                });
 
-              await this.addDataTag(newItem.id, tag.tag_id, target);
+                await this.addDataTag(newItem.id, tag.tag_id);
+              } else if (target === "cloud" || target === "both") {
+                this.cloudDB.createTag(newItem.id, name, "auto");
+              }
             }
           } catch (error) {
             console.error(`[${name}] 텍스트 태그 처리 실패:`, error);
@@ -307,85 +309,42 @@ class DataRepositoryModule extends EventEmitter {
   }
 
   // 태그 추가 및 동기화
-  async addTag(tagData, target = "both") {
+  async addTag(tagData) {
     try {
-      let finalTagId = uuidv4();
-      let cloudTagId = null;
-      let needLocalUpdate = false;
-      let sync_status = "pending";
+      // name + source로 기존 태그 조회
+      let tag = this.localDB.getTagByNameAndSource(
+        tagData.name,
+        tagData.source
+      );
 
-      // 1. 클라우드 동기화 먼저 시도
-      if (target === "cloud" || target === "both") {
-        try {
-          const cloudTag = await this.cloudDB.createTag(tagData);
-          cloudTagId = cloudTag.tag_id;
-          finalTagId = cloudTagId; // 클라우드 ID를 기본으로 사용
-          sync_status = "synced";
-        } catch (error) {
-          throw CCDError.create("E610", {
-            module: "DataRepository",
-            context: "클라우드 태그 생성 실패",
-            message: error.details,
-          });
-        }
+      if (tag) {
+        return tag; // 이미 존재하면 그대로 반환
       }
 
-      // 2. 로컬 처리
-      if (target === "local" || target === "both" || cloudTagId) {
-        const existingLocalTag = this.localDB.getTagByNameAndSource(
-          tagData.name,
-          tagData.source
-        );
+      const tag_id = uuidv4();
 
-        if (existingLocalTag) {
-          if (existingLocalTag.tag_id !== finalTagId) {
-            console.log(
-              `태그 ID 충돌 감지: 로컬 ${existingLocalTag.tag_id} ↔ 클라우드 ${finalTagId}`
-            );
-            this.localDB.updateTagId(existingLocalTag.tag_id, finalTagId);
-            needLocalUpdate = true;
-          }
-        } else {
-          // 로컬에 없는 경우 새로 삽입
-          this.localDB.insertTag({
-            tag_id: finalTagId,
-            ...tagData,
-            sync_status,
-          });
-          needLocalUpdate = true;
-        }
-      }
-
-      // 3. 변경 사항이 있으면 캐시 무효화
-      if (needLocalUpdate) {
-        this.invalidateCache();
-        notifyRenderer("clipboard-updated");
-      }
+      this.localDB.insertTag({
+        tag_id,
+        ...tagData,
+      });
 
       return {
-        tag_id: finalTagId,
-        ...tagData,
-        sync_status: sync_status,
+        tag_id,
       };
     } catch (error) {
       throw CCDError.create("E610", {
         module: "DataRepository",
-        context: "태그 추가 실패",
+        context: "로컬 태그 추가 실패",
         message: error.message,
       });
     }
   }
 
   // 데이터-태그 매핑 추가
-  async addDataTag(dataId, tagId, target = "both") {
+  async addDataTag(dataId, tagId) {
     try {
-      if (target === "local" || target === "both") {
-        this.localDB.insertDataTag(dataId, tagId);
-      }
-
-      if (target === "cloud" || target === "both") {
-        await this.cloudDB.createDataTag(dataId, tagId);
-      }
+      this.localDB.insertDataTag(dataId, tagId);
+      this.invalidateCache();
       notifyRenderer("clipboard-updated");
 
       return true;
@@ -417,8 +376,6 @@ class DataRepositoryModule extends EventEmitter {
   // 미리보기 데이터 가져오기 (분리된 캐시)
   async getPreviewData() {
     try {
-      console.log("preview data called");
-
       await this.reloadCache(true);
       return this.cache.all.data || [];
     } catch (error) {
@@ -480,11 +437,11 @@ class DataRepositoryModule extends EventEmitter {
       if (!this.cache.all?.valid) {
         await this.reloadCache();
       }
-
-      // 3. 캐시에서 ID 매칭 항목만 추출
       const allItems = this.cache.all.data || [];
+      const itemMap = new Map(allItems.map((item) => [String(item.id), item]));
+
       const results = idList
-        .map((id) => allItems.find((item) => String(item.id) === String(id)))
+        .map((id) => itemMap.get(String(id)))
         .filter(Boolean);
 
       return results;
@@ -528,14 +485,6 @@ class DataRepositoryModule extends EventEmitter {
         context: "검색 오류",
         message: error.message || error,
       });
-    }
-  }
-
-  async syncCloudItems(cloudItems) {
-    const BATCH_SIZE = 50;
-    for (let i = 0; i < cloudItems.length; i += BATCH_SIZE) {
-      const batch = cloudItems.slice(i, i + BATCH_SIZE);
-      await this.localDB.bulkUpsert(batch);
     }
   }
 
@@ -771,16 +720,11 @@ class DataRepositoryModule extends EventEmitter {
                   typeof tag === "string" ? tag : tag.name || tag.tag_id;
                 if (!tagName) continue;
 
-                // 클라우드에 태그 생성 또는 조회 (tag_id 반환 보장)
-                const cloudTag = await this.addTag(
-                  {
-                    name: tagName,
-                    source: "auto",
-                  },
-                  "cloud"
-                );
-
-                await this.addDataTag(item.id, cloudTag.tag_id, "cloud");
+                await this.cloudDB.createTag({
+                  data_id: item.id,
+                  name: tagName,
+                  source: "auto",
+                });
               } catch (err) {
                 console.warn(`태그 연결 실패 [${tag.name || tag}]:`, err);
               }
@@ -834,7 +778,7 @@ class DataRepositoryModule extends EventEmitter {
               content: contentPath,
               created_at: item.created_at,
             };
-            this.localDB.insertClipboardItem(localItem);
+            await this.localDB.insertClipboardItem(localItem);
 
             if (item.type === "img") {
               const { originalPath } = await this.downloadImageFiles(item);
@@ -918,28 +862,18 @@ class DataRepositoryModule extends EventEmitter {
 
   // 태그 동기화
   async syncTagsForItem(cloudItem) {
-    for (const tag of cloudItem.tags) {
-      // 태그 존재 여부 확인
-      const existingTag = this.localDB.getTagByNameAndSource(
-        tag.name,
-        tag.source
-      );
-
-      if (!existingTag) {
-        // 새 태그 생성
-        this.localDB.insertTag({
-          tag_id: tag.tag_id,
-          name: tag.name,
-          source: tag.source,
-          sync_status: "synced",
+    for (const tag of cloudItem.tags || []) {
+      try {
+        // 1. addTag는 중복 검사 + 삽입 + ID 갱신까지 처리함
+        const syncedTag = await this.addTag({
+          name: tag,
+          source: "auto",
         });
-      } else if (existingTag.tag_id !== tag.tag_id) {
-        // 태그 ID 업데이트
-        this.localDB.updateTagId(existingTag.tag_id, tag.tag_id);
+        // 2. 데이터-태그 연결
+        await this.addDataTag(cloudItem.id, syncedTag.tag_id);
+      } catch (error) {
+        console.error(`[${tag}] 태그 동기화 실패:`, error);
       }
-
-      // 데이터-태그 연결
-      this.localDB.insertDataTag(cloudItem.id, tag.tag_id);
     }
   }
 }

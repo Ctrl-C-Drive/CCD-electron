@@ -164,7 +164,9 @@ function setupIPC() {
   ipcMain.handle("user-logout", async () => {
     try {
       isLogin = false;
-      await dataRepo.logout();
+      await dataRepo.logoutAndCleanupCloudData();
+      dataRepo.cloudDB.logout();
+
       return { success: true, message: "로그아웃 완료" };
     } catch (err) {
       const error = CCDError.create("E610", {
