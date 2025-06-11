@@ -6,6 +6,7 @@ const FormData = require("form-data");
 const CCDError = require("../CCDError");
 require("dotenv").config();
 const notifyRenderer = require("../notifyRenderer");
+const WebSocket = require("ws");
 
 const config = {
   apiBaseURL: process.env.CLOUD_SERVER_URL,
@@ -20,6 +21,7 @@ class CloudDataModule {
       accessToken: config.authToken || null,
       refreshToken: config.refreshToken || null,
     };
+    this.socketClient = null;
     this.isRefreshing = false;
     this.refreshSubscribers = [];
     this.localDB = require("./LocalData");
@@ -108,6 +110,9 @@ class CloudDataModule {
         refresh_token: response.data.refresh_token,
       });
       await this.processPendingSync();
+      this.initWebSocket(credentials.user_id, (msg) => {
+        console.log("서버 실시간 메시지 수신:", msg);
+      });
       notifyRenderer("clipboard-updated");
       console.log("login finished", response.data);
       return response.data;
@@ -124,6 +129,7 @@ class CloudDataModule {
   // 로그아웃 메서드 추가
   logout() {
     this.tokenStorage = { accessToken: null, refreshToken: null };
+    this.closeWebSocket();
   }
   async processPendingSync() {
     const items = this.localDB.getPendingSyncItems();
@@ -178,6 +184,64 @@ class CloudDataModule {
       });
     }
   }
+  initWebSocket(userId, onMessageCallback) {
+    if (this.socketClient) {
+      console.log("[WebSocket] 이미 연결됨");
+      return;
+    }
+
+    this.socketClient = new WebSocket(
+      `${this.apiBaseURL.replace(/^http/, "ws")}/ws/${userId}`
+    );
+
+    this.socketClient.on("open", () => {
+      console.log("[WebSocket] 연결 성공");
+    });
+
+    this.socketClient.on("message", (data) => {
+      try {
+        const parsed = JSON.parse(data.toString());
+        this.handleWebSocketMessage(parsed);
+        if (onMessageCallback) onMessageCallback(parsed);
+      } catch (err) {
+        console.error("[WebSocket] 수신 메시지 파싱 실패:", err);
+      }
+    });
+
+    this.socketClient.on("close", () => {
+      console.log("[WebSocket] 연결 종료");
+      this.socketClient = null;
+    });
+
+    this.socketClient.on("error", (err) => {
+      console.error("[WebSocket] 오류 발생:", err);
+    });
+  }
+
+  // WebSocket 연결 해제
+  closeWebSocket() {
+    if (this.socketClient && this.socketClient.readyState === WebSocket.OPEN) {
+      this.socketClient.close();
+      console.log("[WebSocket] 연결 수동 종료");
+    }
+    this.socketClient = null;
+  }
+
+  // WebSocket 메시지 처리
+  handleWebSocketMessage(msg) {
+    switch (msg.event) {
+      case "item_added":
+        console.log("[WebSocket] 새 항목 도착:");
+        notifyRenderer("clipboard-updated");
+        break;
+      case "item_deleted":
+        console.log("[WebSocket] 항목 삭제됨:");
+        notifyRenderer("clipboard-updated");
+        break;
+      default:
+        console.warn("[WebSocket] 알 수 없는 이벤트:", msg.event);
+    }
+  }
 
   // 클립보드 데이터 조회
   async getClipboardData() {
@@ -201,10 +265,14 @@ class CloudDataModule {
     console.log(itemData);
     try {
       const payload = {
-        ...itemData,
+        id: itemData.id,
+        content: itemData.content,
+        type: itemData.type,
+        format: itemData.format,
+        created_at: itemData.created_at,
       };
       const response = await this.axiosInstance.post("/items", payload);
-      return this.transformItem(response.data);
+      // return this.transformItem(response.data);
     } catch (error) {
       throw CCDError.create("E654", {
         module: "CloudData",
@@ -239,7 +307,7 @@ class CloudDataModule {
         module: "CloudData",
         context: "태그 생성",
         message: "태그 생성 실패",
-        details: error.response?.data,
+        details: error.response?.data.detail || error.message.detail,
       });
     }
   }
@@ -280,7 +348,6 @@ class CloudDataModule {
   }
 
   // 아이템 데이터 변환
-  // CloudData.js ── replace transformItem()
   transformItem(item) {
     const base = this.apiBaseURL;
 
