@@ -45,6 +45,7 @@ const MainView = ({ isTagChecked, items, toggleSelect, addItem, refetch }) => {
       const ext = fileName.split(".").pop().toLowerCase();
       const timestamp = Date.now();
 
+
       const readFileAsDataURL = (file) =>
         new Promise((resolve, reject) => {
           const reader = new FileReader();
@@ -163,13 +164,15 @@ const MainView = ({ isTagChecked, items, toggleSelect, addItem, refetch }) => {
           }}
         >
           <div className="relative  h-[9.2rem] bg-blue-100">
-            {item.type === "image" && item.thumbnail_path && (
+            {item.type === "image" && (
+              <>
               <img
-                src={item.thumbnail_path}
+                src={item.thumbnail_path ?? item.src}
                 alt="dropped-img"
                 className="w-full h-[9.2rem] object-cover"
                 onClick={() => handlePaste(item.itemId)}
               />
+              </>
             )}
             {item.type === "text" && item.content && (
               <p

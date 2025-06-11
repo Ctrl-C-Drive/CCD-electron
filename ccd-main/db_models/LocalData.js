@@ -147,7 +147,6 @@ class LocalDataModule {
         tag_id TEXT PRIMARY KEY, 
         name TEXT NOT NULL COLLATE NOCASE,  -- 대소문자 구분 없음
         source TEXT NOT NULL CHECK (source IN ('auto', 'user')),
-        sync_status TEXT CHECK (sync_status IN ('synced', 'pending')) DEFAULT ('pending'),  
         UNIQUE (name, source)  
       );
       CREATE TABLE IF NOT EXISTS data_tag (
@@ -454,7 +453,7 @@ class LocalDataModule {
   }
 
   // 클립보드 항목 추가
-  insertClipboardItem(item) {
+  async insertClipboardItem(item) {
     console.log("insertClipboardItem params:", {
       format: item.format,
       id: item.id,
@@ -559,54 +558,19 @@ class LocalDataModule {
   insertTag(tag) {
     try {
       const stmt = this.db.prepare(`
-        INSERT OR IGNORE INTO tag (tag_id, name, source, sync_status)
-        VALUES (@tag_id, @name, @source, @sync_status)
+        INSERT OR IGNORE INTO tag (tag_id, name, source)
+        VALUES (@tag_id, @name, @source)
       `);
       stmt.run(tag);
     } catch (error) {
       throw CCDError.create("E610", {
         module: "LocalData",
         context: "태그 삽입 실패",
-        message: "insertTag",
+        message: error,
       });
     }
   }
-  // 태그 동기화 상태 변경
-  updateTagSyncStatus(tagId, newStatus) {
-    try {
-      if (!["synced", "pending"].includes(newStatus)) {
-        throw CCDError.create("E610", {
-          module: "LocalData",
-          context: "updateTagSyncStatus 중 sync_status 허용 안 되는 값 삽입 ",
-          message: "sync_status는 'synced' 또는 'pending'만 허용됩니다.",
-        });
-      }
 
-      const stmt = this.db.prepare(`
-      UPDATE tag SET sync_status = ? WHERE tag_id = ?
-    `);
-      const result = stmt.run(newStatus, tagId);
-
-      if (result.changes === 0) {
-        throw CCDError.create("E610", {
-          module: "LocalData",
-          context: "updateTagSyncStatus 중 tagId 태그 검색 불가 ",
-          message: `tag_id ${tagId}에 해당하는 태그가 존재하지 않습니다.`,
-        });
-      }
-
-      return {
-        success: true,
-        message: `태그(${tagId})의 sync_status가 '${newStatus}'로 변경되었습니다.`,
-      };
-    } catch (error) {
-      throw CCDError.create("E610", {
-        module: "LocalData",
-        context: "태그 동기화 상태 변경 실패",
-        message: "updateTagSyncStatus",
-      });
-    }
-  }
   // name과 source로 태그 조회
   getTagByNameAndSource(name, source) {
     try {
@@ -688,7 +652,7 @@ class LocalDataModule {
       throw CCDError.create("E610", {
         module: "LocalData",
         context: "데이터-태그 연결 실패",
-        message: "insertDataTag",
+        message: error,
       });
     }
   }
