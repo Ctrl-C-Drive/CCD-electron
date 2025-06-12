@@ -65,6 +65,7 @@ class DataRepositoryModule extends EventEmitter {
   }
   async updateConfig(newConfig) {
     await this.localDB.updateConfig(newConfig);
+    this.cleanup();
     this._loadConfig(); // 변경된 설정 다시 로드
   }
 
@@ -114,7 +115,7 @@ class DataRepositoryModule extends EventEmitter {
           ...newItem,
         };
 
-        await this.localDB.insertClipboardItem(localItem);
+        this.localDB.insertClipboardItem(localItem);
         this.cleanup();
       }
 
@@ -135,7 +136,9 @@ class DataRepositoryModule extends EventEmitter {
       if (newItem.type === "img") {
         await this.processImageFiles(newItem);
         let temp = await processImage(newItem.content);
+        console.log(temp);
         for (const tagName of temp) {
+          console.log(tagName);
           try {
             if (target === "local" || target === "both") {
               const tag = await this.addTag({
@@ -144,8 +147,15 @@ class DataRepositoryModule extends EventEmitter {
               });
 
               await this.addDataTag(newItem.id, tag.tag_id);
-            } else if (target === "cloud" || target === "both") {
-              this.cloudDB.createTag(newItem.id, tagName, "auto");
+            }
+            if (target === "cloud" || target === "both") {
+              console.log("here!!");
+              console.log(newItem.id, tagName);
+              this.cloudDB.createTag({
+                data_id: newItem.id,
+                name: tagName,
+                source: "auto",
+              });
             }
           } catch (error) {
             console.error(`[${tagName}] 이미지 태그 처리 실패:`, error);
@@ -205,8 +215,13 @@ class DataRepositoryModule extends EventEmitter {
                 });
 
                 await this.addDataTag(newItem.id, tag.tag_id);
-              } else if (target === "cloud" || target === "both") {
-                this.cloudDB.createTag(newItem.id, name, "auto");
+              }
+              if (target === "cloud" || target === "both") {
+                this.cloudDB.createTag({
+                  data_id: newItem.id,
+                  name: name,
+                  source: "auto",
+                });
               }
             }
           } catch (error) {
@@ -778,7 +793,7 @@ class DataRepositoryModule extends EventEmitter {
               content: contentPath,
               created_at: item.created_at,
             };
-            await this.localDB.insertClipboardItem(localItem);
+            this.localDB.insertClipboardItem(localItem);
 
             if (item.type === "img") {
               const { originalPath } = await this.downloadImageFiles(item);

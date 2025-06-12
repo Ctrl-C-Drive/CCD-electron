@@ -453,7 +453,7 @@ class LocalDataModule {
   }
 
   // 클립보드 항목 추가
-  async insertClipboardItem(item) {
+  insertClipboardItem(item) {
     console.log("insertClipboardItem params:", {
       format: item.format,
       id: item.id,
