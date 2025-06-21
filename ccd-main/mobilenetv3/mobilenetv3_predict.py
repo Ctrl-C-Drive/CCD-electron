@@ -6,7 +6,7 @@ import os
 from Classes import CLASSES
 from typing import List
 
-MODEL_PATH = os.path.join(os.path.dirname(__file__), "mobilenetv3_trained.onnx")
+MODEL_PATH = os.path.join(os.path.dirname(__file__), "mobilenetv3_trained_new.onnx")
 THRESHOLD = 0.5
 
 # 이미지 전처리

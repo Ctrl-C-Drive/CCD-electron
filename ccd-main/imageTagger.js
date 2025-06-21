@@ -9,7 +9,7 @@ const CLASSES = require("./mobilenetv3/Classes.js");
 const mobilenetModelPath = path.join(
   __dirname,
   "mobilenetv3",
-  "mobilenetv3_trained.onnx"
+  "mobilenetv3_trained_new.onnx"
 );
 
 let modelSession = null;
