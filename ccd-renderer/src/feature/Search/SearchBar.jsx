@@ -62,6 +62,7 @@ const SearchBar = ({ setItemsFromSearchResult, refetch }) => {
         shadow-[0_0.253rem_2.53rem_0_rgba(83,83,83,0.25)]
         py-[1.2rem]
         relative
+        mx-auto
       ">
         {/* 입력 영역 */}
         <div 

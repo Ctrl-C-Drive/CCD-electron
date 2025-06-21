@@ -75,7 +75,8 @@ const App= () => {
         {/* 최상단 손잡이, 닫기 버튼 */}
           <div className="pt-[1.6rem] pb-[2.1rem] flex justify-center relative">
               {/*  손잡이 */}
-              <div className="w-[5.6rem]  h-[0.2rem] bg-[var(--blue-200)] [border-[var(--blue-200)]">
+              <div 
+                className="w-[5.6rem]  h-[0.2rem] bg-[var(--blue-200)] [border-[var(--blue-200)]">
 
               </div>
               {/* 닫기 버튼  */}

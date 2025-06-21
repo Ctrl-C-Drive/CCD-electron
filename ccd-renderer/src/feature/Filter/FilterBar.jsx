@@ -99,7 +99,7 @@ const FilterBar = ({isTagChecked,
         className="flex justify-between items-center gap-4 px-[1rem] py-2  rounded-xl">
         {/* TAG 영역 */}
         <div
-          className="flex items-center gap-2 cursor-pointer"
+          className="flex items-center gap-2 cursor-pointer pl-[0.8rem]"
           onClick={() => setIsTagChecked((prev) => !prev)}
         >
           <input
