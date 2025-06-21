@@ -42,6 +42,7 @@ const Toast = ({ message, type }) => {
 
   const BottomBar = ({getSelectedItemIds }) => {
       const [toasts, setToasts] = useState([]);
+      const [isModalOpen, setIsModalOpen] = useState(false);
 
     const showToast = (message, type) => {
       const id = Date.now();
@@ -55,7 +56,9 @@ const Toast = ({ message, type }) => {
     // const { getSelectedItemIds } = useClipboardRecords();
 
     return (
-      <div className="flex justify-between items-center px-6 mt-[3rem] ">
+      <div
+        style={{ WebkitAppRegion: 'no-drag' }} // 클릭 이벤트 허용
+         className="flex justify-between items-center px-6 mt-[3rem] ">
         {/* 왼쪽 업로드 / 다운로드 */}
         <div className="flex gap-6 items-center">
           <div 
@@ -126,7 +129,7 @@ const Toast = ({ message, type }) => {
         {/* <div className="cursor-pointer">
           <img src="settings.svg" alt="Settings" className="w-6 h-6 text-blue-700" />
         </div> */}
-          <SettingModal />
+        <SettingModal onClose={() => setIsModalOpen(false)} />
         <div className="absolute top-[48rem] flex flex-col items-end z-50">
           {toasts.map((toast) => (
             <Toast key={toast.id} message={toast.message} type={toast.type} />

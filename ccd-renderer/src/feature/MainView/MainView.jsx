@@ -4,12 +4,13 @@ import { twMerge } from "tailwind-merge";
 import "../../styles/color.css";
 // import useClipboardRecords from '../../utils/useClipboardRecords';
 
-const MainView = ({ isTagChecked, items, toggleSelect, addItem, refetch }) => {
+const MainView = ({ isTagChecked, items, toggleSelect, addItem, refetch,fileType,setFileType }) => {
   // const [items, setItems] = useState([]);
   const [activeItemId, setActiveItemId] = useState(null);
   const containerRefs = useRef({});
   // const { items, refetch, addItem } = useClipboardRecords();
   // const { items, refetch, toggleSelect, addItem } = useClipboardRecords();
+  // const [fileType, setFileType] = useState("IMG");
 
   // 모달 외부 클릭 시 닫기
   useEffect(() => {
@@ -135,6 +136,7 @@ const MainView = ({ isTagChecked, items, toggleSelect, addItem, refetch }) => {
       const res = await window.electronAPI.deleteItem(itemId, deleteOption);
       if (res.deletionResult && res.refreshReq) {
         refetch(); // 화면 갱신
+        setActiveItemId(null);   //해당 item 모달 닫기
       }
     } catch (err) {
       console.error("삭제 중 오류:", err);
@@ -143,18 +145,31 @@ const MainView = ({ isTagChecked, items, toggleSelect, addItem, refetch }) => {
 
   return (
     <div
-      className="grid grid-cols-2 gap-3 px-6 py-4  !w-screen  "
+      className="grid grid-cols-2 gap-3 px-6 py-4 
+       !w-full  
+        h-[calc(100vh-22.9rem)] 
+       !overflow-y-scroll
+       custom-scrollbar
+       "
+       style={{ WebkitAppRegion: 'no-drag' }} // 클릭 이벤트 허용
       onDragOver={(e) => e.preventDefault()}
       onDrop={(e) => {
         e.preventDefault();
         console.log("Drop 이벤트 내부 div에서 감지됨");
       }}
+      
     >
-      {items.map((item) => (
+      {items
+        .filter((item) => {
+          if (fileType === "img") return item.type === "image";
+          if (fileType === "txt") return item.type === "text";
+          return true; // "all"인 경우
+        })
+        .map((item) => (
         <div
           key={item.itemId}
           // onClick={() => handlePaste(item.itemId)} //클릭 이벤트 버블링 막고자, 보다 덜 포괄적인 위치로 리스너 이동동
-          className="w-[17rm] !h-auto relative  border border-blue-700 rounded-md overflow-hidden cursor-pointer"
+          className="w-[17rm] !h-[12rem] !h-auto relative  border border-blue-700 rounded-md overflow-hidden cursor-pointer"
           onContextMenu={(e) => {
             e.preventDefault(); // ✅ 기본 우클릭 메뉴 차단
             e.stopPropagation(); // 이벤트 전파 차단
@@ -162,6 +177,7 @@ const MainView = ({ isTagChecked, items, toggleSelect, addItem, refetch }) => {
             e.stopPropagation();
             // handlePaste(item.itemId);
           }}
+          style={{ WebkitAppRegion: 'no-drag' }} // 클릭 이벤트 허용
         >
           <div className="relative  h-[9.2rem] bg-blue-100">
             {item.type === "image" && (
@@ -238,45 +254,57 @@ const MainView = ({ isTagChecked, items, toggleSelect, addItem, refetch }) => {
             </div>
           )}
 
-          {activeItemId === item.itemId && (
-            <div
-              ref={(el) => (containerRefs.current[item.itemId] = el)}
-              onClick={(e) => e.stopPropagation()}
-              className="absolute w-[11rem] h-auto px-[1.2rem] top-[2rem] right-[2.2rem] 
-              bg-white border rounded-2xl shadow-md z-50 
-              text-[var(--blue-200)]
-              text-center
-              !font-pretendard
-              text-[1.1rem]
-              not-italic
-              font-[var(--font-md)]
-              leading-normal
-              "
-            >
-              <div
-                className="py-2 hover:bg-blue-50 cursor-pointer"
-                onClick={() => handleDelete(item.itemId, "both")}
-              >
-                모두 삭제
-              </div>
-              <hr />
-              <div
-                className="py-2 hover:bg-blue-50 cursor-pointer"
-                onClick={() => handleDelete(item.itemId, "local")}
-              >
-                Local에서 삭제
-              </div>
-              <hr />
+        {activeItemId === item.itemId && (
+          <div
+            ref={(el) => (containerRefs.current[item.itemId] = el)}
+            onClick={(e) => e.stopPropagation()}
+            className="absolute w-[11rem] h-auto px-[1.2rem] top-[2rem] right-[2.2rem] 
+            bg-white border rounded-2xl shadow-md z-50 
+            text-[var(--blue-200)]
+            text-center
+            !font-pretendard
+            text-[1.1rem]
+            not-italic
+            font-[var(--font-md)]
+            leading-normal
+            "
+          >
+            {(item.shared === "both" || item.shared === "all") && (
+              <>
+                <div
+                  className="py-2 hover:bg-blue-50 cursor-pointer"
+                  onClick={() => handleDelete(item.itemId, "both")}
+                >
+                  모두 삭제
+                </div>
+                <hr />
+              </>
+            )}
+            {(item.shared === "local" || item.shared === "both") && (
+              <>
+                <div
+                  className="py-2 hover:bg-blue-50 cursor-pointer"
+                  onClick={() => handleDelete(item.itemId, "local")}
+                >
+                  Local에서 삭제
+                </div>
+                <hr />
+              </>
+            )}
+            {(item.shared === "cloud" || item.shared === "both") && (
               <div
                 className="py-2 hover:bg-blue-50 cursor-pointer"
                 onClick={() => handleDelete(item.itemId, "cloud")}
               >
                 Cloud에서 삭제
               </div>
-            </div>
-          )}
-        </div>
-      ))}
+            )}
+          </div>
+        )}
+
+       </div>
+       
+              ))}
     </div>
   );
 };

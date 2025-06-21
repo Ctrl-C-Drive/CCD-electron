@@ -15,8 +15,10 @@ let isAlwaysOnTop = false;
 
 const createWindow = () => {
   win = new BrowserWindow({
-    width: 617,
+    width: 417,
     height: 646,
+    frame: false, 
+    titleBarStyle: 'hidden', 
     resizable: false,
     show: true,
     icon: path.join(__dirname, "icon.png"),

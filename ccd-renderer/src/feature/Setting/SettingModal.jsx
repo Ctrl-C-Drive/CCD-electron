@@ -19,19 +19,26 @@ import useClipboardRecords from "../../utils/useClipboardRecords";
     const [cloudLimit, setCloudLimit] = useState("50개");
 
   const [isAutoCloudSave, setIsAutoCloudSave] = useState(false);
+  const iconRef = useRef(null);
 
-    useEffect(() => {
-      const handleClickOutside = (event) => {
-        if (modalRef.current && !modalRef.current.contains(event.target)) {
-          setIsVisible(false);
-          setRetentionOpen(false);
-          setLocalLimitOpen(false);
-          setCloudLimitOpen(false);
-        }
-      };
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
+useEffect(() => {
+  const handleClickOutside = (event) => {
+    // 아이콘이나 모달 둘 다 아닌 경우에만 닫기
+    if (
+      modalRef.current &&
+      !modalRef.current.contains(event.target) &&
+      iconRef.current &&
+      !iconRef.current.contains(event.target)
+    ) {
+      setIsVisible(false);
+      setRetentionOpen(false);
+      setLocalLimitOpen(false);
+      setCloudLimitOpen(false);
+    }
+  };
+  document.addEventListener('mousedown', handleClickOutside);
+  return () => document.removeEventListener('mousedown', handleClickOutside);
+}, []);
     useEffect(() => {
       window.electronAPI.onCloudUploadStatusChange((status) => {
         setIsAutoCloudSave(status);
@@ -39,7 +46,7 @@ import useClipboardRecords from "../../utils/useClipboardRecords";
     }, []);
 
     const retentionOptions = ['1일', '7일', '10일', '30일', '∞'];
-    const limitOptions = ['30개','10개', '50개' ]; 
+    const limitOptions = ['10개','30개', '50개' ]; 
     const handleApplySetting = async () => {
     const settings = {
       retentionDays : extractNumber(retention),             // ex) "7"
@@ -57,6 +64,7 @@ import useClipboardRecords from "../../utils/useClipboardRecords";
     if (response.success) {
       await refetch();   // 기록 다시 불러오기
       onClose();         // 모달 닫기
+      setIsVisible(false); 
     } else {
       console.error("❌ 설정 전송 실패", response.error);
     }
@@ -72,7 +80,10 @@ const extractNumber = (text) => {
   
 return (
   <div className="relative">
-    <div className="cursor-pointer" onClick={() => setIsVisible(true)}>
+    <div className="cursor-pointer"
+         onClick={() => setIsVisible(prev => !prev)}
+      ref={iconRef}     
+    >
       <img src="settings.svg" alt="Settings" className="w-[3.2rem] h-[3.2rem] text-blue-700" />
     </div>
 
