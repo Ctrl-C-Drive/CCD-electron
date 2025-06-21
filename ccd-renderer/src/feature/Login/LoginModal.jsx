@@ -188,7 +188,9 @@ const handleLogout = async () => {
   }
 
   return (
-    <div className="relative inline-block">
+    <div 
+      style={{ WebkitAppRegion: 'no-drag' }} // 클릭 이벤트 허용
+      className="relative inline-block">
       {/* 아바타 */}
       <img
         src="/avatar.svg" 
@@ -217,6 +219,7 @@ const handleLogout = async () => {
            right-0 mt-2 w-56 bg-white rounded-xl   
            shadow-[0_0.1rem_2.5rem_0_rgba(0,0,0,0.10)]
             p-4 z-10"
+            style={{ WebkitAppRegion: 'no-drag' }} // 클릭 이벤트 허용
         >
           {/* 로그인 전 메뉴 */}
           {modalState === "menu" && (

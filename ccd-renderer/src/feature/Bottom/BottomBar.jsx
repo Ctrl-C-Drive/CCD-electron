@@ -56,7 +56,9 @@ const Toast = ({ message, type }) => {
     // const { getSelectedItemIds } = useClipboardRecords();
 
     return (
-      <div className="flex justify-between items-center px-6 mt-[3rem] ">
+      <div
+        style={{ WebkitAppRegion: 'no-drag' }} // 클릭 이벤트 허용
+         className="flex justify-between items-center px-6 mt-[3rem] ">
         {/* 왼쪽 업로드 / 다운로드 */}
         <div className="flex gap-6 items-center">
           <div 

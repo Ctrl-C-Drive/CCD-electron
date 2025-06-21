@@ -64,7 +64,9 @@ const SearchBar = ({ setItemsFromSearchResult, refetch }) => {
         relative
       ">
         {/* 입력 영역 */}
-        <div className="flex items-center gap-[0.7rem] pl-[1.3rem]">
+        <div 
+          style={{ WebkitAppRegion: 'no-drag' }} // 클릭 이벤트 허용
+          className="flex items-center gap-[0.7rem] pl-[1.3rem]">
           <img className="" alt="search-icon" src="search.svg" />
           <input
             type="text"
@@ -102,6 +104,7 @@ const SearchBar = ({ setItemsFromSearchResult, refetch }) => {
               "text-[var(--blue-200)]"
             )}
             onClick={() => setDropdownOpen((prev) => !prev)}
+              style={{ WebkitAppRegion: 'no-drag' }} // 클릭 이벤트 허용
           >
             {currentSelection}
             <div
@@ -128,7 +131,7 @@ const SearchBar = ({ setItemsFromSearchResult, refetch }) => {
                     key={opt.label}
                     className={clsx("cursor-pointer", isDisabled && "text-gray-400 cursor-not-allowed")}
                     onClick={() => {
-                      if (!isDisabled) {
+                      if (isDisabled) {
                           return; //고급검색은 비로그인 상태시 그냥 무시
                       }
                         setCurrentSelection(opt.label);
@@ -136,9 +139,11 @@ const SearchBar = ({ setItemsFromSearchResult, refetch }) => {
                         console.log(opt.label);
                     }}
                      style={isDisabled ? { pointerEvents: 'auto', cursor: 'default' } : {}}
-                      //비로그인 상태서 hover시 빨간 빗금 금지 아이콘 안 뜨게 수정
+                      //비로그인 상태서 hover시 빨간금지 아이콘 안뜨게함
                   >
-                    <div className={clsx("text-[1.3rem] font-[var(--font-md)] leading-tight", isDisabled ? "text-gray-400" : "text-[var(--blue-200)]")}> 
+                    <div 
+                        style={{ WebkitAppRegion: 'no-drag' }} // 클릭 이벤트 허용
+                      className={clsx("text-[1.3rem] font-[var(--font-md)] leading-tight", isDisabled ? "text-gray-400" : "text-[var(--blue-200)]")}> 
                       {opt.label}
                     </div>
                     <div className="text-gray-400 text-[1.1rem] leading-snug">

@@ -69,7 +69,7 @@ const App= () => {
   return (
     <>
       <div 
-        className="w-full h-full bg-white opacity-87  p-0 overflow-hidden "
+        className="w-full h-full bg-white opacity-87  p-0 overflow-hidden  "
         style={{ WebkitAppRegion: 'drag' }}
       >
         {/* 최상단 손잡이, 닫기 버튼 */}

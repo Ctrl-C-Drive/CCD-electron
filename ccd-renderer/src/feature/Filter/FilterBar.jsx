@@ -94,7 +94,9 @@ const FilterBar = ({isTagChecked,
 
     return (
       <>
-      <div className="flex justify-between items-center gap-4 px-[1rem] py-2  rounded-xl">
+      <div
+         style={{ WebkitAppRegion: 'no-drag' }} // 클릭 이벤트 허용 
+        className="flex justify-between items-center gap-4 px-[1rem] py-2  rounded-xl">
         {/* TAG 영역 */}
         <div
           className="flex items-center gap-2 cursor-pointer"
@@ -137,7 +139,9 @@ const FilterBar = ({isTagChecked,
               <div className="flex justify-between gap-[0.4rem]"> {location} <span className="text-xs">▼</span></div>
             </button>
             {dropdownOpen && (
-              <div className="absolute flex flex-col text-end  h-auto mt-[2.7rem] ml-[2.7rem] w-32 bg-white border rounded-xl shadow-md z-50 p-2">
+              <div 
+               style={{ WebkitAppRegion: 'no-drag' }} // 클릭 이벤트 허용
+                className="absolute flex flex-col text-end  h-auto mt-[2.7rem] ml-[2.7rem] w-32 bg-white border rounded-xl shadow-md z-50 p-2">
                 {['All','Local', 'Cloud'].map((opt, idx) => (
                     <React.Fragment key={opt}>
 
@@ -210,7 +214,9 @@ const FilterBar = ({isTagChecked,
         </select>
       </div>
 
-      <div className="flex flex-col gap-[0.8rem]">
+      <div 
+        style={{ WebkitAppRegion: 'no-drag' }} // 클릭 이벤트 허용
+        className="flex flex-col gap-[0.8rem]">
         <div className="flex justify-between items-center">
           <label className="text-[var(--blue-200)] !font-pretendard font-[var(--font-md)]">since</label>
           <input
@@ -245,6 +251,7 @@ const FilterBar = ({isTagChecked,
          -setFileType(pendingFileType);
 
         }}
+        style={{ WebkitAppRegion: 'no-drag' }} // 클릭 이벤트 허용
       >
         확인
       </button>

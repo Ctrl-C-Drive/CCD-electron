@@ -151,6 +151,7 @@ const MainView = ({ isTagChecked, items, toggleSelect, addItem, refetch,fileType
        !overflow-y-scroll
        custom-scrollbar
        "
+       style={{ WebkitAppRegion: 'no-drag' }} // 클릭 이벤트 허용
       onDragOver={(e) => e.preventDefault()}
       onDrop={(e) => {
         e.preventDefault();
@@ -176,6 +177,7 @@ const MainView = ({ isTagChecked, items, toggleSelect, addItem, refetch,fileType
             e.stopPropagation();
             // handlePaste(item.itemId);
           }}
+          style={{ WebkitAppRegion: 'no-drag' }} // 클릭 이벤트 허용
         >
           <div className="relative  h-[9.2rem] bg-blue-100">
             {item.type === "image" && (
