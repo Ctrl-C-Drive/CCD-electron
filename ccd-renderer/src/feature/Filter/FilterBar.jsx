@@ -17,17 +17,18 @@ const FilterBar = ({isTagChecked,
                     onApplyFilters,
                      sinceInput, setSinceInput,
                     untilInput, setUntilInput,
+                    fileType,setFileType 
                   }) => {
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [location, setLocation] = useState('ALL');
     const [isLocal, setIsLocal] = useState(false);
     const [isCloud, setIsCloud] = useState(false);
     const [isOpenFilterModal, setIsOpenFilterModal] = useState(false);
-    const [fileType, setFileType] = useState('JPG');
     const [dateInput, setDateInput] = useState('');
     const [year, setYear] = useState('');
     const [month, setMonth] = useState('');
     const [day, setDay] = useState('');
+  const [pendingFileType, setPendingFileType] = useState(fileType); //임시 선택한 파일 타입
 
     // const [sinceRaw, setSinceRaw] = useState("");
     const [sinceDisplay, setSinceDisplay] = useState("");
@@ -93,10 +94,12 @@ const FilterBar = ({isTagChecked,
 
     return (
       <>
-      <div className="flex justify-between items-center gap-4 px-[1rem] py-2  rounded-xl">
+      <div
+         style={{ WebkitAppRegion: 'no-drag' }} // 클릭 이벤트 허용 
+        className="flex justify-between items-center gap-4 px-[1rem] py-2  rounded-xl">
         {/* TAG 영역 */}
         <div
-          className="flex items-center gap-2 cursor-pointer"
+          className="flex items-center gap-2 cursor-pointer pl-[0.8rem]"
           onClick={() => setIsTagChecked((prev) => !prev)}
         >
           <input
@@ -136,7 +139,9 @@ const FilterBar = ({isTagChecked,
               <div className="flex justify-between gap-[0.4rem]"> {location} <span className="text-xs">▼</span></div>
             </button>
             {dropdownOpen && (
-              <div className="absolute flex flex-col text-end  h-auto mt-[2.7rem] ml-[2.7rem] w-32 bg-white border rounded-xl shadow-md z-50 p-2">
+              <div 
+               style={{ WebkitAppRegion: 'no-drag' }} // 클릭 이벤트 허용
+                className="absolute flex flex-col text-end  h-auto mt-[2.7rem] ml-[2.7rem] w-32 bg-white border rounded-xl shadow-md z-50 p-2">
                 {['All','Local', 'Cloud'].map((opt, idx) => (
                     <React.Fragment key={opt}>
 
@@ -199,14 +204,19 @@ const FilterBar = ({isTagChecked,
         <select
           className="w-[5.2rem] mt-1 rounded px-2 py-1"
           value={fileType}
-          onChange={(e) => setFileType(e.target.value)}
+          onChange={(e) => setPendingFileType(e.target.value)}
         >
           {/* <option>JPG</option> */}
-          <option>PNG</option>
+         <option>ALL</option>
+          <option>img</option>
+          <option>txt</option>
+
         </select>
       </div>
 
-      <div className="flex flex-col gap-[0.8rem]">
+      <div 
+        style={{ WebkitAppRegion: 'no-drag' }} // 클릭 이벤트 허용
+        className="flex flex-col gap-[0.8rem]">
         <div className="flex justify-between items-center">
           <label className="text-[var(--blue-200)] !font-pretendard font-[var(--font-md)]">since</label>
           <input
@@ -238,7 +248,10 @@ const FilterBar = ({isTagChecked,
           console.log(" 확인 클릭:", { fileType, since: sinceRaw, until: untilRaw });
             onApplyFilters(); //필터 적용 요청
           setIsOpenFilterModal(false);
+         -setFileType(pendingFileType);
+
         }}
+        style={{ WebkitAppRegion: 'no-drag' }} // 클릭 이벤트 허용
       >
         확인
       </button>

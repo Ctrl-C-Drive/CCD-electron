@@ -28,6 +28,7 @@ const App= () => {
     const { items, refetch, toggleSelect, addItem, setItemsFromSearchResult, getSelectedItemIds   } = useClipboardRecords();
     const [sinceRaw, setSinceRaw] = useState("");
     const [untilRaw, setUntilRaw] = useState("");
+  const [fileType, setFileType] = useState("all");
 
     // 입력 상태 (FilterBar에서 입력하는 값)
     const [sinceInput, setSinceInput] = useState("");
@@ -68,13 +69,14 @@ const App= () => {
   return (
     <>
       <div 
-        className="w-full h-full bg-white opacity-87  p-0 "
+        className="w-full h-full bg-white opacity-87  p-0 overflow-hidden  "
         style={{ WebkitAppRegion: 'drag' }}
       >
         {/* 최상단 손잡이, 닫기 버튼 */}
           <div className="pt-[1.6rem] pb-[2.1rem] flex justify-center relative">
               {/*  손잡이 */}
-              <div className="w-[5.6rem]  h-[0.2rem] bg-[var(--blue-200)] [border-[var(--blue-200)]">
+              <div 
+                className="w-[5.6rem]  h-[0.2rem] bg-[var(--blue-200)] [border-[var(--blue-200)]">
 
               </div>
               {/* 닫기 버튼  */}
@@ -112,6 +114,7 @@ const App= () => {
                     setUntilFilter(untilInput);
                     setLocationFilter(locationInput);
                   }}
+                   fileType={fileType} setFileType={setFileType} 
                />
               </div>
               {/* grid-view 데이터 존 */}
@@ -120,19 +123,19 @@ const App= () => {
                       isTagChecked={isTagChecked}
                       // items={items} 
                       items={filteredItems}
-
+                      refetch={refetch} 
                       addItem={addItem}  
                        toggleSelect={toggleSelect}  
+                        fileType={fileType} setFileType={setFileType} 
                   />
               </div>
               {/* 하단 bar */}
-              <div className="">
-                <BottomBar 
+
+            </div>
+            <BottomBar 
                   // selectedIds={selectedIds} 
                   getSelectedItemIds={getSelectedItemIds}
-                />
-              </div>
-            </div>
+           />
       </div>
       
     </>
