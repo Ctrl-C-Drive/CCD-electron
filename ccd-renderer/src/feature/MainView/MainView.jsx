@@ -145,12 +145,18 @@ const MainView = ({ isTagChecked, items, toggleSelect, addItem, refetch,fileType
 
   return (
     <div
-      className="grid grid-cols-2 gap-3 px-6 py-4  !w-screen  "
+      className="grid grid-cols-2 gap-3 px-6 py-4 
+       !w-full  
+        h-[calc(100vh-22.9rem)] 
+       !overflow-y-scroll
+       custom-scrollbar
+       "
       onDragOver={(e) => e.preventDefault()}
       onDrop={(e) => {
         e.preventDefault();
         console.log("Drop 이벤트 내부 div에서 감지됨");
       }}
+      
     >
       {items
         .filter((item) => {
@@ -162,7 +168,7 @@ const MainView = ({ isTagChecked, items, toggleSelect, addItem, refetch,fileType
         <div
           key={item.itemId}
           // onClick={() => handlePaste(item.itemId)} //클릭 이벤트 버블링 막고자, 보다 덜 포괄적인 위치로 리스너 이동동
-          className="w-[17rm] !h-auto relative  border border-blue-700 rounded-md overflow-hidden cursor-pointer"
+          className="w-[17rm] !h-[12rem] !h-auto relative  border border-blue-700 rounded-md overflow-hidden cursor-pointer"
           onContextMenu={(e) => {
             e.preventDefault(); // ✅ 기본 우클릭 메뉴 차단
             e.stopPropagation(); // 이벤트 전파 차단
