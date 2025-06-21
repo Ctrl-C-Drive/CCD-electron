@@ -39,7 +39,7 @@ import useClipboardRecords from "../../utils/useClipboardRecords";
     }, []);
 
     const retentionOptions = ['1일', '7일', '10일', '30일', '∞'];
-    const limitOptions = ['30개','10개', '50개' ]; 
+    const limitOptions = ['10개','30개', '50개' ]; 
     const handleApplySetting = async () => {
     const settings = {
       retentionDays : extractNumber(retention),             // ex) "7"
