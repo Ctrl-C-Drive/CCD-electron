@@ -11,8 +11,8 @@ const SearchBar = ({ setItemsFromSearchResult, refetch }) => {
   const options = ['일반 검색', '고급 검색'];
 
   const searchOptions = [
-    { label: "일반 검색", description: "텍스트 및 태그 검색" },
-    { label: "고급 검색", description: "문장 검색에 더 적합" },
+    { label: "일반 검색", description: "MobilenetV3 태그" },
+    { label: "고급 검색", description: "CLIP" },
   ];
 
   const [currentSelection, setCurrentSelection] = useState('일반 검색');
