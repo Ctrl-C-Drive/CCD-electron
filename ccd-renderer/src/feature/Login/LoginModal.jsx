@@ -2,6 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import clsx from 'clsx'; 
 import { twMerge } from 'tailwind-merge';
 import "../../styles/color.css";
+import useDisableDuringSubmit from "../../utils/useDisableDuringSubmit.js";
+
 import CryptoJS from "crypto-js";
 
 const LoginModal = ({loginInfo, setLoginInfo}) => {
@@ -15,6 +17,14 @@ const [error, setError] = useState("");
 const [isSubmitted, setIsSubmitted] = useState(false);
 const [idError, setIdError] = useState("");
 const [pwError, setPwError] = useState("");
+const loginBtnRef = useRef(null);
+const joinBtnRef = useRef(null);
+const isDisabled = modalState === "login"; // ex: 로그인 중이면 비활성화
+
+useDisableDuringSubmit(isSubmitted, loginBtnRef);
+useEffect(() => {
+  console.log("🟡 상태 확인", { error, success, isSubmitted });
+}, [error, success, isSubmitted]);
 
 // console.log("electronAPI:", window.electronAPI);
 useEffect(() => {
@@ -23,9 +33,15 @@ useEffect(() => {
     setModalState("loggedIn");
   }
 }, [loginInfo.isLoggedIn, loginInfo.userId]);
+useEffect(() => {
+  console.log(" error changed:", error);
+}, [error]);
 
 useEffect(() => {
-  console.log("🧪 loginInfo changed", loginInfo);
+  console.log(" success changed:", success);
+}, [success]);
+useEffect(() => {
+  console.log("loginInfo changed", loginInfo);
 }, [loginInfo]);
 
   useEffect(() => {
@@ -66,11 +82,16 @@ useEffect(() => {
   };
 
  const handleLogin = async () => {
-  setIsSubmitted(true);
+    setIsSubmitted(true); 
+
+    if (userId.length < 8 || pw.length < 8) {
+    setError("ID와 PW는 8자 이상이어야 합니다.");
+    return;
+  }
+
 
   if (!userId || !pw) {
     setError("ID 또는 PW를 입력해주세요");
-    setIsSubmitted(false);
     return;
   }
 
@@ -82,6 +103,7 @@ useEffect(() => {
       encryptedId,
       encryptedPw
     );
+    
 
     if (!tokenMsg) {
       setError("로그인 실패: 계정 정보를 확인하세요.");
@@ -103,6 +125,8 @@ useEffect(() => {
   } finally {
     setIsSubmitted(false);
   }
+  console.log("에러:", error, "성공:", success);
+
 };
 const handleLogout = async () => {
   try {
@@ -116,6 +140,12 @@ const handleLogout = async () => {
 
 
   const handleJoin = async() => {
+      setIsSubmitted(true); 
+    if (userId.length < 8 || pw.length < 8) {
+      setError("ID와 PW는 8자 이상이어야 합니다.");
+      return;
+    }
+
     if (!userId || !pw) {
     setError("ID 또는 PW를 입력해주세요");
     return;
@@ -225,6 +255,8 @@ const handleLogout = async () => {
                   Login
                 </div>
                 <div 
+                  ref={joinBtnRef}
+                  disabled={isSubmitted}
                     className="
                         text-[var(--blue-200)]
                         !font-pretendard
@@ -301,7 +333,7 @@ const handleLogout = async () => {
                   </div>
                 </label>
               </div>
-                  {isSubmitted && error && (
+               
                   <div className="
                    text-center
                    text-center
@@ -312,18 +344,17 @@ const handleLogout = async () => {
                    text-[var(--red)]
                    mt-[1rem]
                   ">
-                      {(error || success) && (
-                        <div
-                          className={twMerge(
-                            "text-center text-[0.9rem] mt-[1rem] !font-inter font-[var(--font-rg)] leading-normal",
-                            error ? "text-[var(--red)]" : "!text-blue-200"
-                          )}
-                        >
-                          {error || success}
-                        </div>
-                      )}
+                    {isSubmitted && (error || success) && (
+                      <div className={twMerge(
+                        "text-center text-[0.9rem] mt-[1rem] !font-inter font-[var(--font-rg)] leading-normal",
+                        error ? "text-[var(--red)]" : "!text-blue-200"
+                      )}>
+                        {error || success}
+                      </div>
+                    )}
+
                   </div>
-                )}
+
               <button
                 className="
                   text-[var(--blue-200)]
@@ -340,6 +371,8 @@ const handleLogout = async () => {
                  pt-[1.3rem]
                  "
                 onClick={handleLogin}
+                ref={loginBtnRef}
+                disabled={isSubmitted}
               >
                 Login
               </button>
@@ -461,46 +494,23 @@ const handleLogout = async () => {
                   />
                 </label>
               </div>
-                  {isSubmitted && error && (
-                  <div className="
-                   text-center
-                   text-center
-                   !font-inter
-                   text-[0.9rem]
-                   font-[var( --font-rg)]
-                   leading-normal
-                   text-[var(--red)]
-                   mt-[1rem]
-                  ">
-                    {(error || success) && (
-                        <div
-                          className={twMerge(
-                            "text-center text-[0.9rem] mt-[1rem] !font-inter font-[var(--font-rg)] leading-normal",
-                            error ? "text-[var(--red)]" : "!text-blue-200"
-                          )}
-                        >
-                          {error || success}
-                        </div>
+                  {isSubmitted && (error || success) && (
+                    <div
+                      className={twMerge(
+                        "text-center text-[0.9rem] mt-[1rem] !font-inter font-[var(--font-rg)] leading-normal",
+                        error ? "text-[var(--red)]" : "!text-blue-200"
                       )}
-
+                    >
+                          {error || success}
+                    
 
                   </div>
-                )}
+                 )} 
               <button
-                className="
-                  text-[var(--blue-200)]
-                  text-center
-                  !font-pretendard
-                  text-[1.1rem]
-                  font-[var(--font-rg)]
-                  leading-normal
-                  underline
-                  text-center
-                  justify-center
-                  flex
-                 w-full text-center
-                 pt-[1.3rem]
-                 "
+                   className={twMerge(
+                    "text-[var(--blue-200)] text-center !font-pretendard text-[1.1rem] font-[var(--font-rg)] leading-normal  underline text-center justify-center  flex  w-full text-center  pt-[1.3rem]",        
+                    isSubmitted && error ? "text-gray-400" : "text-[var(--blue-200)]"
+                  )}
                 onClick={handleJoin}
               >
                 Join
