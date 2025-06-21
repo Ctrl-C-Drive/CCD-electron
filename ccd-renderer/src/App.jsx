@@ -28,7 +28,7 @@ const App= () => {
     const { items, refetch, toggleSelect, addItem, setItemsFromSearchResult, getSelectedItemIds   } = useClipboardRecords();
     const [sinceRaw, setSinceRaw] = useState("");
     const [untilRaw, setUntilRaw] = useState("");
-
+  
     // 입력 상태 (FilterBar에서 입력하는 값)
     const [sinceInput, setSinceInput] = useState("");
     const [untilInput, setUntilInput] = useState("");

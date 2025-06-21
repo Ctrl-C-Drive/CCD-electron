@@ -42,6 +42,7 @@ const Toast = ({ message, type }) => {
 
   const BottomBar = ({getSelectedItemIds }) => {
       const [toasts, setToasts] = useState([]);
+      const [isModalOpen, setIsModalOpen] = useState(false);
 
     const showToast = (message, type) => {
       const id = Date.now();
@@ -126,7 +127,7 @@ const Toast = ({ message, type }) => {
         {/* <div className="cursor-pointer">
           <img src="settings.svg" alt="Settings" className="w-6 h-6 text-blue-700" />
         </div> */}
-          <SettingModal />
+        <SettingModal onClose={() => setIsModalOpen(false)} />
         <div className="absolute top-[48rem] flex flex-col items-end z-50">
           {toasts.map((toast) => (
             <Toast key={toast.id} message={toast.message} type={toast.type} />
