@@ -120,7 +120,7 @@ const App= () => {
                       isTagChecked={isTagChecked}
                       // items={items} 
                       items={filteredItems}
-
+                      refetch={refetch} 
                       addItem={addItem}  
                        toggleSelect={toggleSelect}  
                   />

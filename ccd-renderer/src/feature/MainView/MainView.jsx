@@ -135,6 +135,7 @@ const MainView = ({ isTagChecked, items, toggleSelect, addItem, refetch }) => {
       const res = await window.electronAPI.deleteItem(itemId, deleteOption);
       if (res.deletionResult && res.refreshReq) {
         refetch(); // 화면 갱신
+        setActiveItemId(null);   //해당 item 모달 닫기
       }
     } catch (err) {
       console.error("삭제 중 오류:", err);
@@ -238,45 +239,56 @@ const MainView = ({ isTagChecked, items, toggleSelect, addItem, refetch }) => {
             </div>
           )}
 
-          {activeItemId === item.itemId && (
-            <div
-              ref={(el) => (containerRefs.current[item.itemId] = el)}
-              onClick={(e) => e.stopPropagation()}
-              className="absolute w-[11rem] h-auto px-[1.2rem] top-[2rem] right-[2.2rem] 
-              bg-white border rounded-2xl shadow-md z-50 
-              text-[var(--blue-200)]
-              text-center
-              !font-pretendard
-              text-[1.1rem]
-              not-italic
-              font-[var(--font-md)]
-              leading-normal
-              "
-            >
-              <div
-                className="py-2 hover:bg-blue-50 cursor-pointer"
-                onClick={() => handleDelete(item.itemId, "both")}
-              >
-                모두 삭제
-              </div>
-              <hr />
-              <div
-                className="py-2 hover:bg-blue-50 cursor-pointer"
-                onClick={() => handleDelete(item.itemId, "local")}
-              >
-                Local에서 삭제
-              </div>
-              <hr />
+        {activeItemId === item.itemId && (
+          <div
+            ref={(el) => (containerRefs.current[item.itemId] = el)}
+            onClick={(e) => e.stopPropagation()}
+            className="absolute w-[11rem] h-auto px-[1.2rem] top-[2rem] right-[2.2rem] 
+            bg-white border rounded-2xl shadow-md z-50 
+            text-[var(--blue-200)]
+            text-center
+            !font-pretendard
+            text-[1.1rem]
+            not-italic
+            font-[var(--font-md)]
+            leading-normal
+            "
+          >
+            {(item.shared === "both" || item.shared === "all") && (
+              <>
+                <div
+                  className="py-2 hover:bg-blue-50 cursor-pointer"
+                  onClick={() => handleDelete(item.itemId, "both")}
+                >
+                  모두 삭제
+                </div>
+                <hr />
+              </>
+            )}
+            {(item.shared === "local" || item.shared === "both") && (
+              <>
+                <div
+                  className="py-2 hover:bg-blue-50 cursor-pointer"
+                  onClick={() => handleDelete(item.itemId, "local")}
+                >
+                  Local에서 삭제
+                </div>
+                <hr />
+              </>
+            )}
+            {(item.shared === "cloud" || item.shared === "both") && (
               <div
                 className="py-2 hover:bg-blue-50 cursor-pointer"
                 onClick={() => handleDelete(item.itemId, "cloud")}
               >
                 Cloud에서 삭제
               </div>
-            </div>
-          )}
-        </div>
-      ))}
+            )}
+          </div>
+        )}
+
+                </div>
+              ))}
     </div>
   );
 };
