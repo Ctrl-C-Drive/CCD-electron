@@ -9,8 +9,11 @@ import LoginModal from '../Login/LoginModal';
 
 const SearchBar =({setItemsFromSearchResult, refetch}) => {
  const options = ['일반 검색', '고급 검색'];
-
- const [isMobileNetv3] = useState(['일반 검색', '고급 검색']);
+ 
+const searchOptions = [
+  { label: "일반 검색", description: "텍스트 및 태그 검색" },
+  { label: "고급 검색", description: "문장 검색에 더 적합" },
+];
   const [currentSelection, setCurrentSelection] = useState('일반 검색');
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
@@ -116,27 +119,35 @@ const handleSearch = async () => {
                 bg-white border rounded-xl shadow-md pl-[1.3rem]
                 flex flex-col gap-2 z-[30]
               ">
-                {isMobileNetv3.map((opt) => (
-                  <div
-                    key={opt}
-                    className="
-                      cursor-pointer
-                      text-[var(--blue-200)]
-                      !font-pretendard
-                      !text-[1.3rem]
-                      !font-[var(--font-md)]
-                      leading-normal
-                      w-[7.8rem] h-[1.7rem]
-                    "
-                    onClick={() => {
-                      setCurrentSelection(opt);
-                      setDropdownOpen(false);
-                      console.log(opt);
-                    }}
-                  >
-                    {opt}
-                  </div>
-                ))}
+              {dropdownOpen && (
+                <div className="
+                  h-auto w-[15rem] 
+                  py-[0.5rem]
+                  absolute right-0 top-[3.8rem]
+                  bg-white border rounded-xl shadow-md pl-[1.3rem] pr-[1.3rem]
+                  flex flex-col gap-2 z-[30]
+                ">
+                  {searchOptions.map((opt) => (
+                    <div
+                      key={opt.label}
+                      className="cursor-pointer"
+                      onClick={() => {
+                        setCurrentSelection(opt.label);
+                        setDropdownOpen(false);
+                        console.log(opt.label);
+                      }}
+                    >
+                      <div className="text-[var(--blue-200)] text-[1.3rem] font-[var(--font-md)] leading-tight">
+                        {opt.label}
+                      </div>
+                      <div className="text-gray-400 text-[1.1rem] leading-snug">
+                        {opt.description}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               </div>
             )}
             </div>
