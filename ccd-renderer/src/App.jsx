@@ -28,7 +28,8 @@ const App= () => {
     const { items, refetch, toggleSelect, addItem, setItemsFromSearchResult, getSelectedItemIds   } = useClipboardRecords();
     const [sinceRaw, setSinceRaw] = useState("");
     const [untilRaw, setUntilRaw] = useState("");
-  
+  const [fileType, setFileType] = useState("all");
+
     // 입력 상태 (FilterBar에서 입력하는 값)
     const [sinceInput, setSinceInput] = useState("");
     const [untilInput, setUntilInput] = useState("");
@@ -112,6 +113,7 @@ const App= () => {
                     setUntilFilter(untilInput);
                     setLocationFilter(locationInput);
                   }}
+                   fileType={fileType} setFileType={setFileType} 
                />
               </div>
               {/* grid-view 데이터 존 */}
@@ -123,6 +125,7 @@ const App= () => {
                       refetch={refetch} 
                       addItem={addItem}  
                        toggleSelect={toggleSelect}  
+                        fileType={fileType} setFileType={setFileType} 
                   />
               </div>
               {/* 하단 bar */}

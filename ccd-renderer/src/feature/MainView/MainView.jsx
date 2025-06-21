@@ -4,12 +4,13 @@ import { twMerge } from "tailwind-merge";
 import "../../styles/color.css";
 // import useClipboardRecords from '../../utils/useClipboardRecords';
 
-const MainView = ({ isTagChecked, items, toggleSelect, addItem, refetch }) => {
+const MainView = ({ isTagChecked, items, toggleSelect, addItem, refetch,fileType,setFileType }) => {
   // const [items, setItems] = useState([]);
   const [activeItemId, setActiveItemId] = useState(null);
   const containerRefs = useRef({});
   // const { items, refetch, addItem } = useClipboardRecords();
   // const { items, refetch, toggleSelect, addItem } = useClipboardRecords();
+  // const [fileType, setFileType] = useState("IMG");
 
   // 모달 외부 클릭 시 닫기
   useEffect(() => {
@@ -151,7 +152,13 @@ const MainView = ({ isTagChecked, items, toggleSelect, addItem, refetch }) => {
         console.log("Drop 이벤트 내부 div에서 감지됨");
       }}
     >
-      {items.map((item) => (
+      {items
+        .filter((item) => {
+          if (fileType === "img") return item.type === "image";
+          if (fileType === "txt") return item.type === "text";
+          return true; // "all"인 경우
+        })
+        .map((item) => (
         <div
           key={item.itemId}
           // onClick={() => handlePaste(item.itemId)} //클릭 이벤트 버블링 막고자, 보다 덜 포괄적인 위치로 리스너 이동동
@@ -287,7 +294,8 @@ const MainView = ({ isTagChecked, items, toggleSelect, addItem, refetch }) => {
           </div>
         )}
 
-                </div>
+       </div>
+       
               ))}
     </div>
   );

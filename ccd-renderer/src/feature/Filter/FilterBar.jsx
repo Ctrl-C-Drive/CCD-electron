@@ -17,17 +17,18 @@ const FilterBar = ({isTagChecked,
                     onApplyFilters,
                      sinceInput, setSinceInput,
                     untilInput, setUntilInput,
+                    fileType,setFileType 
                   }) => {
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [location, setLocation] = useState('ALL');
     const [isLocal, setIsLocal] = useState(false);
     const [isCloud, setIsCloud] = useState(false);
     const [isOpenFilterModal, setIsOpenFilterModal] = useState(false);
-    const [fileType, setFileType] = useState('JPG');
     const [dateInput, setDateInput] = useState('');
     const [year, setYear] = useState('');
     const [month, setMonth] = useState('');
     const [day, setDay] = useState('');
+  const [pendingFileType, setPendingFileType] = useState(fileType); //임시 선택한 파일 타입
 
     // const [sinceRaw, setSinceRaw] = useState("");
     const [sinceDisplay, setSinceDisplay] = useState("");
@@ -199,10 +200,13 @@ const FilterBar = ({isTagChecked,
         <select
           className="w-[5.2rem] mt-1 rounded px-2 py-1"
           value={fileType}
-          onChange={(e) => setFileType(e.target.value)}
+          onChange={(e) => setPendingFileType(e.target.value)}
         >
           {/* <option>JPG</option> */}
-          <option>PNG</option>
+         <option>ALL</option>
+          <option>img</option>
+          <option>txt</option>
+
         </select>
       </div>
 
@@ -238,6 +242,8 @@ const FilterBar = ({isTagChecked,
           console.log(" 확인 클릭:", { fileType, since: sinceRaw, until: untilRaw });
             onApplyFilters(); //필터 적용 요청
           setIsOpenFilterModal(false);
+         -setFileType(pendingFileType);
+
         }}
       >
         확인
