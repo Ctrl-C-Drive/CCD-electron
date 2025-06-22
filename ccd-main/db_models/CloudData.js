@@ -113,7 +113,7 @@ class CloudDataModule {
       this.initWebSocket(credentials.user_id, (msg) => {
         console.log("서버 실시간 메시지 수신:", msg);
       });
-      notifyRenderer("clipboard-updated");
+      dataRepo.invalidateCache();
       console.log("login finished", response.data);
       return response.data;
     } catch (error) {
@@ -232,11 +232,11 @@ class CloudDataModule {
     switch (msg.event) {
       case "item_added":
         console.log("[WebSocket] 새 항목 도착:");
-        notifyRenderer("clipboard-updated");
+        dataRepo.invalidateCache();
         break;
       case "item_deleted":
         console.log("[WebSocket] 항목 삭제됨:");
-        notifyRenderer("clipboard-updated");
+        dataRepo.invalidateCache();
         break;
       default:
         console.warn("[WebSocket] 알 수 없는 이벤트:", msg.event);
