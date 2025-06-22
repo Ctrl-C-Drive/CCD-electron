@@ -19,7 +19,7 @@ class DataRepositoryModule extends EventEmitter {
   constructor() {
     super();
     this.localDB = require("./LocalData");
-    this.cloudDB = require("./CloudData");
+    this.cloudDB = null;
     this._loadConfig();
     this.initializeCleanup();
     this.cache = {
@@ -49,6 +49,9 @@ class DataRepositoryModule extends EventEmitter {
 
     // 24시간 주기로 정리
     setInterval(() => this.cleanup(), 86400000);
+  }
+  setCloudData(cloudDB) {
+    this.cloudDB = cloudDB;
   }
 
   async cleanup() {
@@ -893,5 +896,4 @@ class DataRepositoryModule extends EventEmitter {
   }
 }
 
-const dataRepositoryInstance = new DataRepositoryModule();
-module.exports = dataRepositoryInstance;
+module.exports = DataRepositoryModule;
