@@ -15,7 +15,7 @@ let isAlwaysOnTop = false;
 
 const createWindow = () => {
   win = new BrowserWindow({
-    width: 417,
+    width: 617,
     height: 646,
     frame: false, 
     titleBarStyle: 'hidden', 
