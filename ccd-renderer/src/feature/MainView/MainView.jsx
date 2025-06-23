@@ -242,17 +242,16 @@ const MainView = ({ isTagChecked, items, toggleSelect, addItem, refetch,fileType
                 leading-[2.8rem]
                 border-t h-[2.6rem] border-[var(--blue-200)] pl-[1.6rem] "
             >
-              {item.tags && item.tags.length > 0 ? (
-                item.tags.map((t, idx) =>
-                  typeof t === "string" ? (
-                    <span key={idx}># {t}</span>
-                  ) : (
-                    <span key={idx}># {t.tag}</span>
-                  )
-                )
+             {item.tags && item.tags.length > 0 ? (
+                <span>
+                  {item.tags
+                    .map((t) => `#${typeof t === "string" ? t : t.tag}`)
+                    .join(' ')}
+                </span>
               ) : (
                 <span># 태그 없음</span>
               )}
+
             </div>
           )}
 
