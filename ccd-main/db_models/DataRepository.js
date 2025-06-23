@@ -541,12 +541,6 @@ class DataRepositoryModule extends EventEmitter {
           shared: item.shared || "cloud",
         });
       }
-      // if (!mergedMap.has(item.id)) {
-      //   mergedMap.set(item.id, {
-      //     ...item,
-      //     thumbnailUrl: item.thumbnailUrl,
-      //   });
-      // }
     });
 
     return Array.from(mergedMap.values()).sort(
@@ -572,6 +566,7 @@ class DataRepositoryModule extends EventEmitter {
       tags: item.tags || [],
       score: item.score || 0,
     };
+  }
   }
 
   //선택 업로드
