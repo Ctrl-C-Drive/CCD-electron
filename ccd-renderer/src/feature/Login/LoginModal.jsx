@@ -7,13 +7,15 @@ import useDisableDuringSubmit from "../../utils/useDisableDuringSubmit.js";
 import CryptoJS from "crypto-js";
 
 const LoginModal = ({loginInfo, setLoginInfo}) => {
-  const [success, setSuccess] = useState("");
+const [loginSuccess, setLoginSuccess] = useState("");
+const [loginError, setLoginError] = useState("");
+const [joinSuccess, setJoinSuccess] = useState("");
+const [joinError, setJoinError] = useState("");
 
 const [modalState, setModalState] = useState(null);
   const [userId, setUserId] = useState(""); // 로그인 성공 시 저장될 유저 ID
   const ref = useRef(null);
 const [pw, setPw] = useState("");
-const [error, setError] = useState("");
 const [isSubmitted, setIsSubmitted] = useState(false);
 const [idError, setIdError] = useState("");
 const [pwError, setPwError] = useState("");
@@ -22,9 +24,7 @@ const joinBtnRef = useRef(null);
 const isDisabled = modalState === "login"; // ex: 로그인 중이면 비활성화
 
 useDisableDuringSubmit(isSubmitted, loginBtnRef);
-useEffect(() => {
-  console.log("🟡 상태 확인", { error, success, isSubmitted });
-}, [error, success, isSubmitted]);
+
 
 // console.log("electronAPI:", window.electronAPI);
 useEffect(() => {
@@ -33,16 +33,17 @@ useEffect(() => {
     setModalState("loggedIn");
   }
 }, [loginInfo.isLoggedIn, loginInfo.userId]);
-useEffect(() => {
-  console.log(" error changed:", error);
-}, [error]);
+
 
 useEffect(() => {
-  console.log(" success changed:", success);
-}, [success]);
-useEffect(() => {
-  console.log("loginInfo changed", loginInfo);
-}, [loginInfo]);
+  if (modalState === "JoinIn") {
+    setJoinError("");
+    setJoinSuccess("");
+  } else if (modalState === "login") {
+    setLoginError("");
+    setLoginSuccess("");
+  }
+}, [modalState]);
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -82,16 +83,19 @@ useEffect(() => {
   };
 
  const handleLogin = async () => {
+  setLoginSuccess("");
+  setLoginError("");
+
     setIsSubmitted(true); 
 
     if (userId.length < 8 || pw.length < 8) {
-    setError("ID와 PW는 8자 이상이어야 합니다.");
+    setLoginError("ID와 PW는 8자 이상이어야 합니다.");
     return;
   }
 
 
   if (!userId || !pw) {
-    setError("ID 또는 PW를 입력해주세요");
+    setLoginError("ID 또는 PW를 입력해주세요");
     return;
   }
 
@@ -106,26 +110,26 @@ useEffect(() => {
     
 
     if (!tokenMsg) {
-      setError("로그인 실패: 계정 정보를 확인하세요.");
-      setSuccess("");
+      setLoginError("로그인 실패: 계정 정보를 확인하세요.");
+      setLoginSuccess("");
     // } else if (!accessToken) {
     //   setError("Access Token이 존재하지 않습니다.");
     //   setSuccess("");
     } else {
       // setUserId(userId); // 실제 userId 저장 (암호화된 값 아님)
-        setSuccess("로그인 성공"); 
-        setError("");
+        setLoginSuccess("로그인 성공"); 
+        setLoginError("");
 
         setLoginInfo({ isLoggedIn: true, userId }); ;
     }
   } catch (error) {
     console.error("로그인 중 오류 발생:", error);
-    setError("로그인 중 오류가 발생했습니다.");
-    setSuccess("");
+    setLoginError("로그인 중 오류가 발생했습니다.");
+    setLoginSuccess("");
   } finally {
     setIsSubmitted(false);
   }
-  console.log("에러:", error, "성공:", success);
+  console.log("에러:", loginError, "성공:", loginSuccess);
 
 };
 const handleLogout = async () => {
@@ -142,12 +146,12 @@ const handleLogout = async () => {
   const handleJoin = async() => {
       setIsSubmitted(true); 
     if (userId.length < 8 || pw.length < 8) {
-      setError("ID와 PW는 8자 이상이어야 합니다.");
+      setJoinError("ID와 PW는 8자 이상이어야 합니다.");
       return;
     }
 
     if (!userId || !pw) {
-    setError("ID 또는 PW를 입력해주세요");
+    setJoinError("ID 또는 PW를 입력해주세요");
     return;
   }
 
@@ -157,25 +161,29 @@ const handleLogout = async () => {
     const { joinResultMsg } = await window.electronAPI.registerUser(encryptedId, encryptedPw);
 
     if (joinResultMsg === "success") {
-      setSuccess("회원가입 성공"); 
-      setModalState(null);
-      setError("");
-    } else if (joinResultMsg === "duplication") {
-      setError("이미 존재하는 ID입니다.");
-      setSuccess("");
-    } else {
-      setError("회원가입에 실패했습니다. 다시 시도해주세요.");
-      setSuccess("");
+      setJoinSuccess("회원가입 성공"); 
+      setTimeout(() => {
+          setModalState(null);
+          setJoinSuccess(""); // 이후 다시 열었을 때 남지 않도록 초기화
+        }, 1000); // 1초 후 모달 닫기    
+     } else if (joinResultMsg === "duplication") {
+      setJoinError("이미 존재하는 ID입니다.");   
+        setJoinSuccess("");
+  
+      } else {
+      setJoinError("회원가입에 실패했습니다. 다시 시도해주세요.");
+      // setModalState(null);
+      setJoinSuccess("");
+
     }
   } catch (err) {
     console.error("회원가입 중 에러:", err);
-    setError("알 수 없는 오류가 발생했습니다.");
-    setSuccess("");
+    setJoinError("알 수 없는 오류가 발생했습니다.");
+    setJoinSuccess("");
   }
   
     setUserId(userId); // ID 반영
     setPw(pw);
-    setModalState(null);  //PW 반영
   }
   
 
@@ -347,12 +355,12 @@ const handleLogout = async () => {
                    text-[var(--red)]
                    mt-[1rem]
                   ">
-                    {isSubmitted && (error || success) && (
+                    {(loginError || loginSuccess) && (
                       <div className={twMerge(
                         "text-center text-[0.9rem] mt-[1rem] !font-inter font-[var(--font-rg)] leading-normal",
-                        error ? "text-[var(--red)]" : "!text-blue-200"
+                        loginError ? "text-[var(--red)]" : "!text-blue-200"
                       )}>
-                        {error || success}
+                        {loginError || loginSuccess}
                       </div>
                     )}
 
@@ -497,14 +505,14 @@ const handleLogout = async () => {
                   />
                 </label>
               </div>
-                  {isSubmitted && (error || success) && (
+                  {(joinError || joinSuccess) && (
                     <div
                       className={twMerge(
                         "text-center text-[0.9rem] mt-[1rem] !font-inter font-[var(--font-rg)] leading-normal",
-                        error ? "text-[var(--red)]" : "!text-blue-200"
+                        joinError ? "text-[var(--red)]" : "!text-blue-200"
                       )}
                     >
-                          {error || success}
+                          {joinError || joinSuccess}
                     
 
                   </div>
@@ -512,7 +520,7 @@ const handleLogout = async () => {
               <button
                    className={twMerge(
                     "text-[var(--blue-200)] text-center !font-pretendard text-[1.1rem] font-[var(--font-rg)] leading-normal  underline text-center justify-center  flex  w-full text-center  pt-[1.3rem]",        
-                    isSubmitted && error ? "text-gray-400" : "text-[var(--blue-200)]"
+                    isSubmitted && joinError ? "text-gray-400" : "text-[var(--blue-200)]"
                   )}
                 onClick={handleJoin}
               >
