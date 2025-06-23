@@ -229,7 +229,7 @@ return (
               </div>
 
               {localLimitOpen && (
-                <div className="absolute top-6 left-2 z-[999] bg-white border mt-1 rounded shadow text-sm  w-[4.4rem] items-center flex flex-col">
+                <div className="absolute top-full left-2  z-[999] bg-white border rounded shadow text-sm w-[4.4rem] items-center flex flex-col">
                   {limitOptions.map((opt) => (
                     <div
                       key={opt + '-local'}
