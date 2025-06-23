@@ -201,7 +201,7 @@ const MainView = ({ isTagChecked, items, toggleSelect, addItem, refetch,fileType
               </p>
             )}
               {/* 체크박스: shared가 cloud 또는 both가 아닐 때만 표시 */}
-              {(item.shared !== "cloud" && item.shared !== "both") && (
+              {/* {(item.shared !== "cloud" && item.shared !== "both") && ( */}
                 <div className="absolute top-1 left-1">
                   <input
                     type="checkbox"
@@ -213,7 +213,7 @@ const MainView = ({ isTagChecked, items, toggleSelect, addItem, refetch,fileType
                     className="accent-blue-700 w-[1.3rem] h-[1.3rem]"
                   />
                 </div>
-              )}
+              {/* )} */}
 
             <div className="absolute bottom-1 right-1 flex gap-1 items-end">
               {(item.shared === "both" || item.shared === "cloud") && (
