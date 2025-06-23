@@ -188,6 +188,8 @@ const handleLogout = async () => {
     console.error("회원가입 중 에러:", err);
     setJoinError("알 수 없는 오류가 발생했습니다.");
     setJoinSuccess("");
+  }finally{
+     setIsSubmitted(false);
   }
   
     setUserId(userId); // ID 반영
