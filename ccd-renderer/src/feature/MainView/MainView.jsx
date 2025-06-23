@@ -201,7 +201,7 @@ const MainView = ({ isTagChecked, items, toggleSelect, addItem, refetch,fileType
               </p>
             )}
               {/* 체크박스: shared가 cloud 또는 both가 아닐 때만 표시 */}
-              {(item.shared !== "cloud" && item.shared !== "both") && (
+              {/* {(item.shared !== "cloud" && item.shared !== "both") && ( */}
                 <div className="absolute top-1 left-1">
                   <input
                     type="checkbox"
@@ -213,7 +213,7 @@ const MainView = ({ isTagChecked, items, toggleSelect, addItem, refetch,fileType
                     className="accent-blue-700 w-[1.3rem] h-[1.3rem]"
                   />
                 </div>
-              )}
+              {/* )} */}
 
             <div className="absolute bottom-1 right-1 flex gap-1 items-end">
               {(item.shared === "both" || item.shared === "cloud") && (
@@ -242,17 +242,16 @@ const MainView = ({ isTagChecked, items, toggleSelect, addItem, refetch,fileType
                 leading-[2.8rem]
                 border-t h-[2.6rem] border-[var(--blue-200)] pl-[1.6rem] "
             >
-              {item.tags && item.tags.length > 0 ? (
-                item.tags.map((t, idx) =>
-                  typeof t === "string" ? (
-                    <span key={idx}># {t}</span>
-                  ) : (
-                    <span key={idx}># {t.tag}</span>
-                  )
-                )
+             {item.tags && item.tags.length > 0 ? (
+                <span>
+                  {item.tags
+                    .map((t) => `#${typeof t === "string" ? t : t.tag}`)
+                    .join(' ')}
+                </span>
               ) : (
                 <span># 태그 없음</span>
               )}
+
             </div>
           )}
 

@@ -203,7 +203,8 @@ const FilterBar = ({isTagChecked,
         </label>
         <select
           className="w-[5.2rem] mt-1 rounded px-2 py-1"
-          value={fileType}
+          // value={fileType}
+          value={pendingFileType} 
           onChange={(e) => setPendingFileType(e.target.value)}
         >
           {/* <option>JPG</option> */}
@@ -248,7 +249,7 @@ const FilterBar = ({isTagChecked,
           console.log(" 확인 클릭:", { fileType, since: sinceRaw, until: untilRaw });
             onApplyFilters(); //필터 적용 요청
           setIsOpenFilterModal(false);
-         -setFileType(pendingFileType);
+         setFileType(pendingFileType);
 
         }}
         style={{ WebkitAppRegion: 'no-drag' }} // 클릭 이벤트 허용

@@ -129,6 +129,7 @@ const setItemsFromSearchResult = (newItems) => {
     addItem,
     setItemsFromSearchResult,
     getSelectedItemIds,
+    setItems
   };
 };
 
