@@ -68,10 +68,16 @@ class DataRepositoryModule extends EventEmitter {
   }
   async updateConfig(newConfig) {
     await this.localDB.updateConfig(newConfig);
-    this.cleanup();
     this._loadConfig();
-    this.invalidateCache();
+    console.log(
+      "✅ 업데이트 전 캐시 수:",
+      this.cache.all.data?.length ?? "없음"
+    );
+    await this.cleanup();
+
+    await this.reloadCache(true);
     notifyRenderer("clipboard-updated");
+    console.log("✅ 새로 로드된 캐시 수:", this.cache.all.data?.length);
   }
 
   async updateMaxCountCloud(limit) {
@@ -85,7 +91,7 @@ class DataRepositoryModule extends EventEmitter {
     }
   }
 
-  invalidateCache() {
+  async invalidateCache() {
     this.cache.all.valid = false;
   }
 
@@ -237,6 +243,7 @@ class DataRepositoryModule extends EventEmitter {
 
       this.invalidateCache();
       notifyRenderer("clipboard-updated");
+      this.localDB.cleanupImageFiles();
       return this.transformItem(newItem);
     } catch (error) {
       throw CCDError.create("E610", {
@@ -317,6 +324,7 @@ class DataRepositoryModule extends EventEmitter {
 
       this.invalidateCache();
       notifyRenderer("clipboard-updated");
+      this.localDB.cleanupImageFiles();
 
       return true;
     } catch (error) {
