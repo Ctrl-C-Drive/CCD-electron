@@ -20,7 +20,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // 로그인
   loginUser: (userId, password) =>
     ipcRenderer.invoke("user-login", { userId, password }),
- logoutUser: () => ipcRenderer.invoke('user-logout'),
+  
+  // 로그아웃
+  logoutUser: () => ipcRenderer.invoke('user-logout'),
   //로그인 상태 불러오기
   getLoginState: () => ipcRenderer.invoke("get-login-state"),
 
@@ -52,6 +54,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
   updateSettings: (settings) =>
     ipcRenderer.invoke("update-settings", settings),
 
+  // 환경설정 불러오기
+  getSettings: () => ipcRenderer.invoke("get-settings"),
+  
   // 클라우드 업로드
   uploadSelectedItems: (itemIds) =>
     ipcRenderer.invoke("upload-selected-items", itemIds),
