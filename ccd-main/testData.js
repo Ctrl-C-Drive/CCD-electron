@@ -1,8 +1,8 @@
-const dataRepo = require("./db_models/DataRepository");
+const dataRepo = require("./db_models/initModule").dataRepo;
 const { app } = require("electron");
 
 app.whenReady().then(async () => {
-  const dataRepo = require("./db_models/DataRepository");
+  const dataRepo = require("./db_models/initModule").dataRepo;
 
   console.log("Running cache test...");
   await testCacheBehavior();

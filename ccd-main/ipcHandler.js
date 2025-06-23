@@ -10,7 +10,7 @@ const {
 const { pasteById } = require("./paste");
 const CCDError = require("./CCDError");
 
-const dataRepo = require("./db_models/DataRepository");
+const dataRepo = require("./db_models/initModule").dataRepo;
 let isLogin = false;
 function setupIPC() {
   // 회원가입

@@ -1,5 +1,5 @@
 const { ipcMain } = require("electron");
-const dataRepo = require("./db_models/DataRepository");
+const dataRepo = require("./db_models/initModule").dataRepo;
 
 /**
  * 선택한 항목 클라우드 업로드

@@ -6,7 +6,7 @@ const { app, ipcMain, globalShortcut, BrowserWindow } = require("electron");
 const monitor = require("./monitor");
 const CCDError = require("../CCDError");
 const notifyRenderer = require("../notifyRenderer");
-const dbmgr = require("../db_models/DataRepository");
+const dbmgr = require("../db_models/initModule").dataRepo;
 
 const {
   getCloudUploadEnabled,

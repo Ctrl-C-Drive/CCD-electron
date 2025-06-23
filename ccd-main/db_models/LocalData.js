@@ -489,6 +489,19 @@ class LocalDataModule {
   //클립보드 항목 삭제
   deleteClipboardItem(id) {
     try {
+      const meta = this.getImageMeta(id);
+
+      // 이미지 파일이 존재하면 삭제
+      if (meta) {
+        if (meta.file_path && fs.existsSync(meta.file_path)) {
+          fs.unlinkSync(meta.file_path);
+          console.log(`이미지 파일 삭제됨: ${meta.file_path}`);
+        }
+        if (meta.thumbnail_path && fs.existsSync(meta.thumbnail_path)) {
+          fs.unlinkSync(meta.thumbnail_path);
+          console.log(`썸네일 파일 삭제됨: ${meta.thumbnail_path}`);
+        }
+      }
       const deleteChain = this.db.transaction((id) => {
         this.db.prepare("DELETE FROM clipboard WHERE id = ?").run(id);
       });

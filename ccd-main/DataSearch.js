@@ -1,5 +1,5 @@
 const CCDError = require("./CCDError");
-const dataRepo = require("./db_models/DataRepository");
+const dataRepo = require("./db_models/initModule").dataRepo;
 const fs = require("fs");
 const path = require("path");
 

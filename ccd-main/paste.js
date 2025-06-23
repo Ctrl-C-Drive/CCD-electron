@@ -3,7 +3,7 @@ const { clipboard, nativeImage } = require("electron");
 const http = require("http");
 const https = require("https");
 const { Buffer } = require("buffer");
-const DataRepository = require("./db_models/DataRepository"); // 경로는 실제 위치에 맞게 수정
+const DataRepository = require("./db_models/initModule").dataRepo; // 경로는 실제 위치에 맞게 수정
 const CCDError = require("./CCDError");
 const monitor = require("./clipboard/monitor");
 
@@ -51,12 +51,18 @@ async function pasteById(dataId) {
         await copyImageFromUrl(item.content);
         // URL로 복사된 이미지는 해시값을 구해 예외 등록
         const image = clipboard.readImage();
-        const hash = require("crypto").createHash("sha256").update(image.toPNG()).digest("hex");
+        const hash = require("crypto")
+          .createHash("sha256")
+          .update(image.toPNG())
+          .digest("hex");
         monitor.skipNextCopy(hash, "image");
       } else {
         const image = nativeImage.createFromPath(item.content);
         clipboard.writeImage(image);
-        const hash = require("crypto").createHash("sha256").update(image.toPNG()).digest("hex");
+        const hash = require("crypto")
+          .createHash("sha256")
+          .update(image.toPNG())
+          .digest("hex");
         monitor.skipNextCopy(hash, "image");
       }
     } else {

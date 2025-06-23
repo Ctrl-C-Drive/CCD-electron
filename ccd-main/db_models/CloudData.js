@@ -25,7 +25,7 @@ class CloudDataModule {
     this.isRefreshing = false;
     this.refreshSubscribers = [];
     this.localDB = require("./LocalData");
-    this.dataRepo = require("./DataRepository");
+    this.dataRepo = null;
     // Axios 인스턴스 생성
     this.axiosInstance = axios.create({
       baseURL: this.apiBaseURL,
@@ -89,6 +89,9 @@ class CloudDataModule {
       }
     );
   }
+  setDataRepository(dataRepo) {
+    this.dataRepo = dataRepo;
+  }
 
   // 토큰 저장소 업데이트
   updateTokenStorage(tokens) {
@@ -113,8 +116,9 @@ class CloudDataModule {
       this.initWebSocket(credentials.user_id, (msg) => {
         console.log("서버 실시간 메시지 수신:", msg);
       });
-      notifyRenderer("clipboard-updated");
+      this.dataRepo.invalidateCache();
       console.log("login finished", response.data);
+      notifyRenderer("clipboard-updated");
       return response.data;
     } catch (error) {
       console.error("Login failed:", error.response?.data || error);
@@ -130,6 +134,7 @@ class CloudDataModule {
   logout() {
     this.tokenStorage = { accessToken: null, refreshToken: null };
     this.closeWebSocket();
+    notifyRenderer("clipboard-updated");
   }
   async processPendingSync() {
     const items = this.localDB.getPendingSyncItems();
@@ -232,10 +237,12 @@ class CloudDataModule {
     switch (msg.event) {
       case "item_added":
         console.log("[WebSocket] 새 항목 도착:");
+        this.dataRepo.invalidateCache();
         notifyRenderer("clipboard-updated");
         break;
       case "item_deleted":
         console.log("[WebSocket] 항목 삭제됨:");
+        this.dataRepo.invalidateCache();
         notifyRenderer("clipboard-updated");
         break;
       default:
@@ -464,5 +471,4 @@ class CloudDataModule {
   }
 }
 
-const cloudDataInstance = new CloudDataModule(config);
-module.exports = cloudDataInstance;
+module.exports = CloudDataModule;
