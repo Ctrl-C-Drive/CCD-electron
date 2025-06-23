@@ -180,15 +180,31 @@ class CloudDataModule {
   async signup(userData) {
     try {
       const response = await this.axiosInstance.post("/signup", userData);
-      return response.data;
+      return {
+        success: true,
+        message: response.data.message,
+      };
     } catch (error) {
-      throw CCDError.create("E610", {
-        module: "CloudData",
-        context: "회원가입",
+      const code = error.response?.data?.code;
+
+      // 아이디 중복인 경우
+      if (code === "USER_EXISTS") {
+        return {
+          success: false,
+          reason: "duplicate",
+          message: "이미 사용 중인 ID입니다.",
+        };
+      }
+
+      // 기타 서버 오류
+      return {
+        success: false,
+        reason: "unknown",
         message: error.response?.data?.detail || "회원가입 실패",
-      });
+      };
     }
   }
+
   initWebSocket(userId, onMessageCallback) {
     if (this.socketClient) {
       console.log("[WebSocket] 이미 연결됨");
@@ -216,6 +232,8 @@ class CloudDataModule {
     this.socketClient.on("close", () => {
       console.log("[WebSocket] 연결 종료");
       this.socketClient = null;
+      this.dataRepo.invalidateCache();
+      notifyRenderer("clipboard-updated");
     });
 
     this.socketClient.on("error", (err) => {
