@@ -232,7 +232,7 @@ const handleLogout = async () => {
         <div
           ref={ref}
           className="absolute  flex flex-col
-           right-0 mt-2 w-[14.2rem] h-[15.5rem] bg-white rounded-xl   
+           right-0 mt-2 min-w-[14.2rem] min-h-[15.5rem] bg-white rounded-xl   
            shadow-[0_0.1rem_2.5rem_0_rgba(0,0,0,0.10)]
             p-4 z-10"
             style={{ WebkitAppRegion: 'no-drag' }} // 클릭 이벤트 허용
@@ -453,7 +453,7 @@ const handleLogout = async () => {
 
           {/* 회원가입 입력 폼 */}
           {modalState === "JoinIn" && (
-            <div className="w-[14.2rem]  bg-[var(--white)]">
+            <div className="w-[14.2rem]   bg-[var(--white)]">
               <div className="
                     text-[var(--blue-200)]
                     text-center
@@ -503,8 +503,7 @@ const handleLogout = async () => {
                     className="!w-[8.3rem] ml-2 px-2 py-1 ml-[0.2rem] rounded-md bg-gray-100 text-gray-800 flex-1"
                   />
                 </label>
-              </div>
-                  {(joinError || joinSuccess) && (
+                    {(joinError || joinSuccess) && (
                     <div
                       className={twMerge(
                         "text-center  text-[0.9rem] mt-[1rem] mb-[0.6rem] !font-inter font-[var(--font-rg)] leading-normal flex w-full justify-center ",
@@ -516,15 +515,18 @@ const handleLogout = async () => {
 
                   </div>
                  )} 
-              <button
+                   <button
                    className={twMerge(
-                    "text-[var(--blue-200)] text-center !font-pretendard text-[1.1rem] font-[var(--font-rg)] pt-[2rem] leading-normal  underline text-center justify-center  flex  w-full text-center  pb-[1.3rem]",        
+                    "text-[var(--blue-200)] text-center !font-pretendard text-[1.1rem] font-[var(--font-rg)]  leading-normal  underline text-center justify-center  flex  w-full text-center ",        
                     isSubmitted && joinError ? "text-gray-400" : "text-[var(--blue-200)]"
                   )}
                 onClick={handleJoin}
               >
                 Join
               </button>
+              </div>
+
+
             </div>
           )}
         
