@@ -23,6 +23,8 @@ const loginBtnRef = useRef(null);
 const joinBtnRef = useRef(null);
 const isDisabled = modalState === "login"; // ex: 로그인 중이면 비활성화
 
+// 공백만으로 구성된 입력을 막기 위한 정규식: ^\s+$ 는 공백으로만 구성된 문자열
+const isWhitespaceOnly = (str) => /^\s+$/.test(str);
 useDisableDuringSubmit(isSubmitted, loginBtnRef);
 
 
@@ -92,7 +94,10 @@ useEffect(() => {
     setLoginError("ID와 PW는 8자 이상이어야 합니다.");
     return;
   }
-
+  if (userId.length < 8 || pw.length < 8 || isWhitespaceOnly(userId) || isWhitespaceOnly(pw)) {
+    setLoginError("ID와 PW는 8자 이상의 공백이 아닌 문자여야 합니다.");
+    return;
+  }
 
   if (!userId || !pw) {
     setLoginError("ID 또는 PW를 입력해주세요");
@@ -149,7 +154,10 @@ const handleLogout = async () => {
       setJoinError("ID와 PW는 8자 이상이어야 합니다.");
       return;
     }
-
+    if (userId.length < 8 || pw.length < 8 || isWhitespaceOnly(userId) || isWhitespaceOnly(pw)) {
+      setJoinError("ID와 PW는 8자 이상의 공백이 아닌 문자여야 합니다.");
+      return;
+    }
     if (!userId || !pw) {
     setJoinError("ID 또는 PW를 입력해주세요");
     return;
@@ -224,7 +232,7 @@ const handleLogout = async () => {
         <div
           ref={ref}
           className="absolute  flex flex-col
-           right-0 mt-2 w-56 bg-white rounded-xl   
+           right-0 mt-2 w-[14.2rem] h-[15.5rem] bg-white rounded-xl   
            shadow-[0_0.1rem_2.5rem_0_rgba(0,0,0,0.10)]
             p-4 z-10"
             style={{ WebkitAppRegion: 'no-drag' }} // 클릭 이벤트 허용
@@ -260,6 +268,7 @@ const handleLogout = async () => {
                         leading-normal
                         text-center
                         cursor-pointer
+                        b-[2rem]
                     "
                   onClick={() => setModalState("login")}
                 >
@@ -286,7 +295,7 @@ const handleLogout = async () => {
 
           {/* 로그인 입력 폼 */}
           {modalState === "login" && (
-            <div className="w-[14.2rem] h-[15.4rem] bg-[var(--white)]">
+            <div className="w-[14.2rem] h-[15.4rem] bg-[var(--white)] mb-[1.2rem] pb-[2rem]">
               <div className="
                     text-[var(--blue-200)]
                     text-center
@@ -298,7 +307,7 @@ const handleLogout = async () => {
               ">Login
               </div>
               <hr className="mb-2" />
-              <div className="flex flex-col gap-2 pl-[2rem] pt-[1.4rem] pr-[1.8rem] ">
+              <div className="flex flex-col gap-2  pt-[1.4rem] px-[1.8rem] ">
                 <label className=" 
                   text-[var(--blue-200)]
                   text-[1.2rem]
@@ -367,20 +376,10 @@ const handleLogout = async () => {
                   </div>
 
               <button
-                className="
-                  text-[var(--blue-200)]
-                  text-center
-                  !font-pretendard
-                  text-[1.1rem]
-                  font-[var(--font-rg)]
-                  leading-normal
-                  underline
-                  text-center
-                  justify-center
-                  flex
-                 w-full text-center
-                 pt-[1.3rem]
-                 "
+                  className={twMerge(
+                    "text-[var(--blue-200)] text-center !font-pretendard text-[1.1rem] font-[var(--font-rg)] leading-normal  underline text-center justify-center  flex  w-full text-center  mb-[1.2rem] pb-[1.3rem] pt-[1.2rem]",        
+                    isSubmitted && loginError ? "text-gray-400" : "text-[var(--blue-200)]"
+                  )}
                 onClick={handleLogin}
                 ref={loginBtnRef}
                 disabled={isSubmitted}
@@ -454,7 +453,7 @@ const handleLogout = async () => {
 
           {/* 회원가입 입력 폼 */}
           {modalState === "JoinIn" && (
-            <div className="w-[14.2rem] h-[15.4rem] bg-[var(--white)]">
+            <div className="w-[14.2rem]  bg-[var(--white)]">
               <div className="
                     text-[var(--blue-200)]
                     text-center
@@ -466,7 +465,7 @@ const handleLogout = async () => {
               ">Join
               </div>
               <hr className="mb-2" />
-              <div className="flex flex-col gap-2 pl-[2rem] pt-[1.4rem] pr-[1.8rem] ">
+              <div className="flex flex-col gap-2 px-[2rem] pt-[1.4rem]  ">
                 <label className=" 
                   text-[var(--blue-200)]
                   text-[1.2rem]
@@ -508,7 +507,7 @@ const handleLogout = async () => {
                   {(joinError || joinSuccess) && (
                     <div
                       className={twMerge(
-                        "text-center text-[0.9rem] mt-[1rem] !font-inter font-[var(--font-rg)] leading-normal",
+                        "text-center  text-[0.9rem] mt-[1rem] mb-[0.6rem] !font-inter font-[var(--font-rg)] leading-normal flex w-full justify-center ",
                         joinError ? "text-[var(--red)]" : "!text-blue-200"
                       )}
                     >
@@ -519,7 +518,7 @@ const handleLogout = async () => {
                  )} 
               <button
                    className={twMerge(
-                    "text-[var(--blue-200)] text-center !font-pretendard text-[1.1rem] font-[var(--font-rg)] leading-normal  underline text-center justify-center  flex  w-full text-center  pt-[1.3rem]",        
+                    "text-[var(--blue-200)] text-center !font-pretendard text-[1.1rem] font-[var(--font-rg)] pt-[2rem] leading-normal  underline text-center justify-center  flex  w-full text-center  pb-[1.3rem]",        
                     isSubmitted && joinError ? "text-gray-400" : "text-[var(--blue-200)]"
                   )}
                 onClick={handleJoin}
