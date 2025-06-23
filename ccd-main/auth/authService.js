@@ -1,20 +1,23 @@
-
 require("dotenv").config();
 const crypto = require("crypto");
-const CCDError = require("./CCDError");
-const CloudDataModule = require("../db_models/CloudData");
+const CCDError = require("../CCDError");
+
+const cloudDB = require("../db_models/initModule").cloudData;
 
 const { AES_KEY, AES_IV, CLOUD_SERVER_URL } = process.env;
 
 if (!AES_KEY || !AES_IV || !CLOUD_SERVER_URL) {
-  throw CCDError.create("E611", {
+  const err = CCDError.create("E611", {
     module: "authService",
     context: "환경 변수 확인",
     message: "AES_KEY, AES_IV 또는 CLOUD_SERVER_URL이 설정되지 않았습니다.",
   });
+  module.exports = {
+    registerUser: async () => err.toJSON(),
+    authenticate: async () => err.toJSON(),
+  };
+  return;
 }
-
-const cloudDB = new CloudDataModule({ apiBaseURL: CLOUD_SERVER_URL });
 
 //AES-256-CBC 복호화 함수
 function decryptAES(encrypted) {
@@ -26,69 +29,68 @@ function decryptAES(encrypted) {
     );
     let decrypted = decipher.update(encrypted, "base64", "utf8");
     decrypted += decipher.final("utf8");
-    return decrypted;
+    return { success: true, data: decrypted };
   } catch (err) {
-    throw CCDError.create("E611", {
+    return CCDError.create("E611", {
       module: "authService",
       context: "AES 복호화 실패",
-      details: err,
-    });
+      details: err.message,
+    }).toJSON();
   }
 }
 
 /**
  * 사용자 회원가입
- * @param {string} encryptedId AES 암호화된 userId
- * @param {string} encryptedPwd AES 암호화된 password
- * @returns {Promise<{JoinResult: boolean}>}
  */
 async function registerUser(encryptedId, encryptedPwd) {
-  try {
-    const userId = decryptAES(encryptedId);
-    const password = decryptAES(encryptedPwd);
+  const idResult = decryptAES(encryptedId);
+  const pwResult = decryptAES(encryptedPwd);
 
-    const result = await cloudDB.signup({ user_id: userId, password });
-    return { JoinResult: result?.JoinResult ?? true };
+  if (!idResult.success) return idResult;
+  if (!pwResult.success) return pwResult;
+
+  try {
+    const result = await cloudDB.signup({
+      user_id: idResult.data,
+      password: pwResult.data,
+    });
+
+    return { success: true, JoinResult: result?.JoinResult ?? true };
   } catch (err) {
     const code = err.response?.data?.errorCode || err.code || "E632";
 
-    switch (code) {
-      case "E409":
-        throw CCDError.create("E409", {
-          module: "authService",
-          context: "회원가입",
-          message: "이미 존재하는 사용자입니다.",
-        });
-      case "E611":
-        throw CCDError.create("E611", {
-          module: "authService",
-          context: "입력값 오류",
-          details: err,
-        });
-      default:
-        throw CCDError.create(code, {
-          module: "authService",
-          context: "회원가입 처리 중 오류",
-          details: err,
-        });
+    const errorDetail = {
+      module: "authService",
+      context: "회원가입",
+      details: err.message || err,
+    };
+
+    if (code === "E409") {
+      errorDetail.message = "이미 존재하는 사용자입니다.";
     }
+
+    return CCDError.create(code, errorDetail).toJSON();
   }
 }
 
 /**
  * 사용자 로그인
- * @param {string} encryptedId AES 암호화된 userId
- * @param {string} encryptedPwd AES 암호화된 password
- * @returns {Promise<{loginResult: boolean, accessToken: string}>}
  */
 async function authenticate(encryptedId, encryptedPwd) {
-  try {
-    const userId = decryptAES(encryptedId);
-    const password = decryptAES(encryptedPwd);
+  const idResult = decryptAES(encryptedId);
+  const pwResult = decryptAES(encryptedPwd);
 
-    const result = await cloudDB.login({ user_id: userId, password });
+  if (!idResult.success) return idResult;
+  if (!pwResult.success) return pwResult;
+
+  try {
+    const result = await cloudDB.login({
+      user_id: idResult.data,
+      password: pwResult.data,
+    });
 
     return {
+      success: true,
       loginResult: true,
       accessToken: result.access_token,
       refreshToken: result.refresh_token,
@@ -96,26 +98,17 @@ async function authenticate(encryptedId, encryptedPwd) {
   } catch (err) {
     const code = err.response?.data?.errorCode || err.code || "E610";
 
-    switch (code) {
-      case "E401":
-        throw CCDError.create("E401", {
-          module: "authService",
-          context: "로그인 인증 실패",
-          message: "아이디 또는 비밀번호가 잘못되었습니다.",
-        });
-      case "E611":
-        throw CCDError.create("E611", {
-          module: "authService",
-          context: "입력값 오류",
-          details: err,
-        });
-      default:
-        throw CCDError.create(code, {
-          module: "authService",
-          context: "로그인 처리 중 오류",
-          details: err,
-        });
+    const errorDetail = {
+      module: "authService",
+      context: "로그인",
+      details: err.message || err,
+    };
+
+    if (code === "E401") {
+      errorDetail.message = "아이디 또는 비밀번호가 잘못되었습니다.";
     }
+
+    return CCDError.create(code, errorDetail).toJSON();
   }
 }
 

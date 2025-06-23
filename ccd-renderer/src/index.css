@@ -7,9 +7,27 @@ html, body, #root {
   height: 100%;
   margin: 0;
   padding: 0;
+  overflow: hidden;
+
 }
 
 html {
   font-size: 62.5%;
 }
 
+@layer utilities {
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 7px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: #C6D2DF; /* 트랙 배경색 (연회색) */
+   border-radius: 20px;  
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: #185EAF; /* 썸 색상 (파란색) */
+    border-radius: 20px;      /* pill 모양 */
+  }
+
+}

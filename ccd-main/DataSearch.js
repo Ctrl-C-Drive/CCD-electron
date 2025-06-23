@@ -1,70 +1,87 @@
-// ccd-main/modules/DataSearchModule.js
-const DataRepositoryModule = require("../db_models/DataRepository");
 const CCDError = require("./CCDError");
-const CLOUD_SERVER_URL = process.env.CLOUD_SERVER_URL || "http://localhost:8000";
+const dataRepo = require("./db_models/initModule").dataRepo;
+const fs = require("fs");
+const path = require("path");
 
-if (!CLOUD_SERVER_URL) {
-  throw CCDError.create("E611", {
-    module: "DataSearchModule",
-    context: "환경 변수 확인",
-    message: "CLOUD_SERVER_URL이 설정되지 않았습니다.",
-  });
-}
+// function transformForRenderer(item) {
+//   return {
+//     itemId: item.id || item.itemId,
+//     type: item.type === "img" ? "image" : "text",
+//     content: item.content || item.snippet || "",
+//     thumbnail_path:
+//       item.type === "img" && item.thumbnail_path && fs.existsSync(item.thumbnail_path)
+//         ? `data:image/png;base64,${fs.readFileSync(item.thumbnail_path).toString("base64")}`
+//         : undefined,
+//     tags: Array.isArray(item.tags)
+//       ? item.tags.map((t) => (typeof t === "string" ? t : t.name))
+//       : [],
+//     selected: false,
+//     source: item.shared || item.source || "local",
+//   };
+// }
 
-const dataRepo = new DataRepositoryModule({ apiBaseURL: CLOUD_SERVER_URL });
+// function transformItem(item) {
+//   console.log(item);
+//   const isBase64 =
+//     typeof item.thumbnail_path === "string" &&
+//     item.thumbnail_path.startsWith("data:image/");
 
-/**
- * 검색 요청 처리 함수
- * @param {string} keyword - 사용자 검색어
- * @param {"mobilenet" | "clip"} model - 사용할 AI 모델
- * @returns {Promise<{ sendResult: boolean, sendData: Array } | { success: false, error: object }>}
- */
+//   const encodedThumbnail =
+//     item.thumbnail_path && !isBase64 && fs.existsSync(item.thumbnail_path)
+//       ? `data:image/png;base64,${fs
+//           .readFileSync(item.thumbnail_path)
+//           .toString("base64")}`
+//       : isBase64
+//       ? item.thumbnail_path
+//       : undefined;
+//   return {
+//     id: item.id,
+//     type: item.type,
+//     content: item.content,
+//     format: item.format,
+//     created_at: item.created_at,
+//     tags: item.tags || [],
+//     score: item.score || 0,
+//     thumbnail_path: encodedThumbnail,
+//   };
+// }
+
 async function searchData(keyword, model) {
   try {
     if (!keyword || !model) {
-      throw CCDError.create("E611", {
+      const err = CCDError.create("E611", {
         module: "DataSearchModule",
         context: "검색 요청 유효성 검사",
         message: "검색어 또는 모델 정보가 없습니다.",
       });
+      console.error(err);
+      return err.toJSON();
     }
 
     let resultItems = [];
 
     if (model === "mobilenet") {
-      const [localData, cloudData] = await Promise.all([
-        dataRepo.getLocalPreview(),
-        dataRepo.getCloudPreview(),
-      ]);
-
-      const allItems = dataRepo.mergeItems(localData, cloudData);
-
-      resultItems = allItems.filter(item =>
-        item.tags?.some(tag => tag.name?.includes(keyword))
-      );
+      resultItems = await dataRepo.searchItems(keyword, { includeCloud: true });
+      // const rawResults = await dataRepo.searchItems(keyword, {
+      //   includeCloud: true,
+      // });
+      // resultItems = rawResults.map(transformItem); // ✅ 이 경우에만 transform
     }
 
     if (model === "clip") {
-      resultItems = await dataRepo.cloudDB.searchByCLIP(keyword);
+      resultItems = await dataRepo.searchByCLIP(keyword); // 내부에서 transformItem 호출됨
     }
 
-    const sendData = resultItems.map(item => ({
-      fileType: item.format,
-      source: item.source,
-      date: item.createdAt,
-      imgURL: item.content,
-      thumbnailURL: item.thumbnailUrl || null,
-    }));
-
-    return { sendResult: true, sendData };
-  } catch (error) {
-    const wrapped = error instanceof CCDError
-      ? error
-      : CCDError.create("E621", {
-          module: "DataSearchModule",
-          context: "검색 처리 중",
-          details: error,
-        });
+    return { success: true, data: resultItems };
+  } catch (err) {
+    const wrapped =
+      err instanceof CCDError
+        ? err
+        : CCDError.create("E621", {
+            module: "DataSearchModule",
+            context: "검색 처리 중",
+            details: err,
+          });
 
     console.error("searchData 오류:", wrapped);
     return wrapped.toJSON();

@@ -4,17 +4,39 @@ import { twMerge } from 'tailwind-merge';
 import "../../styles/color.css";
 
 
-const FilterBar = ({isTagChecked, setIsTagChecked}) => {
+const FilterBar = ({isTagChecked, 
+                    setIsTagChecked, 
+                    locationFilter,
+                    setLocationFilter, 
+                    sinceRaw,
+                    setSinceRaw,
+                    untilRaw,
+                    setUntilRaw,
+                    locationInput,
+                    setLocationInput,
+                    onApplyFilters,
+                     sinceInput, setSinceInput,
+                    untilInput, setUntilInput,
+                    fileType,setFileType 
+                  }) => {
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [location, setLocation] = useState('ALL');
     const [isLocal, setIsLocal] = useState(false);
     const [isCloud, setIsCloud] = useState(false);
     const [isOpenFilterModal, setIsOpenFilterModal] = useState(false);
-    const [fileType, setFileType] = useState('JPG');
     const [dateInput, setDateInput] = useState('');
     const [year, setYear] = useState('');
     const [month, setMonth] = useState('');
     const [day, setDay] = useState('');
+  const [pendingFileType, setPendingFileType] = useState(fileType); //임시 선택한 파일 타입
+
+    // const [sinceRaw, setSinceRaw] = useState("");
+    const [sinceDisplay, setSinceDisplay] = useState("");
+    const [sinceError, setSinceError] = useState("");
+
+    // const [untilRaw, setUntilRaw] = useState("");
+    const [untilDisplay, setUntilDisplay] = useState("");
+    const [untilError, setUntilError] = useState("");
 
     const [dateInputRaw, setDateInputRaw] = useState("");     // 내부 로직용 (YYYYMMDD)
     const [dateInputDisplay, setDateInputDisplay] = useState(""); // 사용자에게 보여지는 값 (YYYY/MM/DD)
@@ -37,11 +59,8 @@ const FilterBar = ({isTagChecked, setIsTagChecked}) => {
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-const handleDateInput = (value) => {
-  // 숫자만 추출
-  const digits = value.replace(/\D/g, "").slice(0, 8); // 최대 8자리 숫자
-
-  // 실시간 포맷팅: YYYY/MM/DD
+  const handleDateInput = (value, type) => {
+  const digits = value.replace(/\D/g, "").slice(0, 8);
   let formatted = digits;
   if (digits.length > 4) {
     formatted = `${digits.slice(0, 4)}/${digits.slice(4, 6)}`;
@@ -50,44 +69,37 @@ const handleDateInput = (value) => {
     }
   }
 
-  // 상태 업데이트
-  setDateInputRaw(digits);
-  setDateInputDisplay(formatted);
+  const year = parseInt(digits.slice(0, 4), 10);
+  const month = parseInt(digits.slice(4, 6), 10);
+  const day = parseInt(digits.slice(6, 8), 10);
 
-    // 유효성 검사
-    // 1. 8글자 이내인지 아닌지 검사사
-    if (digits.length === 8) {
-      //8글자면 year/month/day로 사용자에게 보여지는 값만 파싱
-      // (실제 값은 여전히 20240427 식)
-      const year = parseInt(digits.slice(0, 4), 10);
-      const month = parseInt(digits.slice(4, 6), 10);
-      const day = parseInt(digits.slice(6, 8), 10);
+  const isValidDate =
+    digits.length === 8 &&
+    month >= 1 && month <= 12 &&
+    day >= 1 && day <= 31 &&
+    new Date(`${year}-${month}-${day}`).getDate() === day &&
+    new Date(`${year}-${month}-${day}`).getMonth() + 1 === month;
 
-      const isValidDate =
-        month >= 1 &&
-        month <= 12 &&
-        day >= 1 &&
-        day <= 31 &&
-        new Date(`${year}-${month}-${day}`).getDate() === day &&
-        new Date(`${year}-${month}-${day}`).getMonth() + 1 === month;
+  if (type === "since") {
+    setSinceInput(digits); // ✅ 외부 상태 업데이트
+    setSinceDisplay(formatted);
+    setSinceError(isValidDate || digits.length < 8 ? "" : "유효한 날짜를 입력해주세요");
+  } else {
+    setUntilInput(digits); 
+    setUntilDisplay(formatted);
+    setUntilError(isValidDate || digits.length < 8 ? "" : "유효한 날짜를 입력해주세요");
+  }
+};
 
-      //9999/04/27 같이 말이 안되는 날짜 검사
-      if (!isValidDate) {
-        setDateError("유효한 날짜를 입력해주세요");
-      } else {
-        setDateError("");
-      }
-    } else {
-      setDateError(""); // 입력 중간에는 에러 숨김
-    }
-  };
 
     return (
       <>
-      <div className="flex justify-between items-center gap-4 px-[1rem] py-2  rounded-xl">
+      <div
+         style={{ WebkitAppRegion: 'no-drag' }} // 클릭 이벤트 허용 
+        className="flex justify-between items-center gap-4 px-[1rem] py-2  rounded-xl">
         {/* TAG 영역 */}
         <div
-          className="flex items-center gap-2 cursor-pointer"
+          className="flex items-center gap-2 cursor-pointer pl-[0.8rem]"
           onClick={() => setIsTagChecked((prev) => !prev)}
         >
           <input
@@ -127,7 +139,9 @@ const handleDateInput = (value) => {
               <div className="flex justify-between gap-[0.4rem]"> {location} <span className="text-xs">▼</span></div>
             </button>
             {dropdownOpen && (
-              <div className="absolute flex flex-col text-end  h-auto mt-[2.7rem] ml-[2.7rem] w-32 bg-white border rounded-xl shadow-md z-50 p-2">
+              <div 
+               style={{ WebkitAppRegion: 'no-drag' }} // 클릭 이벤트 허용
+                className="absolute flex flex-col text-end  h-auto mt-[2.7rem] ml-[2.7rem] w-32 bg-white border rounded-xl shadow-md z-50 p-2">
                 {['All','Local', 'Cloud'].map((opt, idx) => (
                     <React.Fragment key={opt}>
 
@@ -146,6 +160,7 @@ const handleDateInput = (value) => {
                     "
                     onClick={() => {
                       setLocation(opt);
+                      setLocationFilter(opt);
                       setIsLocal(opt === 'Local');
                       setIsCloud(opt === 'Cloud');
                       setDropdownOpen(false);
@@ -170,87 +185,80 @@ const handleDateInput = (value) => {
               src="Filter.svg"
               alt="Filter"
             />
-            {isOpenFilterModal && (
-              <div className="
-                  absolute  w-[14.2rem]
-                  h-[14.5rem]  right-0 mt-2 bg-white border 
-                  rounded-xl shadow-md z-50 py-4
-              ">
-                <div 
-                className="
-                  text-[var(--blue-200)]
-                  text-center
-                  !font-pretendard
-                  text-[1.4rem]
-                  not-italic
-                  font-[600]
-                  leading-normal
-                  flex
-                  justify-center
-                  px-auto     
-        
-                  pb-[0.8rem]        
-                ">
-                  Filter
-                  </div>
-                <div className=" px-[1.7rem] flex flex-col gap-[1.3rem] ">
-                
-                 <hr className="mb-2" />
-                  <div className="flex flex-row w-auto justify-between items-center">
-                
-                   <label className="
-                    text-[var(--blue-200)]
-                    !font-pretendard
-                    font-[var(--font-md)]
-                    leading-normal justify-between items-center
-                    whitespace-nowrap
-                  ">파일 타입</label>
-                  <lable className="
-                    text-[var(--blue-200)]
-                    !font-pretendard
-                    font-[var(--font-md)]
-                    leading-normal justify-between items-center
-                  ">
-                  <select
-                    className="w-[5.2rem] mt-1 rounded px-2 py-1 "
-                    value={fileType}
-                    onChange={(e) => setFileType(e.target.value)}
-                  >
-                    <option>jpg</option>
-                    <option>png</option>
-                    <option>jpeg</option>
-                  </select>
-                  </lable>
-                  </div>
-                 <div className="flex flex-row w-auto justify-between ">
-                  <label className="  
-                    text-[var(--blue-200)]
-                    !font-pretendard
-                    font-[var(--font-md)]
-                    leading-normal justify-between items-center
-                    whitespace-nowrap
-                  ">
-                    날짜
-                  </label>
-                  <div className="flex flex-col">
-                  <input
-                    type="text"
-                    placeholder="YYYYMMDD"
-                    value={dateInputDisplay}
-                    onChange={(e) => handleDateInput(e.target.value)}
-                    className="!w-[5.2rem] mt-1 rounded bg-[var(--gray-200)]/50 px-2 py-1"
-                  />
-                  {dateError && (
-                    <p className="absolute bottom-4 left-5 text-[var(--red)] text-[0.9rem] mt-1 inline-block whitespace-nowrap z-100
-                          ">{dateError}</p>
-                  )}
-                  </div>
+ {isOpenFilterModal && (
+  <div className="
+      absolute w-[14.2rem]
+      h-auto right-0 mt-2 bg-white border 
+      rounded-xl shadow-md z-50 py-4
+  ">
+    <div className="text-[var(--blue-200)] text-center !font-pretendard text-[1.4rem] font-[600] leading-normal pb-[0.8rem]">
+      Filter
+    </div>
+    <div className="px-[1.7rem] flex flex-col gap-[1.3rem]">
+      <hr className="mb-2" />
 
-                </div>
-                </div>
+      <div className="flex justify-between items-center">
+        <label className="text-[var(--blue-200)] !font-pretendard font-[var(--font-md)]">
+          파일 타입
+        </label>
+        <select
+          className="w-[5.2rem] mt-1 rounded px-2 py-1"
+          value={fileType}
+          onChange={(e) => setPendingFileType(e.target.value)}
+        >
+          {/* <option>JPG</option> */}
+         <option>ALL</option>
+          <option>img</option>
+          <option>txt</option>
 
-              </div>
-            )}
+        </select>
+      </div>
+
+      <div 
+        style={{ WebkitAppRegion: 'no-drag' }} // 클릭 이벤트 허용
+        className="flex flex-col gap-[0.8rem]">
+        <div className="flex justify-between items-center">
+          <label className="text-[var(--blue-200)] !font-pretendard font-[var(--font-md)]">since</label>
+          <input
+            type="text"
+            placeholder="YYYYMMDD"
+            value={sinceDisplay}
+            onChange={(e) => handleDateInput(e.target.value, "since")}
+            className="!w-[7rem] mt-1 rounded bg-[var(--gray-200)]/50 px-2 py-1"
+          />
+        </div>
+        {sinceError && <p className="text-[var(--red)] text-[0.9rem] mt-1 whitespace-nowrap">{sinceError}</p>}
+
+        <div className="flex justify-between items-center">
+          <label className="text-[var(--blue-200)] !font-pretendard font-[var(--font-md)]">until</label>
+          <input
+            type="text"
+            placeholder="YYYYMMDD"
+            value={untilDisplay}
+            onChange={(e) => handleDateInput(e.target.value, "until")}
+            className="!w-[7rem] mt-1 rounded bg-[var(--gray-200)]/50 px-2 py-1"
+          />
+        </div>
+        {untilError && <p className="text-[var(--red)] text-[0.9rem] mt-1 whitespace-nowrap">{untilError}</p>}
+      </div>
+
+      <button
+        className="mt-3 text-center text-[var(--blue-200)] !font-pretendard font-[var(--font-md)] underline"
+        onClick={() => {
+          console.log(" 확인 클릭:", { fileType, since: sinceRaw, until: untilRaw });
+            onApplyFilters(); //필터 적용 요청
+          setIsOpenFilterModal(false);
+         -setFileType(pendingFileType);
+
+        }}
+        style={{ WebkitAppRegion: 'no-drag' }} // 클릭 이벤트 허용
+      >
+        확인
+      </button>
+    </div>
+  </div>
+)}
+
           </div>
 
         </div>

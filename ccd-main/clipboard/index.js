@@ -4,24 +4,14 @@ require("dotenv").config();
 
 const { app, ipcMain, globalShortcut, BrowserWindow } = require("electron");
 const monitor = require("./monitor");
-const DataRepositoryModule = require("../db_models/DataRepository");
 const CCDError = require("../CCDError");
+const notifyRenderer = require("../notifyRenderer");
+const dbmgr = require("../db_models/initModule").dataRepo;
 
-const CLOUD_SERVER_URL = process.env.CLOUD_SERVER_URL || "http://localhost:8000";
-
-if (!CLOUD_SERVER_URL) {
-  throw CCDError.create("E611", {
-    module: "index",
-    context: "환경 변수 확인",
-    message: "CLOUD_SERVER_URL이 설정되지 않았습니다!",
-  });
-}
-
-const dbmgr = new DataRepositoryModule({
-  apiBaseURL: CLOUD_SERVER_URL,
-});
-
-let cloudUploadEnabled = false;
+const {
+  getCloudUploadEnabled,
+  toggleCloudUploadEnabled,
+} = require("../cloudUploadState");
 
 /**
  * 클립보드 기능 모듈 초기화
@@ -29,7 +19,7 @@ let cloudUploadEnabled = false;
 function initClipboardModule() {
   setupToggleShortcut();
   startMonitoring();
-  notifyRenderer();
+  notifyRenderer("clipboard-upload-status", getCloudUploadEnabled());
 }
 
 /**
@@ -41,11 +31,15 @@ function setupToggleShortcut() {
     console.log(`${shortcut} already registered, skipping.`);
     return;
   }
+
   const ok = globalShortcut.register(shortcut, () => {
-    cloudUploadEnabled = !cloudUploadEnabled;
-    console.log(`Cloud upload ${cloudUploadEnabled ? "enabled" : "disabled"}`);
-    notifyRenderer();
+    toggleCloudUploadEnabled();
+    console.log(
+      `Cloud upload ${getCloudUploadEnabled() ? "enabled" : "disabled"}`
+    );
+    notifyRenderer("clipboard-upload-status", getCloudUploadEnabled());
   });
+
   if (!ok) {
     const error = CCDError.create("E611", {
       module: "index",
@@ -53,6 +47,7 @@ function setupToggleShortcut() {
       message: `단축키 등록에 실패했습니다: ${shortcut}`,
     });
     console.error(error);
+    return error.toJSON();
   }
 }
 
@@ -72,7 +67,7 @@ function addClipboard(id, type, format, content, timestamp) {
   };
 
   try {
-    return dbmgr.addItem(itemData, cloudUploadEnabled ? "both" : "local");
+    return dbmgr.addItem(itemData, getCloudUploadEnabled() ? "both" : "local");
   } catch (err) {
     const error = CCDError.create("E631", {
       module: "index",
@@ -80,7 +75,7 @@ function addClipboard(id, type, format, content, timestamp) {
       details: err,
     });
     console.error(error);
-    throw error;
+    return error.toJSON();
   }
 }
 
@@ -107,18 +102,9 @@ function startMonitoring() {
         details: err,
       });
       console.error(error);
+      return error.toJSON();
     }
   });
-}
-
-/**
- * 렌더러에 현재 클라우드 업로드 상태 전송
- */
-function notifyRenderer() {
-  const win = BrowserWindow.getAllWindows()[0];
-  if (win && win.webContents) {
-    win.webContents.send("clipboard-upload-status", cloudUploadEnabled);
-  }
 }
 
 module.exports = { initClipboardModule };

@@ -6,13 +6,17 @@ const crypto = require("crypto");
 const CCDError = require("../CCDError");
 
 const documentsDir = app.getPath("documents");
-const imageDir = path.join(documentsDir, "CCD", "clipboard_images");
+const imageDir = path.join(documentsDir, "CCD", "original");
 fs.ensureDirSync(imageDir);
 
 let lastData = null;
 let intervalId = null;
 let isProcessingImage = false;
 let lastImageHash = null;
+
+let skipCopyContent = new Set();
+let skipContentType = null;
+let skipTimestamp = 0;
 
 function saveImageToDisk(nativeImage, id) {
   try {
@@ -21,12 +25,14 @@ function saveImageToDisk(nativeImage, id) {
     fs.writeFileSync(filePath, buffer);
     return filePath;
   } catch (err) {
-    throw CCDError.create("E670", {
+    const error = CCDError.create("E670", {
       module: "monitor",
       context: "이미지 저장",
       message: "클립보드 이미지를 디스크에 저장하지 못했습니다.",
       details: err,
     });
+    console.error(error);
+    return error.toJSON();
   }
 }
 
@@ -44,9 +50,19 @@ function start(onData) {
 
   intervalId = setInterval(() => {
     try {
+      const now = Date.now();
       const text = clipboard.readText();
       let contentType, content;
       if (text && text !== lastData) {
+        if (
+          skipContentType === "text" &&
+          skipCopyContent.has(text) &&
+          now - skipTimestamp < 3000
+        ) {
+          // 복사 예외 처리: 기록에 반영하지 않음
+          lastData = text;
+          return;
+        }
         contentType = "text";
         content = text;
         lastData = content;
@@ -67,6 +83,15 @@ function start(onData) {
       if (!image.isEmpty() && !isProcessingImage) {
         const currentHash = getImageHash(image);
         if (currentHash === lastImageHash) return;
+        if (
+          skipContentType === "image" &&
+          skipCopyContent.has(currentHash) &&
+          now - skipTimestamp < 3000
+        ) {
+          // 복사 예외 처리: 기록에 반영하지 않음
+          lastImageHash = currentHash;
+          return;
+        }
 
         lastImageHash = currentHash;
         isProcessingImage = true;
@@ -94,6 +119,7 @@ function start(onData) {
         details: err,
       });
       console.error(error);
+      return error.toJSON();
     }
   }, 1000);
 }
@@ -105,4 +131,13 @@ function stop() {
   }
 }
 
-module.exports = { start, stop };
+function skipNextCopy(content, type) {
+  skipCopyContent.add(content);
+  skipContentType = type;
+  skipTimestamp = Date.now();
+  setTimeout(() => {
+    skipCopyContent.delete(content);
+  }, 3000); // 3초간만 예외 처리
+}
+
+module.exports = { start, stop, skipNextCopy };
