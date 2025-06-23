@@ -9,25 +9,36 @@ const {
 } = require("./cloudUploadState");
 const { pasteById } = require("./paste");
 const CCDError = require("./CCDError");
+const { join } = require("./mobilenetv3/Classes");
 
 const dataRepo = require("./db_models/initModule").dataRepo;
 let isLogin = false;
 function setupIPC() {
   // 회원가입
   ipcMain.handle("user-register", async (_, { userId, password }) => {
-    try {
-      const { JoinResult } = await registerUser(userId, password);
-      return { joinResultMsg: JoinResult ? "success" : "fail" };
-    } catch (err) {
-      const error = CCDError.create(err.code || "E632", {
-        module: "ipcHandler",
-        context: "회원가입 처리",
-        details: err.message,
-      });
-      console.error(error);
-      return error.toJSON();
+  try {
+    const result = await registerUser(userId, password);
+
+    if (!result.success) {
+      if (result.code === "E409") {
+        return { joinResultMsg: "duplication" };
+      }
+      return { joinResultMsg: "fail", error: result.message };
     }
-  });
+
+    return { joinResultMsg: "success" };
+  } catch (err) {
+    const error = CCDError.create(err.code || "E632", {
+      module: "ipcHandler",
+      context: "회원가입 처리",
+      details: err.message,
+    });
+    console.error(error);
+    return { joinResultMsg: "fail", error: error.message };
+  }
+});
+
+
 
   // 로그인
   ipcMain.handle("user-login", async (_, { userId, password }) => {
@@ -93,10 +104,10 @@ function setupIPC() {
         err instanceof CCDError
           ? err
           : CCDError.create("E631", {
-              module: "ipcHandler",
-              context: "드래그 파일 처리",
-              details: err.message,
-            });
+            module: "ipcHandler",
+            context: "드래그 파일 처리",
+            details: err.message,
+          });
       console.error(error);
       return error.toJSON();
     }
@@ -145,10 +156,10 @@ function setupIPC() {
         err instanceof CCDError
           ? err
           : CCDError.create("E630", {
-              module: "ipcHandler",
-              context: "붙여넣기",
-              details: err.message,
-            });
+            module: "ipcHandler",
+            context: "붙여넣기",
+            details: err.message,
+          });
       console.error(error);
       return error.toJSON();
     }

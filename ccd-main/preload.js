@@ -20,7 +20,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // 로그인
   loginUser: (userId, password) =>
     ipcRenderer.invoke("user-login", { userId, password }),
- logoutUser: () => ipcRenderer.invoke('user-logout'),
+  
+  // 로그아웃
+  logoutUser: () => ipcRenderer.invoke('user-logout'),
   //로그인 상태 불러오기
   getLoginState: () => ipcRenderer.invoke("get-login-state"),
 
