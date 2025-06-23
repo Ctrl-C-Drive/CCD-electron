@@ -39,6 +39,10 @@ useEffect(() => {
   document.addEventListener('mousedown', handleClickOutside);
   return () => document.removeEventListener('mousedown', handleClickOutside);
 }, []);
+useEffect(() => {
+  console.log("⚠️ 로그인 정보:", loginInfo);
+}, [loginInfo]);
+
     useEffect(() => {
       window.electronAPI.onCloudUploadStatusChange((status) => {
         setIsAutoCloudSave(status);
@@ -69,6 +73,7 @@ useEffect(() => {
       setIsVisible(false); 
     } else {
       console.error("❌ 설정 전송 실패", response.error);
+      setItems([]);
     }
   } catch (err) {
     console.error("❌ IPC 오류:", err);

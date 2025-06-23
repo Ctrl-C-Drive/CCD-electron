@@ -45,7 +45,10 @@ const App= () => {
 
       const [locationFilter, setLocationFilter] = useState("All");
    useEffect(() => {
+          if (!Array.isArray(items)) return;
+
   const filtered = items.filter((item) => {
+
     // Location 필터
     if (locationFilter === "Local" && item.shared !== "local") return false;
     if (locationFilter === "Cloud" && item.shared !== "cloud") return false;
@@ -97,6 +100,8 @@ const App= () => {
                   <SearchBar 
                     setItemsFromSearchResult={setItemsFromSearchResult}
                     refetch={refetch}  
+                    loginInfo={loginInfo} 
+                    setLoginInfo={setLoginInfo}
                   />
               </div>
               {/* Tag, 필터 2개 zone */}

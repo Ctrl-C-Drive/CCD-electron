@@ -38,6 +38,7 @@ const MainView = ({ isTagChecked, items, toggleSelect, addItem, refetch,fileType
       const path = e.dataTransfer.files[0]?.path; // ✅ Electron 환경이라면 존재
       console.log("✅ file.path:", path);
 
+      
       const file = e.dataTransfer.files[0];
       if (!file) return;
 

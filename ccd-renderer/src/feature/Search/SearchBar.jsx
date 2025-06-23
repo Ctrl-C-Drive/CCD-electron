@@ -7,7 +7,7 @@ import useDisableDuringSubmit from "../../utils/useDisableDuringSubmit";
 
 import LoginModal from '../Login/LoginModal';
 
-const SearchBar = ({ setItemsFromSearchResult, refetch }) => {
+const SearchBar = ({ setItemsFromSearchResult, refetch, loginInfo, setLoginInfo }) => {
   const options = ['일반 검색', '고급 검색'];
 
   const searchOptions = [
@@ -19,7 +19,6 @@ const SearchBar = ({ setItemsFromSearchResult, refetch }) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
   const [keyword, setKeyword] = useState("");
-  const [loginInfo, setLoginInfo] = useState({ isLoggedIn: false, userId: "" });
   const [modalState, setModalState] = useState(null);
 
   const dropdownBtnRef = useRef(null);
