@@ -54,6 +54,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
   updateSettings: (settings) =>
     ipcRenderer.invoke("update-settings", settings),
 
+  // 환경설정 불러오기
+  getSettings: () => ipcRenderer.invoke("get-settings"),
+  
   // 클라우드 업로드
   uploadSelectedItems: (itemIds) =>
     ipcRenderer.invoke("upload-selected-items", itemIds),
