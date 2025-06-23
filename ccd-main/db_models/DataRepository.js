@@ -68,8 +68,16 @@ class DataRepositoryModule extends EventEmitter {
   }
   async updateConfig(newConfig) {
     await this.localDB.updateConfig(newConfig);
-    this.cleanup();
-    this._loadConfig(); // 변경된 설정 다시 로드
+    this._loadConfig();
+    console.log(
+      "✅ 업데이트 전 캐시 수:",
+      this.cache.all.data?.length ?? "없음"
+    );
+    await this.cleanup();
+
+    await this.reloadCache(true);
+    notifyRenderer("clipboard-updated");
+    console.log("✅ 새로 로드된 캐시 수:", this.cache.all.data?.length);
   }
 
   async updateMaxCountCloud(limit) {
@@ -83,7 +91,7 @@ class DataRepositoryModule extends EventEmitter {
     }
   }
 
-  invalidateCache() {
+  async invalidateCache() {
     this.cache.all.valid = false;
   }
 
@@ -235,6 +243,7 @@ class DataRepositoryModule extends EventEmitter {
 
       this.invalidateCache();
       notifyRenderer("clipboard-updated");
+      this.localDB.cleanupImageFiles();
       return this.transformItem(newItem);
     } catch (error) {
       throw CCDError.create("E610", {
@@ -315,6 +324,7 @@ class DataRepositoryModule extends EventEmitter {
 
       this.invalidateCache();
       notifyRenderer("clipboard-updated");
+      this.localDB.cleanupImageFiles();
 
       return true;
     } catch (error) {
@@ -562,140 +572,7 @@ class DataRepositoryModule extends EventEmitter {
       tags: item.tags || [],
       score: item.score || 0,
     };
-
-    //     return {
-    //   itemId: item.id || item.itemId,
-    //   type: item.type === "img" ? "image" : "text",
-    //   content: item.content || item.snippet || "",
-    //   thumbnail_path:
-    //     item.type === "img" && item.thumbnail_path && fs.existsSync(item.thumbnail_path)
-    //       ? `data:image/png;base64,${fs.readFileSync(item.thumbnail_path).toString("base64")}`
-    //       : undefined,
-    //   tags: Array.isArray(item.tags)
-    //     ? item.tags.map((t) => (typeof t === "string" ? t : t.name))
-    //     : [],
-    //   selected: false,
-    //   source: item.shared || item.source || "local",
-    // };
   }
-
-  // // 클라우드 → 로컬 다운로드
-  // async downloadCloudData() {
-  //   try {
-  //     this.invalidateCache("cloud");
-  //     await this.getCloudPreview(); // 내부적으로 this.cache.cloud 갱신
-
-  //     const cloudItems = this.cache.cloud.data || [];
-
-  //     // 2. 로컬 캐시 확인 및 필요시 로딩
-  //     if (!this.cache.local.valid) {
-  //       await this.getLocalPreview();
-  //     }
-
-  //     const localItems = this.cache.local.data || [];
-  //     const localIds = new Set(localItems.map((item) => item.id));
-
-  //     // 3. 로컬에 없는 클라우드 항목만 선택
-  //     const itemsToDownload = cloudItems.filter(
-  //       (item) => !localIds.has(item.id)
-  //     );
-
-  //     let successCount = 0;
-  //     let errorCount = 0;
-
-  //     await Promise.all(
-  //       itemsToDownload.map(async (cloudItem) => {
-  //         try {
-  //           // 기본 데이터 저장
-  //           const localItem = {
-  //             id: cloudItem.id,
-  //             type: cloudItem.type,
-  //             format: cloudItem.format,
-  //             content: cloudItem.content,
-  //             created_at: cloudItem.created_at,
-  //           };
-
-  //           this.localDB.insertClipboardItem(localItem);
-
-  //           // 이미지 메타데이터 처리
-  //           if (cloudItem.type === "img") {
-  //             await this.downloadImageFiles(cloudItem);
-  //           }
-
-  //           // 태그 동기화
-  //           await this.syncTagsForItem(cloudItem);
-
-  //           successCount++;
-  //         } catch (error) {
-  //           errorCount++;
-  //           console.error(`다운로드 실패 (${cloudItem.id}):`, error);
-  //         }
-  //       })
-  //     );
-
-  //     this.invalidateCache("local");
-  //     notifyRenderer("clipboard-updated");
-  //     return { successCount, errorCount };
-  //   } catch (error) {
-  //     throw CCDError.create("E610", {
-  //       module: "DataRepository",
-  //       context: "일괄 다운로드 실패",
-  //       message: error.details,
-  //     });
-  //   }
-  // }
-
-  // // 로컬 → 클라우드 업로드
-  // async uploadLocalData() {
-  //   try {
-  //     const [localItems, cloudItems] = await Promise.all([
-  //       this.getLocalPreview(),
-  //       this.cloudDB.getClipboardData(),
-  //     ]);
-
-  //     const cloudIds = new Set(cloudItems.map((item) => item.id));
-  //     const itemsToUpload = localItems.filter(
-  //       (item) => item.shared === "local" && !cloudIds.has(item.id)
-  //     );
-
-  //     let successCount = 0;
-  //     let errorCount = 0;
-
-  //     await Promise.all(
-  //       itemsToUpload.map(async (localItem) => {
-  //         try {
-  //           // 텍스트 업로드
-  //           if (localItem.type === "txt") {
-  //             await this.cloudDB.createTextItem({
-  //               ...localItem,
-  //               created_at: Math.floor(Date.now() / 1000),
-  //             });
-  //           }
-
-  //           // 이미지 업로드
-  //           if (localItem.type === "img") {
-  //             await this.uploadImage(localItem);
-  //           }
-
-  //           successCount++;
-  //         } catch (error) {
-  //           errorCount++;
-  //           console.error(`업로드 실패 (${localItem.id}):`, error);
-  //         }
-  //       })
-  //     );
-
-  //     this.invalidateCache("All");
-  //     notifyRenderer("clipboard-updated");
-  //     return { successCount, errorCount };
-  //   } catch (error) {
-  //     throw CCDError.create("E610", {
-  //       module: "DataRepository",
-  //       context: "일괄 업로드 실패",
-  //       message: error.details,
-  //     });
-  //   }
-  // }
 
   //선택 업로드
   async uploadSelectedItems(itemIds) {
