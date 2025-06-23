@@ -567,7 +567,6 @@ class DataRepositoryModule extends EventEmitter {
       score: item.score || 0,
     };
   }
-  }
 
   //선택 업로드
   async uploadSelectedItems(itemIds) {
