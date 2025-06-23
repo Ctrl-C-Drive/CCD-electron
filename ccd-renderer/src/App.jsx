@@ -15,6 +15,7 @@ import './index.css'
 import './styles/color.css'
 import './styles/typography.css'
 import useClipboardRecords from './utils/useClipboardRecords.js'
+// import useDisableDuringSubmit from "../../utils/useDisableDuringSubmit";
 
 //typo, color util 예시 (복붙해서 쓰기)
 // {`${colorVariants({ bg: 'gray-50' })}`}
@@ -24,8 +25,10 @@ import useClipboardRecords from './utils/useClipboardRecords.js'
 
 //전체 
 const App= () => {
+  const [loginInfo, setLoginInfo] = useState({ isLoggedIn: false, userId: null });
+
     const [isTagChecked, setIsTagChecked] = useState(true);
-    const { items, refetch, toggleSelect, addItem, setItemsFromSearchResult, getSelectedItemIds   } = useClipboardRecords();
+    const { items, refetch, toggleSelect, addItem, setItemsFromSearchResult, getSelectedItemIds , setItems  } = useClipboardRecords();
     const [sinceRaw, setSinceRaw] = useState("");
     const [untilRaw, setUntilRaw] = useState("");
   const [fileType, setFileType] = useState("all");
@@ -135,6 +138,9 @@ const App= () => {
             <BottomBar 
                   // selectedIds={selectedIds} 
                   getSelectedItemIds={getSelectedItemIds}
+                  refetch={refetch}
+                  setItems={setItems}
+                  loginInfo={loginInfo}
            />
       </div>
       
