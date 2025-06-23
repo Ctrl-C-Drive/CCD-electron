@@ -22,6 +22,7 @@ const [pwError, setPwError] = useState("");
 const loginBtnRef = useRef(null);
 const joinBtnRef = useRef(null);
 const isDisabled = modalState === "login"; // ex: 로그인 중이면 비활성화
+const avatarRef = useRef(null);
 
 // 공백만으로 구성된 입력을 막기 위한 정규식: ^\s+$ 는 공백으로만 구성된 문자열
 const isWhitespaceOnly = (str) => /^\s+$/.test(str);
@@ -49,17 +50,18 @@ useEffect(() => {
 
   useEffect(() => {
     function handleClickOutside(event) {
-      if (ref.current && !ref.current.contains(event.target)) {
-        setModalState(null);
-        setIsSubmitted(false); 
+      const clickedOutsideModal = ref.current && !ref.current.contains(event.target);
+      const clickedOutsideAvatar = avatarRef.current && !avatarRef.current.contains(event.target);
 
+      if (clickedOutsideModal && clickedOutsideAvatar) {
+        setModalState(null);
+        setIsSubmitted(false);
       }
     }
 
     document.addEventListener("mousedown", handleClickOutside);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
-
     };
   }, []);
 
@@ -213,17 +215,17 @@ const handleLogout = async () => {
       <img
         src="/avatar.svg" 
         alt="User Avatar"
+        ref={avatarRef}
         className="ml-3 w-[5.3rem] h-[5.3rem]  cursor-pointer object-cover"
-        onClick={() => {
-          // 모달이 꺼진 상태일 때만 동작
+        onClick={(e) => {
+          e.stopPropagation(); // 외부 클릭으로 잘못 간주되지 않게
+
           setModalState((prev) => {
-            if (prev !== null) return null; // toggle off
-
-            if (loginInfo.isLoggedIn && loginInfo.userId) {
-              return "loggedIn";
+            if (prev === "menu" || prev === "login" || prev === "JoinIn" || prev === "loggedIn") {
+              return null; // 열린 상태면 닫기
+            } else {
+              return loginInfo.isLoggedIn ? "loggedIn" : "menu";
             }
-
-            return "menu";
           });
         }}
     />
