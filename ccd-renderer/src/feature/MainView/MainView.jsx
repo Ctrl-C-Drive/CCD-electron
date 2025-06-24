@@ -12,6 +12,8 @@ const MainView = ({ isTagChecked, items, toggleSelect, addItem, refetch, fileTyp
   // const { items, refetch, toggleSelect, addItem } = useClipboardRecords();
   // const [fileType, setFileType] = useState("IMG");
 
+
+
   // 모달 외부 클릭 시 닫기
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -93,17 +95,23 @@ const MainView = ({ isTagChecked, items, toggleSelect, addItem, refetch, fileTyp
       console.error("삭제 중 오류:", err);
     }
   };
+const visibleItems = items.filter(
+  (item) => fileType === "img" ? item.type === "image"
+         : fileType === "txt" ? item.type === "text"
+         : true
+);
+
+const needScroll = visibleItems.length > 6;
 
   return (
     <div
-      className="grid grid-cols-2 gap-3 px-6 py-4 
-       !w-full  
-        !max-h-[calc(100vh-22.9rem)] 
-       !overflow-y-scroll
-       overflow-y-auto
-       custom-scrollbar
-       "
-      style={{ WebkitAppRegion: 'no-drag' }} // 클릭 이벤트 허용
+      className={clsx("grid grid-cols-2 gap-3 px-6 py-4 !w-full  custom-scrollbar",
+       needScroll
+      ? "!max-h-[calc(100vh-22.9rem)] overflow-y-auto"
+      : "overflow-y-hidden"
+      )}
+      
+       style={{ WebkitAppRegion: 'no-drag' }} // 클릭 이벤트 허용
       onDragOver={(e) => e.preventDefault()}
       onDrop={(e) => {
         e.preventDefault();
