@@ -52,6 +52,11 @@ useEffect(() => {
     const retentionOptions = ['1일', '7일', '10일', '30일', '∞'];
     const limitOptions = ['10개','30개', '50개' ]; 
     const handleApplySetting = async () => {
+      // if (!loginInfo.isLoggedIn) {
+      //   console.warn("로그인 상태 아님 → 설정 적용 불가");
+      //   return;
+      // }
+
     const settings = {
       retentionDays : extractNumber(retention),             // ex) "7"
       localLimit : extractNumber(localLimit),        // ex) "30"
@@ -79,6 +84,14 @@ useEffect(() => {
     console.error("❌ IPC 오류:", err);
   }
 };
+useEffect(() => {
+  if (isVisible) {
+    setTimeout(() => {
+      console.log("🔁 강제 리렌더링 발생");
+    }, 0);
+  }
+}, [isVisible]);
+
  // 숫자만 추출하는 헬퍼 함수
 const extractNumber = (text) => {
   const match = text.match(/\d+/);  // 정규표현식: 숫자 하나 이상
@@ -104,7 +117,7 @@ return (
           h-[22.6rem] w-[26rem]
           flex justify-between flex-row
           absolute
-          z-50
+          z-100
           bottom-[4rem]
           right-[-1.4rem]"
       >
@@ -229,7 +242,7 @@ return (
               </div>
 
               {localLimitOpen && (
-                <div className="absolute top-full left-2  z-[999] bg-white border rounded shadow text-sm w-[4.4rem] items-center flex flex-col">
+                <div className="absolute top-full left-2  bg-white border rounded shadow text-sm w-[4.4rem] items-center flex flex-col">
                   {limitOptions.map((opt) => (
                     <div
                       key={opt + '-local'}
@@ -250,7 +263,7 @@ return (
               <div className={`flex items-center gap-1 ${!loginInfo.isLoggedIn ? 'opacity-50 cursor-not-allowed' : ''}`}>
                 <img
                   src="cloud.svg"
-                  className={`w-6 h-6 ${loginInfo.isLoggedIn ? 'cursor-pointer' : 'cursor-not-allowed'}`}
+                  className={`w-6 h-6 }`}
                   onClick={() => {
                     if (!loginInfo.isLoggedIn) return;
                     setCloudLimitOpen(!cloudLimitOpen);
@@ -260,7 +273,7 @@ return (
                   alt="Cloud Limit"
                 />
                 <div
-                  className={`text-blue-700 text-sm select-none flex items-center ${loginInfo.isLoggedIn ? 'cursor-pointer' : 'cursor-not-allowed'}`}
+                  className={`text-blue-700 text-sm select-none flex items-center `}
                   onClick={() => {
                     if (!loginInfo.isLoggedIn) return;
                     setCloudLimitOpen(!cloudLimitOpen);
@@ -323,6 +336,7 @@ return (
           <div
             // onClick={() => setIsAutoCloudSave((prev) => !prev)}
               ref={cloudToggleRef}
+              // style={{ zIndex: 9999, position: 'relative' ,outline: '2px solid red'  }}
 
             onClick={() => {
               if (!loginInfo.isLoggedIn) return;
@@ -332,7 +346,6 @@ return (
             className={`
             w-[3.4rem] h-[1.9rem] rounded-full p-[0.2rem]
             transition-all duration-200
-            ${loginInfo.isLoggedIn ? 'cursor-pointer' : 'cursor-not-allowed'}
             ${loginInfo.isLoggedIn
               ? isAutoCloudSave
                 ? 'bg-[var(--blue-200)]'
