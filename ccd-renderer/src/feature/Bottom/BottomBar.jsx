@@ -58,7 +58,7 @@ const Toast = ({ message, type }) => {
     return (
       <div
         style={{ WebkitAppRegion: 'no-drag' }} // 클릭 이벤트 허용
-         className="flex justify-between items-center ">
+         className="flex justify-between items-center w-[36rem] ">
         {/* 왼쪽 업로드 / 다운로드 */}
         <div className="flex gap-6 items-center">
          <div 
