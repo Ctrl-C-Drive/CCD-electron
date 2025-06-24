@@ -10,6 +10,17 @@ const {
 const { pasteById } = require("./paste");
 const CCDError = require("./CCDError");
 const { join } = require("./mobilenetv3/Classes");
+const { v4: uuidv4 } = require("uuid");
+const axios = require("axios");
+const https = require("https");
+const path = require("path");
+const { app } = require("electron");
+const fs = require("fs");
+
+
+const agent = new https.Agent({
+  rejectUnauthorized: false, // 인증서 검증 비활성화 (선택)
+});
 
 const dataRepo = require("./db_models/initModule").dataRepo;
 let isLogin = false;
@@ -68,48 +79,62 @@ function setupIPC() {
   ipcMain.handle("get-login-state", () => isLogin);
 
   // 드래그앤드랍으로 들어온 파일 처리
-  ipcMain.handle("add-dropped-file", async (_, { filePath }) => {
+  ipcMain.handle("save-dropped-web-text", async (_, { content }) => {
     try {
-      const ext = path.extname(filePath).replace(".", "").toLowerCase();
-      const imageExtensions = ["png", "jpg", "jpeg", "gif", "bmp", "webp"];
-      const textExtensions = ["txt", "md", "csv", "log"];
+      const item = {
+        id: uuidv4(),
+        type: "txt",
+        content,
+        format: "plain",
+        created_at: Math.floor(Date.now() / 1000),
+      };
 
-      let item;
+      const savedItem = await dataRepo.addItem(item, getCloudUploadEnabled() ? "both" : "local");
+      return { success: true, item: savedItem };
+    } catch (err) {
+      return CCDError.create("E631", {
+        module: "ipcHandler",
+        context: "웹 텍스트 저장",
+        details: err.message,
+      }).toJSON();
+    }
+  });
+  ipcMain.handle("save-dropped-web-image", async (_, { url }) => {
+    try {
+      const res = await axios.get(url, {
+        httpsAgent: agent,
+        responseType: "arraybuffer",
+        headers: {
+          "User-Agent": "Mozilla/5.0",
+        },
+      });
 
-      if (imageExtensions.includes(ext)) {
-        item = {
-          type: "img",
-          content: filePath,
-          format: ext,
-        };
-      } else if (textExtensions.includes(ext)) {
-        const text = await fs.promises.readFile(filePath, "utf-8");
-        item = {
-          type: "txt",
-          content: text,
-          format: ext,
-        };
-      } else {
-        throw CCDError.create("E643", {
-          module: "ipcHandler",
-          context: "드래그 파일 확장자 검사",
-          message: `지원되지 않는 파일 형식입니다. (${ext})`,
-        });
+      const contentType = res.headers["content-type"] || "";
+      if (!contentType.startsWith("image/")) {
+        throw new Error(`이미지가 아닙니다: ${contentType}`);
       }
 
-      await dataRepo.addItem(item, "local");
-      return { success: true, message: "파일이 추가되었습니다." };
+      const ext = contentType.split("/")[1].split(";")[0] || "jpg";
+      const id = uuidv4();
+      const tempPath = path.join(app.getPath("temp"), `${id}.${ext}`);
+      await fs.promises.writeFile(tempPath, res.data);
+
+      const item = {
+        id,
+        type: "img",
+        content: tempPath,
+        format: ext,
+        created_at: Math.floor(Date.now() / 1000),
+      };
+
+      const savedItem = await dataRepo.addItem(item, getCloudUploadEnabled() ? "both" : "local");
+      return { success: true, item: savedItem };
     } catch (err) {
-      const error =
-        err instanceof CCDError
-          ? err
-          : CCDError.create("E631", {
-            module: "ipcHandler",
-            context: "드래그 파일 처리",
-            details: err.message,
-          });
-      console.error(error);
-      return error.toJSON();
+      return CCDError.create("E631", {
+        module: "ipcHandler",
+        context: "웹 이미지 저장",
+        details: err.message || "fetch failed",
+      }).toJSON();
     }
   });
 
