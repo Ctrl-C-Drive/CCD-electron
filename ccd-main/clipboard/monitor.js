@@ -17,6 +17,9 @@ let lastImageHash = null;
 let skipCopyContent = new Set();
 let skipContentType = null;
 let skipTimestamp = 0;
+let recentImageHashes = new Set();
+let recentImageTimestamps = new Map();
+
 
 function saveImageToDisk(nativeImage, id) {
   try {
@@ -82,6 +85,24 @@ function start(onData) {
       const image = clipboard.readImage();
       if (!image.isEmpty() && !isProcessingImage) {
         const currentHash = getImageHash(image);
+        const now = Date.now();
+        if (
+          recentImageHashes.has(currentHash) &&
+          now - (recentImageTimestamps.get(currentHash) || 0) < 3000
+        ) {
+          lastImageHash = currentHash;
+          return;
+        }
+
+        // 등록: 중복 감지를 방지하기 위해 해시값을 임시 기억
+        recentImageHashes.add(currentHash);
+        recentImageTimestamps.set(currentHash, now);
+
+        // 일정 시간 후 제거
+        setTimeout(() => {
+          recentImageHashes.delete(currentHash);
+          recentImageTimestamps.delete(currentHash);
+        }, 5000);
         if (currentHash === lastImageHash) return;
         if (
           skipContentType === "image" &&

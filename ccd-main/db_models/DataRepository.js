@@ -252,6 +252,28 @@ class DataRepositoryModule extends EventEmitter {
         message: error.details,
       });
     }
+    if (newItem.type === "img") {
+      const { nativeImage } = require("electron");
+      const fs = require("fs");
+      const crypto = require("crypto");
+      const monitor = require("../clipboard/monitor");
+
+      try {
+        const image = nativeImage.createFromPath(newItem.content);
+        if (!image.isEmpty()) {
+          const hash = crypto
+            .createHash("sha256")
+            .update(image.toPNG())
+            .digest("hex");
+
+          monitor.skipNextCopy(hash, "image");  // ✅ 이미지 예외 등록
+        }
+      } catch (e) {
+        console.warn("이미지 예외 등록 실패:", e);
+      }
+    }
+
+
   }
 
   // 이미지 파일 처리 메서드
@@ -557,11 +579,11 @@ class DataRepositoryModule extends EventEmitter {
       created_at: item.created_at,
       thumbnail_path:
         item.type === "img" &&
-        item.thumbnail_path &&
-        fs.existsSync(item.thumbnail_path)
+          item.thumbnail_path &&
+          fs.existsSync(item.thumbnail_path)
           ? `data:image/png;base64,${fs
-              .readFileSync(item.thumbnail_path)
-              .toString("base64")}`
+            .readFileSync(item.thumbnail_path)
+            .toString("base64")}`
           : undefined,
       tags: item.tags || [],
       score: item.score || 0,

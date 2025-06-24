@@ -51,6 +51,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // 설정
   updateSettings: (settings) =>
     ipcRenderer.invoke("update-settings", settings),
+
   getSettings: () => ipcRenderer.invoke("get-settings"),
 
   // 클라우드
@@ -64,7 +65,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   toggleCloudUpload: () => ipcRenderer.send("toggle-cloud-upload"),
 
-  // ✅ 웹 콘텐츠 드래그앤드랍
+  //웹 콘텐츠 드래그앤드랍
   saveDroppedWebText: (data) =>
     ipcRenderer.invoke("save-dropped-web-text", data),
 
