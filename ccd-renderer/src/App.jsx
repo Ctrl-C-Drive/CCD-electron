@@ -94,7 +94,7 @@ const App= () => {
              
               </div>
           </div>
-           <div className=" !bg-white/70 px-[3rem]  ">
+           <div className=" !bg-white/70 px-[3rem]  max-h-[41.7rem]">
               {/* search-bar-zone */}
               <div className="">
                   <SearchBar 
@@ -140,13 +140,16 @@ const App= () => {
               {/* 하단 bar */}
 
             </div>
-            <BottomBar 
-                  // selectedIds={selectedIds} 
-                  getSelectedItemIds={getSelectedItemIds}
-                  refetch={refetch}
-                  setItems={setItems}
-                  loginInfo={loginInfo}
-           />
+            <div className="fixed bottom-[2rem] left-[3rem] w-[30.7rem] z-50">
+              <BottomBar 
+                    // selectedIds={selectedIds} 
+                    getSelectedItemIds={getSelectedItemIds}
+                    refetch={refetch}
+                    setItems={setItems}
+                    loginInfo={loginInfo}
+                  
+            />
+           </div>
       </div>
       
     </>
