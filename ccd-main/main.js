@@ -7,23 +7,23 @@ const { loadModel } = require("./imageTagger");
 const { globalShortcut, Tray, Menu } = require("electron");
 const fs = require("fs");
 const path = require("path");
-const chokidar = require("chokidar"); 
+// const chokidar = require("chokidar"); 
 
 
 const isDev = !app.isPackaged;
 
-const dotenvPath = isDev
-  ? path.join(__dirname, "..", ".env")
-  : path.join(process.resourcesPath, "app.asar.unpacked", ".env");
+// const dotenvPath = isDev
+//   ? path.join(__dirname, "..", ".env")
+//   : path.join(process.resourcesPath, "app.asar.unpacked", ".env");
 
-require("dotenv").config({ path: dotenvPath });
+// require("dotenv").config({ path: dotenvPath });
 
-chokidar.watch(dotenvPath).on("change", () => {
-  console.log(".env changed – reloading");
-  require("dotenv").config({ path: dotenvPath, override: true });
-  // 필요하면 렌더러에 IPC로 새 값 알리기
-  // win && win.webContents.send("env-updated");
-});
+// chokidar.watch(dotenvPath).on("change", () => {
+//   console.log(".env changed – reloading");
+//   require("dotenv").config({ path: dotenvPath, override: true });
+//   // 필요하면 렌더러에 IPC로 새 값 알리기
+//   // win && win.webContents.send("env-updated");
+// });
 
 let win;
 let tray;

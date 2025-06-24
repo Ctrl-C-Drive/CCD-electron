@@ -1,4 +1,4 @@
-// require("dotenv").config();
+require("dotenv").config();
 
 const CloudDataModule = require("./CloudData");
 const DataRepositoryModule = require("./DataRepository");

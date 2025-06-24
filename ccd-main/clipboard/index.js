@@ -1,6 +1,6 @@
 // ccd-main/features/clipboard/index.js
 // 메인 프로세스 클립보드 모듈 초기화 및 이벤트 처리
-// require("dotenv").config();
+require("dotenv").config();
 
 const { app, ipcMain, globalShortcut, BrowserWindow } = require("electron");
 const monitor = require("./monitor");
