@@ -16,27 +16,27 @@ let isLogin = false;
 function setupIPC() {
   // 회원가입
   ipcMain.handle("user-register", async (_, { userId, password }) => {
-  try {
-    const result = await registerUser(userId, password);
+    try {
+      const result = await registerUser(userId, password);
 
-    if (!result.success) {
-      if (result.code === "E409") {
-        return { joinResultMsg: "duplication" };
+      if (!result.success) {
+        if (result.code === "E409") {
+          return { joinResultMsg: "duplication" };
+        }
+        return { joinResultMsg: "fail", error: result.message };
       }
-      return { joinResultMsg: "fail", error: result.message };
-    }
 
-    return { joinResultMsg: "success" };
-  } catch (err) {
-    const error = CCDError.create(err.code || "E632", {
-      module: "ipcHandler",
-      context: "회원가입 처리",
-      details: err.message,
-    });
-    console.error(error);
-    return { joinResultMsg: "fail", error: error.message };
-  }
-});
+      return { joinResultMsg: "success" };
+    } catch (err) {
+      const error = CCDError.create(err.code || "E632", {
+        module: "ipcHandler",
+        context: "회원가입 처리",
+        details: err.message,
+      });
+      console.error(error);
+      return { joinResultMsg: "fail", error: error.message };
+    }
+  });
 
 
 
@@ -241,6 +241,22 @@ function setupIPC() {
       return { success: true };
     }
   );
+
+  // 설정값 조회
+  ipcMain.handle("get-settings", async () => {
+    try {
+      const config = dataRepo.localDB.getConfig();
+      return { success: true, settings: config };
+    } catch (err) {
+      const error = CCDError.create("E652", {
+        module: "ipcHandler",
+        context: "환경설정 조회",
+        details: err.message,
+      });
+      console.error(error);
+      return error.toJSON();
+    }
+  });
 
   // 삭제
   ipcMain.handle("delete-item", async (_, { dataId, deleteOption }) => {
