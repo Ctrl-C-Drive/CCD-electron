@@ -4,7 +4,7 @@ const axios = require("axios");
 const fs = require("fs");
 const FormData = require("form-data");
 const CCDError = require("../CCDError");
-require("dotenv").config();
+// require("dotenv").config();
 const notifyRenderer = require("../notifyRenderer");
 const WebSocket = require("ws");
 
