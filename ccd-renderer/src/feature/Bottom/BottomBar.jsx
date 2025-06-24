@@ -61,68 +61,82 @@ const Toast = ({ message, type }) => {
          className="flex justify-between items-center px-6 mt-[3rem] ">
         {/* 왼쪽 업로드 / 다운로드 */}
         <div className="flex gap-6 items-center">
-          <div 
-            className="flex flex-col items-center text-blue-700 cursor-pointer"
-            onClick={async () => {
-              const selectedIds = getSelectedItemIds(); 
-              console.log("선택된 id 목록: ::",selectedIds);
-              if (selectedIds.length === 0) {
-                showToast('선택된 항목이 없습니다.', 'error');
-                return;
-              }
+         <div 
+      className={`flex flex-col items-center text-blue-700 ${
+        !loginInfo.isLoggedIn ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+      }`}
+      onClick={async () => {
+        if (!loginInfo.isLoggedIn) {
+          showToast('로그인 후 이용 가능합니다.', 'error');
+          return;
+        }
 
-              showToast('업로드 중...', 'info');
-              try {
-                const result = await window.electronAPI.uploadSelectedItems(selectedIds);
-                console.log("자자자 ~~~ ",result);
-               if (result.successCount > 0) {
-                  showToast('업로드 성공!', 'info');
-                  console.log("성공!")
-                } else {
-                  showToast('업로드 실패', 'error');
-                  console.log("실패~!")
-             
-                }
-              } catch (err) {
-                console.error("업로드 중 오류:", err);
-                showToast('오류 발생', 'error');
-              }
-            }}
+        const selectedIds = getSelectedItemIds(); 
+        console.log("선택된 id 목록: ::", selectedIds);
 
-            >
-            <img src="UploadCloud.svg" alt="Upload" className="w-[3.2rem] h-[3.2rem] mb-1" />
-            <span className="text-xs underline">Upload</span>
-          </div>
-          <div 
-              className="flex flex-col items-center text-blue-700 cursor-pointer"
-              onClick={async () => {
-                const selectedIds = getSelectedItemIds(); 
-                console.log("selectedIds:", selectedIds);
+        if (selectedIds.length === 0) {
+          showToast('선택된 항목이 없습니다.', 'error');
+          return;
+        }
 
-                if (selectedIds.length === 0) {
-                  showToast('선택된 항목이 없습니다.', 'error');
-                  return;
-                }
+        showToast('업로드 중...', 'info');
+        try {
+          const result = await window.electronAPI.uploadSelectedItems(selectedIds);
+          console.log("자자자 ~~~ ", result);
+          if (result.successCount > 0) {
+            showToast('업로드 성공!', 'info');
+            console.log("성공!");
+          } else {
+            showToast('업로드 실패', 'error');
+            console.log("실패~!");
+          }
+        } catch (err) {
+          console.error("업로드 중 오류:", err);
+          showToast('오류 발생', 'error');
+        }
+      }}
+    >
+      <img src="UploadCloud.svg" alt="Upload" className="w-[3.2rem] h-[3.2rem] mb-1" />
+      <span className="text-xs underline">Upload</span>
+    </div>
 
-                showToast('다운로드 중...', 'info');
-                try {
-                  const result = await window.electronAPI.downloadSelectedItems(selectedIds);
-                  console.log("📥 다운로드 결과:", result);
-                  if (result.downloadResult) {
-                    showToast('다운로드 성공!', 'info');
-                  } else {
-                    showToast('다운로드 실패', 'error');
-                  }
-                } catch (err) {
-                  console.error("다운로드 중 오류:", err);
-                  showToast('오류 발생', 'error');
-                }
-              }}
+    <div 
+      className={`flex flex-col items-center text-blue-700 ${
+        !loginInfo.isLoggedIn ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+      }`}
+      onClick={async () => {
+        if (!loginInfo.isLoggedIn) {
+          showToast('로그인 후 이용 가능합니다.', 'error');
+          return;
+        }
 
->
-            <img src="DownloadCloud.svg" alt="Download" className="w-[3.2rem] h-[3.2rem] mb-1" />
-            <span className="text-xs underline">Download</span>
-          </div>
+        const selectedIds = getSelectedItemIds(); 
+        console.log("selectedIds:", selectedIds);
+
+        if (selectedIds.length === 0) {
+          showToast('선택된 항목이 없습니다.', 'error');
+          return;
+        }
+
+        showToast('다운로드 중...', 'info');
+        try {
+          const result = await window.electronAPI.downloadSelectedItems(selectedIds);
+          console.log("📥 다운로드 결과:", result);
+          if (result.downloadResult) {
+            showToast('다운로드 성공!', 'info');
+          } else {
+            showToast('다운로드 실패', 'error');
+          }
+        } catch (err) {
+          console.error("다운로드 중 오류:", err);
+          showToast('오류 발생', 'error');
+        }
+      }}
+    >
+  <img src="DownloadCloud.svg" alt="Download" className="w-[3.2rem] h-[3.2rem] mb-1" />
+  <span className="text-xs underline">Download</span>
+</div>
+
         </div>
 
         {/* 오른쪽 환경설정 아이콘 */}

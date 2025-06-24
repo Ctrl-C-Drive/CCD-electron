@@ -39,6 +39,10 @@ useEffect(() => {
   document.addEventListener('mousedown', handleClickOutside);
   return () => document.removeEventListener('mousedown', handleClickOutside);
 }, []);
+useEffect(() => {
+  console.log("⚠️ 로그인 정보:", loginInfo);
+}, [loginInfo]);
+
     useEffect(() => {
       window.electronAPI.onCloudUploadStatusChange((status) => {
         setIsAutoCloudSave(status);
@@ -69,6 +73,7 @@ useEffect(() => {
       setIsVisible(false); 
     } else {
       console.error("❌ 설정 전송 실패", response.error);
+      setItems([]);
     }
   } catch (err) {
     console.error("❌ IPC 오류:", err);
@@ -224,7 +229,7 @@ return (
               </div>
 
               {localLimitOpen && (
-                <div className="absolute top-6 left-2 z-[999] bg-white border mt-1 rounded shadow text-sm  w-[4.4rem] items-center flex flex-col">
+                <div className="absolute top-full left-2  z-[999] bg-white border rounded shadow text-sm w-[4.4rem] items-center flex flex-col">
                   {limitOptions.map((opt) => (
                     <div
                       key={opt + '-local'}
