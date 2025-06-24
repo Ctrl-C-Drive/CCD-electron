@@ -14,8 +14,9 @@ const MainView = ({ isTagChecked, items, toggleSelect, addItem, refetch, fileTyp
 
 
 
+  
   // 모달 외부 클릭 시 닫기
-  useEffect(() => {
+  useEffect(() => { 
     const handleClickOutside = (e) => {
       const clickedInsideSomeModal = Object.values(containerRefs.current).some(
         (ref) => ref && ref.contains(e.target)
