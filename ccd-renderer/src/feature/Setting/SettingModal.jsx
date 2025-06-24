@@ -14,9 +14,9 @@ const cloudToggleRef = useRef(null);
     const [localLimitOpen, setLocalLimitOpen] = useState(false);
     const [cloudLimitOpen, setCloudLimitOpen] = useState(false);
     const [retention, setRetention] = useState('7일');
-    const [localLimit, setLocalLimit] = useState('50개');
+    const [localLimit, setLocalLimit] = useState('30개');
     const modalRef = useRef(null);
-    const [cloudLimit, setCloudLimit] = useState("50개");
+    const [cloudLimit, setCloudLimit] = useState("30개");
 
   const [isAutoCloudSave, setIsAutoCloudSave] = useState(false);
   const iconRef = useRef(null);
@@ -42,6 +42,71 @@ useEffect(() => {
 useEffect(() => {
   console.log("⚠️ 로그인 정보:", loginInfo);
 }, [loginInfo]);
+useEffect(() => {
+  const fetchInitialSettings = async () => {
+    try {
+      const settings = await window.electronAPI.getSettings(); // 메인 프로세스에서 설정 가져옴
+      console.log("📦 초기 설정값 수신:", settings);
+      if (settings) {
+        if (settings.localLimit) setLocalLimit(`${settings.localLimit}개`);
+        // if (settings.cloudLimit) setCloudLimit(`${settings.cloudLimit}개`);
+        if (settings.retentionDays) {
+          // retentionOptions 기준 문자열로 매핑 필요
+          const matchedRetention = retentionOptions.find(opt => extractNumber(opt) === settings.retentionDays);
+          if (matchedRetention) setRetention(matchedRetention);
+        }
+      }
+    } catch (err) {
+      console.error("❌ 초기 설정값 로드 실패:", err);
+    }
+  };
+
+  fetchInitialSettings();
+}, []);
+// useEffect(() => {
+//   const fetchUserSettings = async () => {
+//     if (!loginInfo?.isLoggedIn) return;
+
+//     try {
+//       const userSettings = await window.electronAPI.getUserSettings(loginInfo.userId);
+//       console.log("🌐 로그인된 유저의 설정값:", userSettings);
+
+//       if (userSettings?.cloudLimit) setCloudLimit(`${userSettings.cloudLimit}개`);
+//     } catch (err) {
+//       console.error("❌ 유저 설정 불러오기 실패:", err);
+//     }
+//   };
+
+//   fetchUserSettings();
+// }, [loginInfo]);
+useEffect(() => {
+  const fetchInitialSettings = async () => {
+    try {
+      const response = await window.electronAPI.getSettings();
+      console.log("📦 초기 설정값 수신:", response);
+
+      if (response.success && response.settings) {
+        const settings = response.settings;
+
+        if (settings.local_limit) setLocalLimit(`${settings.local_limit}개`);
+        if (settings.day_limit) {
+          const matchedRetention = retentionOptions.find(
+            (opt) => extractNumber(opt) === settings.day_limit
+          );
+          if (matchedRetention) setRetention(matchedRetention);
+        }
+
+        if (settings.max_count_cloud) {
+          setCloudLimit(`${settings.max_count_cloud}개`); // ✅ 최초 클라우드 개수 설정
+        }
+      }
+    } catch (err) {
+      console.error("❌ 초기 설정값 로드 실패:", err);
+    }
+  };
+
+  fetchInitialSettings();
+}, []);
 
     useEffect(() => {
       window.electronAPI.onCloudUploadStatusChange((status) => {
