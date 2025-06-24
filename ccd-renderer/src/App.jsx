@@ -140,7 +140,7 @@ const App= () => {
               {/* 하단 bar */}
 
             </div>
-            <div className="fixed bottom-[2rem] left-[3rem] w-[30.7rem] z-50">
+            <div className="fixed bottom-[2rem] left-[3rem] w-full z-50">
               <BottomBar 
                     // selectedIds={selectedIds} 
                     getSelectedItemIds={getSelectedItemIds}
