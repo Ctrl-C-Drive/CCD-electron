@@ -8,6 +8,7 @@ const { globalShortcut, Tray, Menu } = require("electron");
 const fs = require("fs");
 const path = require("path");
 
+
 const isDev = !app.isPackaged;
 let win;
 let tray;
