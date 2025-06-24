@@ -119,7 +119,11 @@ class CloudDataModule {
       this.dataRepo.invalidateCache();
       console.log("login finished", response.data);
       notifyRenderer("clipboard-updated");
-      return response.data;
+      const result = {
+        ...response.data,
+        max_count_cloud: response.data.max_count_cloud,
+      };
+      return result;
     } catch (error) {
       console.error("Login failed:", error.response?.data || error);
       throw CCDError.create("E610", {
