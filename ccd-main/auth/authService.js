@@ -1,4 +1,4 @@
-require("dotenv").config();
+// require("dotenv").config();
 const crypto = require("crypto");
 const CCDError = require("../CCDError");
 
@@ -55,21 +55,28 @@ async function registerUser(encryptedId, encryptedPwd) {
       password: pwResult.data,
     });
 
-    return { success: true, JoinResult: result?.JoinResult ?? true };
+    // signup 성공 여부 검사
+    if (!result.success) {
+      const reason = result.reason || "";
+      const code = reason === "duplicate" ? "E409" : "E632";
+
+      return {
+        success: false,
+        code,
+        reason,
+        message: result.message,
+      };
+    }
+    return { success: true, JoinResult: true };
+    
   } catch (err) {
     const code = err.response?.data?.errorCode || err.code || "E632";
 
-    const errorDetail = {
+    return CCDError.create(code, {
       module: "authService",
       context: "회원가입",
       details: err.message || err,
-    };
-
-    if (code === "E409") {
-      errorDetail.message = "이미 존재하는 사용자입니다.";
-    }
-
-    return CCDError.create(code, errorDetail).toJSON();
+    }).toJSON();
   }
 }
 

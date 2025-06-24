@@ -17,8 +17,8 @@ const useClipboardRecords = () => {
             item.type === "txt"
               ? "text"
               : item.type === "img"
-              ? "image"
-              : item.type,
+                ? "image"
+                : item.type,
           src: item.type === "img" ? item.content : undefined,
           content: item.type === "txt" ? item.content : undefined,
           timestamp: item.created_at ?? Date.now(),
@@ -74,8 +74,12 @@ const useClipboardRecords = () => {
     setItems((prev) => {
       const isDuplicate = prev.some(
         (item) =>
-          item.fileName === newItem.fileName &&
-          item.timestamp === newItem.timestamp
+          (item.itemId === newItem.itemId) || // 이미 UUID가 같은 항목이 있다면 중복
+          (
+            item.type === newItem.type &&
+            item.content === newItem.content &&
+            item.timestamp === newItem.timestamp
+          )
       );
       if (isDuplicate) return prev;
 
@@ -93,27 +97,27 @@ const useClipboardRecords = () => {
       ];
     });
   };
-const setItemsFromSearchResult = (newItems) => {
-  const formatted = newItems.map((item) => ({
-    ...item,
-    selected: false,
-    itemId: item.itemId ?? item.id ?? uuidv4(),
-    type:
-      item.type === "txt"
-        ? "text"
-        : item.type === "img"
-        ? "image"
-        : item.type,
-    src: item.type === "img" ? item.content : undefined,
-    content: item.type === "txt" ? item.content : undefined,
-    timestamp: item.created_at ?? Date.now(),
-    fileName: item.fileName ?? "unnamed",
-    ext: item.format?.split("/")?.[1] ?? "unknown",
-    shared: item.shared ?? "local",
-    tags: item.tags ?? [],
-  }));
-  setItems(formatted);
-};
+  const setItemsFromSearchResult = (newItems) => {
+    const formatted = newItems.map((item) => ({
+      ...item,
+      selected: false,
+      itemId: item.itemId ?? item.id ?? uuidv4(),
+      type:
+        item.type === "txt"
+          ? "text"
+          : item.type === "img"
+            ? "image"
+            : item.type,
+      src: item.type === "img" ? item.content : undefined,
+      content: item.type === "txt" ? item.content : undefined,
+      timestamp: item.created_at ?? Date.now(),
+      fileName: item.fileName ?? "unnamed",
+      ext: item.format?.split("/")?.[1] ?? "unknown",
+      shared: item.shared ?? "local",
+      tags: item.tags ?? [],
+    }));
+    setItems(formatted);
+  };
 
 
 
@@ -129,6 +133,7 @@ const setItemsFromSearchResult = (newItems) => {
     addItem,
     setItemsFromSearchResult,
     getSelectedItemIds,
+    setItems
   };
 };
 

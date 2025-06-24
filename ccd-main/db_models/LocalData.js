@@ -28,7 +28,7 @@ class LocalDataModule {
       throw CCDError.create("E610", {
         module: "LocalData",
         context: "데이터베이스 초기화 실패",
-        message: "sqlite 초기화에 실패했습니다.",
+        message: error,
       });
     }
   }

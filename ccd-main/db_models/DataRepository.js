@@ -557,11 +557,11 @@ class DataRepositoryModule extends EventEmitter {
       created_at: item.created_at,
       thumbnail_path:
         item.type === "img" &&
-        item.thumbnail_path &&
-        fs.existsSync(item.thumbnail_path)
+          item.thumbnail_path &&
+          fs.existsSync(item.thumbnail_path)
           ? `data:image/png;base64,${fs
-              .readFileSync(item.thumbnail_path)
-              .toString("base64")}`
+            .readFileSync(item.thumbnail_path)
+            .toString("base64")}`
           : undefined,
       tags: item.tags || [],
       score: item.score || 0,

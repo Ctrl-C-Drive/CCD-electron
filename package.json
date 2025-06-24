@@ -6,19 +6,46 @@
   "scripts": {
     "dev": "concurrently \"npm run dev --prefix ccd-renderer\" \"wait-on http://localhost:5173 --timeout 5000 && electron .\"",
     "build": "npm run build --prefix ccd-renderer",
-    "package": "npm run build && electron-builder"
+    "package": "npm run build && electron-builder --dir",
+    "rebuild:native": "electron-rebuild -f -w sharp, better-sqlite3",
+    "dist": "npm run build && npm run rebuild:native && electron-builder",
+    "dist:win": "npm run build && electron-builder --win --x64",
+    "dist:mac": "npm run build && electron-builder --mac --x64",
+    "postinstall": "electron-builder install-app-deps"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "build": {
     "appId": "com.ccd.app",
+    "productName": "CCD Clipboard Manager",
     "files": [
       "ccd-main/**/*",
-      "ccd-renderer/dist/**/*"
+      "ccd-renderer/dist/**/*",
+      "node_modules/**/*",
+      "package.json",
+      ".env"
+    ],
+    "asarUnpack": [
+      "**/node_modules/sharp/**/*",
+      "**/node_modules/better-sqlite3/**/*",
+      ".env"
     ],
     "directories": {
-      "buildResources": "assets"
+      "buildResources": "assets",
+      "output": "dist"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "ccd-main/icon.ico"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "ccd-main/icon.icns"
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "ccd-main/icon.png"
     }
   },
   "devDependencies": {
@@ -29,8 +56,13 @@
     "wait-on": "^8.0.3"
   },
   "dependencies": {
+    "@emnapi/runtime": "^1.4.3",
     "better-sqlite3": "^11.10.0",
+    "chokidar": "^3.6.0",
     "crypto-js": "^4.2.0",
+    "dotenv": "^16.4.5",
+    "fs-extra": "^9.0.1",
+    "axios": "^1.8.2",
     "node-fetch": "^2.7.0",
     "onnxruntime-node": "^1.22.0-rev",
     "sharp": "^0.34.2",

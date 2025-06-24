@@ -1,21 +1,33 @@
 // main.js
+const path = require("path");
 const { app, BrowserWindow, ipcMain } = require("electron");
-const { initClipboardModule } = require("./clipboard");
+
+const isDev = !app.isPackaged;
+
+const dotenvPath = isDev
+  ? path.join(__dirname, "..", ".env")
+  : path.join(process.resourcesPath, "app.asar.unpacked", ".env");
+
+require("dotenv").config({ path: dotenvPath });
+
 const { registerUser } = require("./auth/authService");
+const { index } = require("./clipboard/index");
+const { clouddata } = require("./db_models/CloudData");
+const { initModule } = require("./db_models/initModule");
+
+const { initClipboardModule } = require("./clipboard");
 const { setupIPC } = require("./ipcHandler");
 const { loadModel } = require("./imageTagger");
 const { globalShortcut, Tray, Menu } = require("electron");
 const fs = require("fs");
-const path = require("path");
 
-const isDev = !app.isPackaged;
 let win;
 let tray;
 let isAlwaysOnTop = false;
 
 const createWindow = () => {
   win = new BrowserWindow({
-    width: 617,
+    width: 417,
     height: 646,
     frame: false, 
     titleBarStyle: 'hidden', 

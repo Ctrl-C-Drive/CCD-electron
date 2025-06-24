@@ -44,6 +44,7 @@ const FilterBar = ({isTagChecked,
 
     const dropdownRef = useRef(null);
     const filterModalRef = useRef(null);
+    const [forceRenderKey, setForceRenderKey] = useState(0);
 
     useEffect(() => {
       const handleClickOutside = (event) => {
@@ -90,6 +91,22 @@ const FilterBar = ({isTagChecked,
     setUntilError(isValidDate || digits.length < 8 ? "" : "유효한 날짜를 입력해주세요");
   }
 };
+const closeFilterModal = () => {
+  setIsOpenFilterModal(false);
+  setForceRenderKey((prev) => prev + 1); // 키 변경 → 강제 리렌더링
+};
+
+useEffect(() => {
+  console.log("🌀 FilterModal 강제 리렌더링됨");
+}, [forceRenderKey]);
+
+// useEffect(() => {
+//   if (isVisible) {
+//     setTimeout(() => {
+//       console.log("🔁 강제 리렌더링 발생");
+//     }, 0);
+//   }
+// }, [isVisible]);
 
 
     return (
@@ -180,13 +197,18 @@ const FilterBar = ({isTagChecked,
       {/* 필터 버튼 */}
           <div className="relative" ref={filterModalRef}>
             <img
-              onClick={() => setIsOpenFilterModal(true)}
+              onClick={() => {
+                setForceRenderKey((prev) => prev + 1); //  강제 리렌더링용
+                setIsOpenFilterModal(true);
+              }}              
               className="text-blue-700 text-2xl cursor-pointer"
               src="Filter.svg"
               alt="Filter"
             />
  {isOpenFilterModal && (
-  <div className="
+  <div
+      key={forceRenderKey}
+     className="
       absolute w-[14.2rem]
       h-auto right-0 mt-2 bg-white border 
       rounded-xl shadow-md z-50 py-4
@@ -203,7 +225,8 @@ const FilterBar = ({isTagChecked,
         </label>
         <select
           className="w-[5.2rem] mt-1 rounded px-2 py-1"
-          value={fileType}
+          // value={fileType}
+          value={pendingFileType} 
           onChange={(e) => setPendingFileType(e.target.value)}
         >
           {/* <option>JPG</option> */}
@@ -248,7 +271,8 @@ const FilterBar = ({isTagChecked,
           console.log(" 확인 클릭:", { fileType, since: sinceRaw, until: untilRaw });
             onApplyFilters(); //필터 적용 요청
           setIsOpenFilterModal(false);
-         -setFileType(pendingFileType);
+         setFileType(pendingFileType);
+           closeFilterModal(); 
 
         }}
         style={{ WebkitAppRegion: 'no-drag' }} // 클릭 이벤트 허용

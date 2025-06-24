@@ -6,17 +6,17 @@ import useClipboardRecords from "../../utils/useClipboardRecords";
 
 
 
- const SettingModal = ({onClose }) => {
-  const { refetch } = useClipboardRecords();
+ const SettingModal = ({onClose, refetch,setItems , loginInfo }) => {
+const cloudToggleRef = useRef(null);
 
     const [isVisible, setIsVisible] = useState(false);
     const [retentionOpen, setRetentionOpen] = useState(false);
     const [localLimitOpen, setLocalLimitOpen] = useState(false);
     const [cloudLimitOpen, setCloudLimitOpen] = useState(false);
     const [retention, setRetention] = useState('7일');
-    const [localLimit, setLocalLimit] = useState('50개');
+    const [localLimit, setLocalLimit] = useState('30개');
     const modalRef = useRef(null);
-    const [cloudLimit, setCloudLimit] = useState("50개");
+    const [cloudLimit, setCloudLimit] = useState("30개");
 
   const [isAutoCloudSave, setIsAutoCloudSave] = useState(false);
   const iconRef = useRef(null);
@@ -39,6 +39,75 @@ useEffect(() => {
   document.addEventListener('mousedown', handleClickOutside);
   return () => document.removeEventListener('mousedown', handleClickOutside);
 }, []);
+useEffect(() => {
+  console.log("⚠️ 로그인 정보:", loginInfo);
+}, [loginInfo]);
+useEffect(() => {
+  const fetchInitialSettings = async () => {
+    try {
+      const settings = await window.electronAPI.getSettings(); // 메인 프로세스에서 설정 가져옴
+      console.log("📦 초기 설정값 수신:", settings);
+      if (settings) {
+        if (settings.localLimit) setLocalLimit(`${settings.localLimit}개`);
+        // if (settings.cloudLimit) setCloudLimit(`${settings.cloudLimit}개`);
+        if (settings.retentionDays) {
+          // retentionOptions 기준 문자열로 매핑 필요
+          const matchedRetention = retentionOptions.find(opt => extractNumber(opt) === settings.retentionDays);
+          if (matchedRetention) setRetention(matchedRetention);
+        }
+      }
+    } catch (err) {
+      console.error("❌ 초기 설정값 로드 실패:", err);
+    }
+  };
+
+  fetchInitialSettings();
+}, []);
+// useEffect(() => {
+//   const fetchUserSettings = async () => {
+//     if (!loginInfo?.isLoggedIn) return;
+
+//     try {
+//       const userSettings = await window.electronAPI.getUserSettings(loginInfo.userId);
+//       console.log("🌐 로그인된 유저의 설정값:", userSettings);
+
+//       if (userSettings?.cloudLimit) setCloudLimit(`${userSettings.cloudLimit}개`);
+//     } catch (err) {
+//       console.error("❌ 유저 설정 불러오기 실패:", err);
+//     }
+//   };
+
+//   fetchUserSettings();
+// }, [loginInfo]);
+useEffect(() => {
+  const fetchInitialSettings = async () => {
+    try {
+      const response = await window.electronAPI.getSettings();
+      console.log("📦 초기 설정값 수신:", response);
+
+      if (response.success && response.settings) {
+        const settings = response.settings;
+
+        if (settings.local_limit) setLocalLimit(`${settings.local_limit}개`);
+        if (settings.day_limit) {
+          const matchedRetention = retentionOptions.find(
+            (opt) => extractNumber(opt) === settings.day_limit
+          );
+          if (matchedRetention) setRetention(matchedRetention);
+        }
+
+        if (settings.max_count_cloud) {
+          setCloudLimit(`${settings.max_count_cloud}개`); // ✅ 최초 클라우드 개수 설정
+        }
+      }
+    } catch (err) {
+      console.error("❌ 초기 설정값 로드 실패:", err);
+    }
+  };
+
+  fetchInitialSettings();
+}, []);
+
     useEffect(() => {
       window.electronAPI.onCloudUploadStatusChange((status) => {
         setIsAutoCloudSave(status);
@@ -48,6 +117,11 @@ useEffect(() => {
     const retentionOptions = ['1일', '7일', '10일', '30일', '∞'];
     const limitOptions = ['10개','30개', '50개' ]; 
     const handleApplySetting = async () => {
+      // if (!loginInfo.isLoggedIn) {
+      //   console.warn("로그인 상태 아님 → 설정 적용 불가");
+      //   return;
+      // }
+
     const settings = {
       retentionDays : extractNumber(retention),             // ex) "7"
       localLimit : extractNumber(localLimit),        // ex) "30"
@@ -62,16 +136,27 @@ useEffect(() => {
   try {
     const response = await window.electronAPI.updateSettings(settings);
     if (response.success) {
-      await refetch();   // 기록 다시 불러오기
+  const updatedItems = response.data;
+  setItems(updatedItems);  
       onClose();         // 모달 닫기
+      await refetch();   // 기록 다시 불러오기
       setIsVisible(false); 
     } else {
       console.error("❌ 설정 전송 실패", response.error);
+      setItems([]);
     }
   } catch (err) {
     console.error("❌ IPC 오류:", err);
   }
 };
+useEffect(() => {
+  if (isVisible) {
+    setTimeout(() => {
+      console.log("🔁 강제 리렌더링 발생");
+    }, 0);
+  }
+}, [isVisible]);
+
  // 숫자만 추출하는 헬퍼 함수
 const extractNumber = (text) => {
   const match = text.match(/\d+/);  // 정규표현식: 숫자 하나 이상
@@ -97,7 +182,7 @@ return (
           h-[22.6rem] w-[26rem]
           flex justify-between flex-row
           absolute
-          z-50
+          z-100
           bottom-[4rem]
           right-[-1.4rem]"
       >
@@ -222,7 +307,7 @@ return (
               </div>
 
               {localLimitOpen && (
-                <div className="absolute top-6 left-2 z-[999] bg-white border mt-1 rounded shadow text-sm  w-[4.4rem] items-center flex flex-col">
+                <div className="absolute top-full left-2  bg-white border rounded shadow text-sm w-[4.4rem] items-center flex flex-col">
                   {limitOptions.map((opt) => (
                     <div
                       key={opt + '-local'}
@@ -240,11 +325,12 @@ return (
             </div>
 
             <div className="flex flex-row relative">
-              <div className="flex items-center gap-1">
+              <div className={`flex items-center gap-1 ${!loginInfo.isLoggedIn ? 'opacity-50 cursor-not-allowed' : ''}`}>
                 <img
                   src="cloud.svg"
-                  className="w-6 h-6 cursor-pointer"
+                  className={`w-6 h-6 }`}
                   onClick={() => {
+                    if (!loginInfo.isLoggedIn) return;
                     setCloudLimitOpen(!cloudLimitOpen);
                     setRetentionOpen(false);
                     setLocalLimitOpen(false);
@@ -252,8 +338,9 @@ return (
                   alt="Cloud Limit"
                 />
                 <div
-                  className="text-blue-700 text-sm cursor-pointer select-none flex items-center"
+                  className={`text-blue-700 text-sm select-none flex items-center `}
                   onClick={() => {
+                    if (!loginInfo.isLoggedIn) return;
                     setCloudLimitOpen(!cloudLimitOpen);
                     setRetentionOpen(false);
                     setLocalLimitOpen(false);
@@ -263,8 +350,8 @@ return (
                 </div>
               </div>
 
-              {cloudLimitOpen && (
-                <div className="absolute top-full left-2 mt-1 z-[999] bg-white border rounded shadow text-sm  w-[4.4rem] items-center flex flex-col">
+              {cloudLimitOpen && loginInfo.isLoggedIn && (
+                <div className="absolute top-full left-2 mt-1 z-[999] bg-white border rounded shadow text-sm w-[4.4rem] items-center flex flex-col">
                   {limitOptions.map((opt) => (
                     <div
                       key={opt + '-cloud'}
@@ -280,6 +367,7 @@ return (
                 </div>
               )}
             </div>
+
           </div>
         {/*클라우드 자동 업로드 여부 토글 */}
         <div className="flex items-center justify-between w-full ">
@@ -312,23 +400,31 @@ return (
           {/* 토글 스위치 */}
           <div
             // onClick={() => setIsAutoCloudSave((prev) => !prev)}
+              ref={cloudToggleRef}
+              // style={{ zIndex: 9999, position: 'relative' ,outline: '2px solid red'  }}
+
             onClick={() => {
+              if (!loginInfo.isLoggedIn) return;
               window.electronAPI.toggleCloudUpload(); // 메인 프로세스로 토글 신호 보내기
               console.log("클라우드 업로드 여부 토글 신호 갔슴다~(렌->메)");
             }}           
             className={`
-              w-[3.4rem] h-[1.9rem] rounded-full p-[0.2rem]
-              cursor-pointer transition-all duration-200
-              ${isAutoCloudSave ? 'bg-[var(--blue-200)]' : 'bg-gray-300'}
+            w-[3.4rem] h-[1.9rem] rounded-full p-[0.2rem]
+            transition-all duration-200
+            ${loginInfo.isLoggedIn
+              ? isAutoCloudSave
+                ? 'bg-[var(--blue-200)]'
+                : 'bg-gray-300'
+              : 'bg-gray-200 opacity-60'}
+          `}
+        >
+          <div
+            className={`
+              w-[1.5rem] h-[1.5rem] rounded-full bg-white shadow
+              transform transition-transform duration-200
+              ${isAutoCloudSave ? 'translate-x-[1.5rem]' : 'translate-x-0'}
             `}
-          >
-            <div
-              className={`
-                w-[1.5rem] h-[1.5rem] rounded-full bg-white shadow
-                transform transition-transform duration-200
-                ${isAutoCloudSave ? 'translate-x-[1.5rem]' : 'translate-x-0'}
-              `}
-            />
+          />
           </div>
           
         </div>
