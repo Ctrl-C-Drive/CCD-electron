@@ -6,8 +6,8 @@ import useClipboardRecords from "../../utils/useClipboardRecords";
 
 
 
- const SettingModal = ({onClose }) => {
-  const { refetch } = useClipboardRecords();
+ const SettingModal = ({onClose, refetch,setItems , loginInfo }) => {
+const cloudToggleRef = useRef(null);
 
     const [isVisible, setIsVisible] = useState(false);
     const [retentionOpen, setRetentionOpen] = useState(false);
@@ -39,6 +39,10 @@ useEffect(() => {
   document.addEventListener('mousedown', handleClickOutside);
   return () => document.removeEventListener('mousedown', handleClickOutside);
 }, []);
+useEffect(() => {
+  console.log("⚠️ 로그인 정보:", loginInfo);
+}, [loginInfo]);
+
     useEffect(() => {
       window.electronAPI.onCloudUploadStatusChange((status) => {
         setIsAutoCloudSave(status);
@@ -62,11 +66,14 @@ useEffect(() => {
   try {
     const response = await window.electronAPI.updateSettings(settings);
     if (response.success) {
-      await refetch();   // 기록 다시 불러오기
+  const updatedItems = response.data;
+  setItems(updatedItems);  
       onClose();         // 모달 닫기
+      await refetch();   // 기록 다시 불러오기
       setIsVisible(false); 
     } else {
       console.error("❌ 설정 전송 실패", response.error);
+      setItems([]);
     }
   } catch (err) {
     console.error("❌ IPC 오류:", err);
@@ -222,7 +229,7 @@ return (
               </div>
 
               {localLimitOpen && (
-                <div className="absolute top-6 left-2 z-[999] bg-white border mt-1 rounded shadow text-sm  w-[4.4rem] items-center flex flex-col">
+                <div className="absolute top-full left-2  z-[999] bg-white border rounded shadow text-sm w-[4.4rem] items-center flex flex-col">
                   {limitOptions.map((opt) => (
                     <div
                       key={opt + '-local'}
@@ -240,11 +247,12 @@ return (
             </div>
 
             <div className="flex flex-row relative">
-              <div className="flex items-center gap-1">
+              <div className={`flex items-center gap-1 ${!loginInfo.isLoggedIn ? 'opacity-50 cursor-not-allowed' : ''}`}>
                 <img
                   src="cloud.svg"
-                  className="w-6 h-6 cursor-pointer"
+                  className={`w-6 h-6 ${loginInfo.isLoggedIn ? 'cursor-pointer' : 'cursor-not-allowed'}`}
                   onClick={() => {
+                    if (!loginInfo.isLoggedIn) return;
                     setCloudLimitOpen(!cloudLimitOpen);
                     setRetentionOpen(false);
                     setLocalLimitOpen(false);
@@ -252,8 +260,9 @@ return (
                   alt="Cloud Limit"
                 />
                 <div
-                  className="text-blue-700 text-sm cursor-pointer select-none flex items-center"
+                  className={`text-blue-700 text-sm select-none flex items-center ${loginInfo.isLoggedIn ? 'cursor-pointer' : 'cursor-not-allowed'}`}
                   onClick={() => {
+                    if (!loginInfo.isLoggedIn) return;
                     setCloudLimitOpen(!cloudLimitOpen);
                     setRetentionOpen(false);
                     setLocalLimitOpen(false);
@@ -263,8 +272,8 @@ return (
                 </div>
               </div>
 
-              {cloudLimitOpen && (
-                <div className="absolute top-full left-2 mt-1 z-[999] bg-white border rounded shadow text-sm  w-[4.4rem] items-center flex flex-col">
+              {cloudLimitOpen && loginInfo.isLoggedIn && (
+                <div className="absolute top-full left-2 mt-1 z-[999] bg-white border rounded shadow text-sm w-[4.4rem] items-center flex flex-col">
                   {limitOptions.map((opt) => (
                     <div
                       key={opt + '-cloud'}
@@ -280,6 +289,7 @@ return (
                 </div>
               )}
             </div>
+
           </div>
         {/*클라우드 자동 업로드 여부 토글 */}
         <div className="flex items-center justify-between w-full ">
@@ -312,23 +322,31 @@ return (
           {/* 토글 스위치 */}
           <div
             // onClick={() => setIsAutoCloudSave((prev) => !prev)}
+              ref={cloudToggleRef}
+
             onClick={() => {
+              if (!loginInfo.isLoggedIn) return;
               window.electronAPI.toggleCloudUpload(); // 메인 프로세스로 토글 신호 보내기
               console.log("클라우드 업로드 여부 토글 신호 갔슴다~(렌->메)");
             }}           
             className={`
-              w-[3.4rem] h-[1.9rem] rounded-full p-[0.2rem]
-              cursor-pointer transition-all duration-200
-              ${isAutoCloudSave ? 'bg-[var(--blue-200)]' : 'bg-gray-300'}
+            w-[3.4rem] h-[1.9rem] rounded-full p-[0.2rem]
+            transition-all duration-200
+            ${loginInfo.isLoggedIn ? 'cursor-pointer' : 'cursor-not-allowed'}
+            ${loginInfo.isLoggedIn
+              ? isAutoCloudSave
+                ? 'bg-[var(--blue-200)]'
+                : 'bg-gray-300'
+              : 'bg-gray-200 opacity-60'}
+          `}
+        >
+          <div
+            className={`
+              w-[1.5rem] h-[1.5rem] rounded-full bg-white shadow
+              transform transition-transform duration-200
+              ${isAutoCloudSave ? 'translate-x-[1.5rem]' : 'translate-x-0'}
             `}
-          >
-            <div
-              className={`
-                w-[1.5rem] h-[1.5rem] rounded-full bg-white shadow
-                transform transition-transform duration-200
-                ${isAutoCloudSave ? 'translate-x-[1.5rem]' : 'translate-x-0'}
-              `}
-            />
+          />
           </div>
           
         </div>

@@ -15,6 +15,7 @@ import './index.css'
 import './styles/color.css'
 import './styles/typography.css'
 import useClipboardRecords from './utils/useClipboardRecords.js'
+// import useDisableDuringSubmit from "../../utils/useDisableDuringSubmit";
 
 //typo, color util 예시 (복붙해서 쓰기)
 // {`${colorVariants({ bg: 'gray-50' })}`}
@@ -24,8 +25,10 @@ import useClipboardRecords from './utils/useClipboardRecords.js'
 
 //전체 
 const App= () => {
+  const [loginInfo, setLoginInfo] = useState({ isLoggedIn: false, userId: null });
+
     const [isTagChecked, setIsTagChecked] = useState(true);
-    const { items, refetch, toggleSelect, addItem, setItemsFromSearchResult, getSelectedItemIds   } = useClipboardRecords();
+    const { items, refetch, toggleSelect, addItem, setItemsFromSearchResult, getSelectedItemIds , setItems  } = useClipboardRecords();
     const [sinceRaw, setSinceRaw] = useState("");
     const [untilRaw, setUntilRaw] = useState("");
   const [fileType, setFileType] = useState("all");
@@ -42,7 +45,10 @@ const App= () => {
 
       const [locationFilter, setLocationFilter] = useState("All");
    useEffect(() => {
+          if (!Array.isArray(items)) return;
+
   const filtered = items.filter((item) => {
+
     // Location 필터
     if (locationFilter === "Local" && item.shared !== "local") return false;
     if (locationFilter === "Cloud" && item.shared !== "cloud") return false;
@@ -94,6 +100,8 @@ const App= () => {
                   <SearchBar 
                     setItemsFromSearchResult={setItemsFromSearchResult}
                     refetch={refetch}  
+                    loginInfo={loginInfo} 
+                    setLoginInfo={setLoginInfo}
                   />
               </div>
               {/* Tag, 필터 2개 zone */}
@@ -135,6 +143,9 @@ const App= () => {
             <BottomBar 
                   // selectedIds={selectedIds} 
                   getSelectedItemIds={getSelectedItemIds}
+                  refetch={refetch}
+                  setItems={setItems}
+                  loginInfo={loginInfo}
            />
       </div>
       

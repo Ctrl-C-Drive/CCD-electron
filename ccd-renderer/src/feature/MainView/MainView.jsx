@@ -38,6 +38,7 @@ const MainView = ({ isTagChecked, items, toggleSelect, addItem, refetch,fileType
       const path = e.dataTransfer.files[0]?.path; // ✅ Electron 환경이라면 존재
       console.log("✅ file.path:", path);
 
+      
       const file = e.dataTransfer.files[0];
       if (!file) return;
 
@@ -147,7 +148,7 @@ const MainView = ({ isTagChecked, items, toggleSelect, addItem, refetch,fileType
     <div
       className="grid grid-cols-2 gap-3 px-6 py-4 
        !w-full  
-        !h-[calc(100vh-22.9rem)] 
+        !max-h-[calc(100vh-22.9rem)] 
        !overflow-y-scroll
        overflow-y-auto
        custom-scrollbar
@@ -170,7 +171,7 @@ const MainView = ({ isTagChecked, items, toggleSelect, addItem, refetch,fileType
         <div
           key={item.itemId}
           // onClick={() => handlePaste(item.itemId)} //클릭 이벤트 버블링 막고자, 보다 덜 포괄적인 위치로 리스너 이동
-          className="w-[17rm] !h-[12rem]  relative  border border-blue-700 rounded-md overflow-hidden cursor-pointer"
+          className="w-[17rm] !h-auto  relative  border border-blue-700 rounded-md overflow-hidden cursor-pointer"
           onContextMenu={(e) => {
             e.preventDefault(); // ✅ 기본 우클릭 메뉴 차단
             e.stopPropagation(); // 이벤트 전파 차단
@@ -201,7 +202,7 @@ const MainView = ({ isTagChecked, items, toggleSelect, addItem, refetch,fileType
               </p>
             )}
               {/* 체크박스: shared가 cloud 또는 both가 아닐 때만 표시 */}
-              {(item.shared !== "cloud" && item.shared !== "both") && (
+              {/* {(item.shared !== "cloud" && item.shared !== "both") && ( */}
                 <div className="absolute top-1 left-1">
                   <input
                     type="checkbox"
@@ -213,7 +214,7 @@ const MainView = ({ isTagChecked, items, toggleSelect, addItem, refetch,fileType
                     className="accent-blue-700 w-[1.3rem] h-[1.3rem]"
                   />
                 </div>
-              )}
+              {/* )} */}
 
             <div className="absolute bottom-1 right-1 flex gap-1 items-end">
               {(item.shared === "both" || item.shared === "cloud") && (
@@ -232,7 +233,7 @@ const MainView = ({ isTagChecked, items, toggleSelect, addItem, refetch,fileType
               )}
             </div>
           </div>
-          {isTagChecked && (
+          {isTagChecked ? (
             <div
               className="
                 text-[var(--blue-200)]
@@ -240,21 +241,21 @@ const MainView = ({ isTagChecked, items, toggleSelect, addItem, refetch,fileType
                 text-[1.3rem]
                 font-[var(--font-rg)]
                 leading-[2.8rem]
-                border-t h-[2.6rem] border-[var(--blue-200)] pl-[1.6rem] "
+                border-t h-[2.6rem] border-[var(--blue-200)] pl-[1.6rem]
+              "
             >
               {item.tags && item.tags.length > 0 ? (
-                item.tags.map((t, idx) =>
-                  typeof t === "string" ? (
-                    <span key={idx}># {t}</span>
-                  ) : (
-                    <span key={idx}># {t.tag}</span>
-                  )
-                )
+                <span>
+                  {item.tags
+                    .map((t) => `#${typeof t === "string" ? t : t.tag}`)
+                    .join(" ")}
+                </span>
               ) : (
                 <span># 태그 없음</span>
               )}
             </div>
-          )}
+          ) : null}
+
 
         {activeItemId === item.itemId && (
           <div

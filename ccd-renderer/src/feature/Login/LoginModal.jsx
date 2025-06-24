@@ -7,24 +7,27 @@ import useDisableDuringSubmit from "../../utils/useDisableDuringSubmit.js";
 import CryptoJS from "crypto-js";
 
 const LoginModal = ({loginInfo, setLoginInfo}) => {
-  const [success, setSuccess] = useState("");
+const [loginSuccess, setLoginSuccess] = useState("");
+const [loginError, setLoginError] = useState("");
+const [joinSuccess, setJoinSuccess] = useState("");
+const [joinError, setJoinError] = useState("");
 
 const [modalState, setModalState] = useState(null);
   const [userId, setUserId] = useState(""); // 로그인 성공 시 저장될 유저 ID
   const ref = useRef(null);
 const [pw, setPw] = useState("");
-const [error, setError] = useState("");
 const [isSubmitted, setIsSubmitted] = useState(false);
 const [idError, setIdError] = useState("");
 const [pwError, setPwError] = useState("");
 const loginBtnRef = useRef(null);
 const joinBtnRef = useRef(null);
 const isDisabled = modalState === "login"; // ex: 로그인 중이면 비활성화
+const avatarRef = useRef(null);
 
+// 공백만으로 구성된 입력을 막기 위한 정규식: ^\s+$ 는 공백으로만 구성된 문자열
+const isWhitespaceOnly = (str) => /^\s+$/.test(str);
 useDisableDuringSubmit(isSubmitted, loginBtnRef);
-useEffect(() => {
-  console.log("🟡 상태 확인", { error, success, isSubmitted });
-}, [error, success, isSubmitted]);
+
 
 // console.log("electronAPI:", window.electronAPI);
 useEffect(() => {
@@ -33,30 +36,32 @@ useEffect(() => {
     setModalState("loggedIn");
   }
 }, [loginInfo.isLoggedIn, loginInfo.userId]);
-useEffect(() => {
-  console.log(" error changed:", error);
-}, [error]);
+
 
 useEffect(() => {
-  console.log(" success changed:", success);
-}, [success]);
-useEffect(() => {
-  console.log("loginInfo changed", loginInfo);
-}, [loginInfo]);
+  if (modalState === "JoinIn") {
+    setJoinError("");
+    setJoinSuccess("");
+  } else if (modalState === "login") {
+    setLoginError("");
+    setLoginSuccess("");
+  }
+}, [modalState]);
 
   useEffect(() => {
     function handleClickOutside(event) {
-      if (ref.current && !ref.current.contains(event.target)) {
-        setModalState(null);
-        setIsSubmitted(false); 
+      const clickedOutsideModal = ref.current && !ref.current.contains(event.target);
+      const clickedOutsideAvatar = avatarRef.current && !avatarRef.current.contains(event.target);
 
+      if (clickedOutsideModal && clickedOutsideAvatar) {
+        setModalState(null);
+        setIsSubmitted(false);
       }
     }
 
     document.addEventListener("mousedown", handleClickOutside);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
-
     };
   }, []);
 
@@ -82,16 +87,22 @@ useEffect(() => {
   };
 
  const handleLogin = async () => {
+  setLoginSuccess("");
+  setLoginError("");
+
     setIsSubmitted(true); 
 
     if (userId.length < 8 || pw.length < 8) {
-    setError("ID와 PW는 8자 이상이어야 합니다.");
+    setLoginError("ID와 PW는 8자 이상이어야 합니다.");
+    return;
+  }
+  if (userId.length < 8 || pw.length < 8 || isWhitespaceOnly(userId) || isWhitespaceOnly(pw)) {
+    setLoginError("ID와 PW는 8자 이상의 공백이 아닌 문자여야 합니다.");
     return;
   }
 
-
   if (!userId || !pw) {
-    setError("ID 또는 PW를 입력해주세요");
+    setLoginError("ID 또는 PW를 입력해주세요");
     return;
   }
 
@@ -106,26 +117,26 @@ useEffect(() => {
     
 
     if (!tokenMsg) {
-      setError("로그인 실패: 계정 정보를 확인하세요.");
-      setSuccess("");
+      setLoginError("로그인 실패: 계정 정보를 확인하세요.");
+      setLoginSuccess("");
     // } else if (!accessToken) {
     //   setError("Access Token이 존재하지 않습니다.");
     //   setSuccess("");
     } else {
       // setUserId(userId); // 실제 userId 저장 (암호화된 값 아님)
-        setSuccess("로그인 성공"); 
-        setError("");
+        setLoginSuccess("로그인 성공"); 
+        setLoginError("");
 
         setLoginInfo({ isLoggedIn: true, userId }); ;
     }
   } catch (error) {
     console.error("로그인 중 오류 발생:", error);
-    setError("로그인 중 오류가 발생했습니다.");
-    setSuccess("");
+    setLoginError("로그인 중 오류가 발생했습니다.");
+    setLoginSuccess("");
   } finally {
     setIsSubmitted(false);
   }
-  console.log("에러:", error, "성공:", success);
+  console.log("에러:", loginError, "성공:", loginSuccess);
 
 };
 const handleLogout = async () => {
@@ -142,12 +153,15 @@ const handleLogout = async () => {
   const handleJoin = async() => {
       setIsSubmitted(true); 
     if (userId.length < 8 || pw.length < 8) {
-      setError("ID와 PW는 8자 이상이어야 합니다.");
+      setJoinError("ID와 PW는 8자 이상이어야 합니다.");
       return;
     }
-
+    if (userId.length < 8 || pw.length < 8 || isWhitespaceOnly(userId) || isWhitespaceOnly(pw)) {
+      setJoinError("ID와 PW는 8자 이상의 공백이 아닌 문자여야 합니다.");
+      return;
+    }
     if (!userId || !pw) {
-    setError("ID 또는 PW를 입력해주세요");
+    setJoinError("ID 또는 PW를 입력해주세요");
     return;
   }
 
@@ -157,25 +171,31 @@ const handleLogout = async () => {
     const { joinResultMsg } = await window.electronAPI.registerUser(encryptedId, encryptedPw);
 
     if (joinResultMsg === "success") {
-      setSuccess("회원가입 성공"); 
-      setModalState(null);
-      setError("");
-    } else if (joinResultMsg === "duplication") {
-      setError("이미 존재하는 ID입니다.");
-      setSuccess("");
-    } else {
-      setError("회원가입에 실패했습니다. 다시 시도해주세요.");
-      setSuccess("");
+      setJoinSuccess("회원가입 성공"); 
+      setTimeout(() => {
+          setModalState(null);
+          setJoinSuccess(""); // 이후 다시 열었을 때 남지 않도록 초기화
+        }, 1000); // 1초 후 모달 닫기    
+     } else if (joinResultMsg === "duplication") {
+      setJoinError("이미 존재하는 ID입니다.");   
+        setJoinSuccess("");
+  
+      } else {
+      setJoinError("회원가입에 실패했습니다. 다시 시도해주세요.");
+      // setModalState(null);
+      setJoinSuccess("");
+
     }
   } catch (err) {
     console.error("회원가입 중 에러:", err);
-    setError("알 수 없는 오류가 발생했습니다.");
-    setSuccess("");
+    setJoinError("알 수 없는 오류가 발생했습니다.");
+    setJoinSuccess("");
+  }finally{
+     setIsSubmitted(false);
   }
   
     setUserId(userId); // ID 반영
     setPw(pw);
-    setModalState(null);  //PW 반영
   }
   
 
@@ -195,17 +215,17 @@ const handleLogout = async () => {
       <img
         src="/avatar.svg" 
         alt="User Avatar"
+        ref={avatarRef}
         className="ml-3 w-[5.3rem] h-[5.3rem]  cursor-pointer object-cover"
-        onClick={() => {
-          // 모달이 꺼진 상태일 때만 동작
+        onClick={(e) => {
+          e.stopPropagation(); // 외부 클릭으로 잘못 간주되지 않게
+
           setModalState((prev) => {
-            if (prev !== null) return null; // toggle off
-
-            if (loginInfo.isLoggedIn && loginInfo.userId) {
-              return "loggedIn";
+            if (prev === "menu" || prev === "login" || prev === "JoinIn" || prev === "loggedIn") {
+              return null; // 열린 상태면 닫기
+            } else {
+              return loginInfo.isLoggedIn ? "loggedIn" : "menu";
             }
-
-            return "menu";
           });
         }}
     />
@@ -216,7 +236,7 @@ const handleLogout = async () => {
         <div
           ref={ref}
           className="absolute  flex flex-col
-           right-0 mt-2 w-56 bg-white rounded-xl   
+           right-0 mt-2 min-w-[14.2rem] min-h-[15.5rem] bg-white rounded-xl   
            shadow-[0_0.1rem_2.5rem_0_rgba(0,0,0,0.10)]
             p-4 z-10"
             style={{ WebkitAppRegion: 'no-drag' }} // 클릭 이벤트 허용
@@ -252,6 +272,7 @@ const handleLogout = async () => {
                         leading-normal
                         text-center
                         cursor-pointer
+                        b-[2rem]
                     "
                   onClick={() => setModalState("login")}
                 >
@@ -278,7 +299,7 @@ const handleLogout = async () => {
 
           {/* 로그인 입력 폼 */}
           {modalState === "login" && (
-            <div className="w-[14.2rem] h-[15.4rem] bg-[var(--white)]">
+            <div className="w-[14.2rem] h-[15.4rem] bg-[var(--white)] mb-[1.2rem] pb-[2rem]">
               <div className="
                     text-[var(--blue-200)]
                     text-center
@@ -290,7 +311,7 @@ const handleLogout = async () => {
               ">Login
               </div>
               <hr className="mb-2" />
-              <div className="flex flex-col gap-2 pl-[2rem] pt-[1.4rem] pr-[1.8rem] ">
+              <div className="flex flex-col gap-2  pt-[1.4rem] px-[1.8rem] ">
                 <label className=" 
                   text-[var(--blue-200)]
                   text-[1.2rem]
@@ -347,32 +368,22 @@ const handleLogout = async () => {
                    text-[var(--red)]
                    mt-[1rem]
                   ">
-                    {isSubmitted && (error || success) && (
+                    {(loginError || loginSuccess) && (
                       <div className={twMerge(
                         "text-center text-[0.9rem] mt-[1rem] !font-inter font-[var(--font-rg)] leading-normal",
-                        error ? "text-[var(--red)]" : "!text-blue-200"
+                        loginError ? "text-[var(--red)]" : "!text-blue-200"
                       )}>
-                        {error || success}
+                        {loginError || loginSuccess}
                       </div>
                     )}
 
                   </div>
 
               <button
-                className="
-                  text-[var(--blue-200)]
-                  text-center
-                  !font-pretendard
-                  text-[1.1rem]
-                  font-[var(--font-rg)]
-                  leading-normal
-                  underline
-                  text-center
-                  justify-center
-                  flex
-                 w-full text-center
-                 pt-[1.3rem]
-                 "
+                  className={twMerge(
+                    "text-[var(--blue-200)] text-center !font-pretendard text-[1.1rem] font-[var(--font-rg)] leading-normal  underline text-center justify-center  flex  w-full text-center  mb-[1.2rem] pb-[1.3rem] pt-[1.2rem]",        
+                    isSubmitted && loginError ? "text-gray-400" : "text-[var(--blue-200)]"
+                  )}
                 onClick={handleLogin}
                 ref={loginBtnRef}
                 disabled={isSubmitted}
@@ -446,7 +457,7 @@ const handleLogout = async () => {
 
           {/* 회원가입 입력 폼 */}
           {modalState === "JoinIn" && (
-            <div className="w-[14.2rem] h-[15.4rem] bg-[var(--white)]">
+            <div className="w-[14.2rem]   bg-[var(--white)]">
               <div className="
                     text-[var(--blue-200)]
                     text-center
@@ -458,7 +469,7 @@ const handleLogout = async () => {
               ">Join
               </div>
               <hr className="mb-2" />
-              <div className="flex flex-col gap-2 pl-[2rem] pt-[1.4rem] pr-[1.8rem] ">
+              <div className="flex flex-col gap-2 px-[2rem] pt-[1.4rem]  ">
                 <label className=" 
                   text-[var(--blue-200)]
                   text-[1.2rem]
@@ -496,28 +507,30 @@ const handleLogout = async () => {
                     className="!w-[8.3rem] ml-2 px-2 py-1 ml-[0.2rem] rounded-md bg-gray-100 text-gray-800 flex-1"
                   />
                 </label>
-              </div>
-                  {isSubmitted && (error || success) && (
+                    {(joinError || joinSuccess) && (
                     <div
                       className={twMerge(
-                        "text-center text-[0.9rem] mt-[1rem] !font-inter font-[var(--font-rg)] leading-normal",
-                        error ? "text-[var(--red)]" : "!text-blue-200"
+                        "text-center  text-[0.9rem] mt-[1rem] mb-[0.6rem] !font-inter font-[var(--font-rg)] leading-normal flex w-full justify-center ",
+                        joinError ? "text-[var(--red)]" : "!text-blue-200"
                       )}
                     >
-                          {error || success}
+                          {joinError || joinSuccess}
                     
 
                   </div>
                  )} 
-              <button
+                   <button
                    className={twMerge(
-                    "text-[var(--blue-200)] text-center !font-pretendard text-[1.1rem] font-[var(--font-rg)] leading-normal  underline text-center justify-center  flex  w-full text-center  pt-[1.3rem]",        
-                    isSubmitted && error ? "text-gray-400" : "text-[var(--blue-200)]"
+                    "text-[var(--blue-200)] text-center !font-pretendard text-[1.1rem] font-[var(--font-rg)]  leading-normal  underline text-center justify-center  flex  w-full text-center ",        
+                    isSubmitted && joinError ? "text-gray-400" : "text-[var(--blue-200)]"
                   )}
                 onClick={handleJoin}
               >
                 Join
               </button>
+              </div>
+
+
             </div>
           )}
         
